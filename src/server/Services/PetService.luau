@@ -71,9 +71,11 @@ end
 
 -- Adds a pet without replicating (callers batch their updates). Returns entry, isNew.
 -- tier: "Normal" | "Golden" | "Rainbow" (true still means Golden)
-function PetService.AddPet(player: Player, petId: string, tier)
+-- force = true ignores MaxStorage (won Mega Storm exclusives are never thrown away; going over
+-- the limit only blocks hatching until the player deletes some pets)
+function PetService.AddPet(player: Player, petId: string, tier, force: boolean?)
 	local data = Registry.DataService.Get(player)
-	if not data or not Pets.Pets[petId] or #data.Pets >= GameConfig.Pets.MaxStorage then
+	if not data or not Pets.Pets[petId] or (#data.Pets >= GameConfig.Pets.MaxStorage and not force) then
 		return nil, false
 	end
 	local tierName = Pets.TierOf(tier)
@@ -97,9 +99,9 @@ function PetService.AddPet(player: Player, petId: string, tier)
 end
 
 -- Gives a pet and replicates right away (rewards, Mega Storm drops)
-function PetService.GivePet(player: Player, petId: string, tier)
+function PetService.GivePet(player: Player, petId: string, tier, force: boolean?)
 	local data = Registry.DataService.Get(player)
-	local entry, isNew = PetService.AddPet(player, petId, tier)
+	local entry, isNew = PetService.AddPet(player, petId, tier, force)
 	if entry and data then
 		Registry.DataService.Replicate(player, "Index")
 		refresh(player, data)

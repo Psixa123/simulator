@@ -4,6 +4,7 @@
 -- autosaves periodically, and saves everyone when the server shuts down.
 
 local DataStoreService = game:GetService("DataStoreService")
+local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -12,6 +13,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(Shared.Config.GameConfig)
 local Signal = require(Shared.Util.Signal)
 local Remotes = require(Shared.Remotes)
+
+local Net = require(script.Parent.Net)
 
 local DataService = {}
 DataService.PlayerLoaded = Signal.new() -- (player, data)
@@ -23,9 +26,12 @@ local SESSION_KEYS = { Passes = true, GiftsClaimed = true, SessionStart = true }
 -- Keys that are never sent to the client
 local PRIVATE_KEYS = { Receipts = true, Codes = true }
 
-local profiles = {} -- [Player] = { Data, Key, CanSave, Released, PlayTimeMark }
+local profiles = {} -- [Player] = { Data, Key, CanSave, Released, PlayTimeMark, Saving, UnsavedReceipts }
 local store = nil
 local warnedStudio = false
+
+-- Servers ask each other over this topic to release a player's session lock straight away
+local RELEASE_TOPIC = "DataRelease"
 
 local function deepCopy(value)
 	if type(value) ~= "table" then
@@ -84,6 +90,15 @@ local function getStore()
 	return store
 end
 
+-- Asks the server holding a player's lock to save and let go of it now instead of making them wait
+local function requestRelease(userId: number, jobId: string)
+	task.spawn(function()
+		pcall(function()
+			MessagingService:PublishAsync(RELEASE_TOPIC, { UserId = userId, JobId = jobId })
+		end)
+	end)
+end
+
 local function loadFromStore(player: Player)
 	local dataStore = getStore()
 	if not dataStore then
@@ -95,6 +110,7 @@ local function loadFromStore(player: Player)
 
 	for attempt = 1, 6 do
 		local lockedElsewhere = false
+		local lockOwner = nil
 		local ok, result = pcall(function()
 			return dataStore:UpdateAsync(key, function(stored)
 				lockedElsewhere = false
@@ -105,7 +121,9 @@ local function loadFromStore(player: Player)
 					and os.time() - (lock.Time or 0) < GameConfig.SessionLockTimeout
 					and attempt < 6
 				then
+					-- Only taken over on the last attempt, in case the other server crashed
 					lockedElsewhere = true
+					lockOwner = lock.JobId
 					return nil
 				end
 				local value = if type(stored) == "table" then stored else template()
@@ -125,6 +143,9 @@ local function loadFromStore(player: Player)
 		if not ok and RunService:IsStudio() then
 			-- Studio without API access fails instantly; don't keep the tester waiting
 			return nil, lastError
+		end
+		if lockedElsewhere and type(lockOwner) == "string" then
+			requestRelease(player.UserId, lockOwner)
 		end
 		task.wait(if lockedElsewhere then 5 else 2)
 	end
@@ -154,9 +175,11 @@ local function trackPlayTime(profile)
 	profile.PlayTimeMark = now
 end
 
+-- Returns true only when the data was actually written
 function DataService.Save(player: Player, release: boolean?): boolean
 	local profile = profiles[player]
-	if not profile or not profile.CanSave then
+	-- Once released only the final save may write; a late save would bring back old data and re-lock it
+	if not profile or not profile.CanSave or (profile.Released and not release) then
 		return false
 	end
 	local dataStore = getStore()
@@ -164,30 +187,59 @@ function DataService.Save(player: Player, release: boolean?): boolean
 		return false
 	end
 
-	trackPlayTime(profile)
-	local payload = serialize(profile.Data)
-	if not release then
-		payload.SessionLock = { JobId = game.JobId, Time = os.time() }
-	end
-
+	profile.Saving += 1
+	local saved = false
 	for attempt = 1, 3 do
+		if profile.Released and not release then
+			break
+		end
+		-- Serialized on every attempt so a retry never writes older data
+		trackPlayTime(profile)
+		local payload = serialize(profile.Data)
+		if not release then
+			payload.SessionLock = { JobId = game.JobId, Time = os.time() }
+		end
+		local receipts = table.clone(profile.UnsavedReceipts)
+		local written, lostLock = false, false
+
 		local ok, err = pcall(function()
 			dataStore:UpdateAsync(profile.Key, function(stored)
+				written, lostLock = false, false
+				if profile.Released and not release then
+					return nil
+				end
 				local lock = type(stored) == "table" and stored.SessionLock
 				if lock and lock.JobId ~= game.JobId and os.time() - (lock.Time or 0) < GameConfig.SessionLockTimeout then
 					-- Another server took over this player's data; never overwrite it
+					lostLock = true
 					return nil
 				end
+				written = true
 				return payload
 			end)
 		end)
 		if ok then
-			return true
+			if written then
+				for purchaseId in receipts do
+					profile.UnsavedReceipts[purchaseId] = nil
+				end
+			elseif lostLock and profile.CanSave then
+				profile.CanSave = false
+				warn("[DataService] " .. player.Name .. "'s data was opened in another server; no longer saving it here")
+				if not release and player.Parent then
+					player:Kick("Your data was opened in another server, please rejoin! ⛈️")
+				end
+			end
+			saved = written
+			break
 		end
 		warn(string.format("[DataService] Save failed for %s (attempt %d): %s", player.Name, attempt, tostring(err)))
-		task.wait(1.5)
+		if attempt < 3 then
+			task.wait(1.5)
+		end
 	end
-	return false
+	profile.Saving -= 1
+	return saved
 end
 
 local function finalSave(player: Player)
@@ -197,6 +249,11 @@ local function finalSave(player: Player)
 	end
 	profile.Released = true
 	DataService.PlayerLeaving:Fire(player, profile.Data)
+	-- Let a save that is already running finish first so it can't land after the release
+	local deadline = os.clock() + 10
+	while profile.Saving > 0 and os.clock() < deadline do
+		task.wait(0.1)
+	end
 	DataService.Save(player, true)
 	profiles[player] = nil
 end
@@ -249,6 +306,8 @@ local function onPlayerAdded(player: Player)
 		CanSave = canSave,
 		Released = false,
 		PlayTimeMark = now,
+		Saving = 0, -- Save calls in progress
+		UnsavedReceipts = {}, -- [purchaseId] = true until a save that includes it succeeds
 	}
 
 	if not player.Parent then
@@ -258,6 +317,42 @@ local function onPlayerAdded(player: Player)
 	end
 
 	DataService.PlayerLoaded:Fire(player, data)
+end
+
+-- Another server is loading a player whose lock this server holds
+local function onReleaseRequest(message)
+	local request = type(message) == "table" and message.Data
+	if type(request) ~= "table" or request.JobId ~= game.JobId or type(request.UserId) ~= "number" then
+		return
+	end
+	local player = Players:GetPlayerByUserId(request.UserId)
+	if player and loading[player] then
+		return
+	end
+	local profile = player and profiles[player]
+	if profile then
+		if not profile.Released then
+			-- They joined another server, so this session is over: save and hand the data over now
+			task.spawn(finalSave, player)
+			player:Kick("You joined another server! ⛈️")
+		end
+		return
+	end
+	-- No session here any more (our final save failed): drop the lock we left behind
+	local dataStore = getStore()
+	if not dataStore then
+		return
+	end
+	pcall(function()
+		dataStore:UpdateAsync("Player_" .. request.UserId, function(stored)
+			local lock = type(stored) == "table" and stored.SessionLock
+			if not lock or lock.JobId ~= game.JobId then
+				return nil
+			end
+			stored.SessionLock = nil
+			return stored
+		end)
+	end)
 end
 
 ---------------------------------------------------------------------------
@@ -271,6 +366,25 @@ end
 function DataService.CanSave(player: Player): boolean
 	local profile = profiles[player]
 	return profile ~= nil and profile.CanSave
+end
+
+-- True once the player's final save has started (they're leaving or the server is closing)
+function DataService.IsReleased(player: Player): boolean
+	local profile = profiles[player]
+	return profile ~= nil and profile.Released
+end
+
+-- Receipts granted in memory stay "unsaved" until a save that includes them succeeds
+function DataService.MarkReceiptUnsaved(player: Player, purchaseId: string)
+	local profile = profiles[player]
+	if profile then
+		profile.UnsavedReceipts[purchaseId] = true
+	end
+end
+
+function DataService.IsReceiptUnsaved(player: Player, purchaseId: string): boolean
+	local profile = profiles[player]
+	return profile ~= nil and profile.UnsavedReceipts[purchaseId] == true
 end
 
 function DataService.WaitForData(player: Player, timeout: number?)
@@ -333,14 +447,22 @@ end
 function DataService.Init()
 	getStore()
 
+	local waitingForData = {} -- [Player] = true while a GetData call is waiting for their data
 	Remotes.GetData.OnServerInvoke = function(player)
+		-- The client asks once and retries a second after a nil answer
+		if waitingForData[player] or not Net.RateLimit(player, "GetData", 1) then
+			return nil
+		end
+		waitingForData[player] = true
 		local data = DataService.WaitForData(player, 45)
+		waitingForData[player] = nil
 		if not data then
 			return nil
 		end
 		return DataService.Snapshot(player)
 	end
 
+	local settingsQueued = {} -- [Player] = true while a throttled Settings update is waiting to be sent
 	Remotes.SetSetting.OnServerInvoke = function(player, key, value)
 		local data = DataService.Get(player)
 		if not data or type(key) ~= "string" or type(value) ~= "boolean" then
@@ -350,19 +472,38 @@ function DataService.Init()
 			return false
 		end
 		data.Settings[key] = value
-		DataService.Replicate(player, "Settings")
+		if Net.RateLimit(player, "SetSetting", 0.2) then
+			DataService.Replicate(player, "Settings")
+		elseif not settingsQueued[player] then
+			-- Spammed toggles still apply, but the client gets one update for the lot
+			settingsQueued[player] = true
+			task.delay(0.2, function()
+				settingsQueued[player] = nil
+				DataService.Replicate(player, "Settings")
+			end)
+		end
 		return true
 	end
 
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(finalSave)
 
+	task.spawn(function()
+		local ok, err = pcall(function()
+			MessagingService:SubscribeAsync(RELEASE_TOPIC, onReleaseRequest)
+		end)
+		if not ok and not RunService:IsStudio() then
+			warn("[DataService] Couldn't listen for data release requests: " .. tostring(err))
+		end
+	end)
+
 	game:BindToClose(function()
 		for player in table.clone(profiles) do
 			task.spawn(finalSave, player)
 		end
+		-- Also wait for players still loading: they may hold a lock that needs releasing
 		local deadline = os.clock() + 25
-		while next(profiles) ~= nil and os.clock() < deadline do
+		while (next(profiles) ~= nil or next(loading) ~= nil) and os.clock() < deadline do
 			task.wait(0.1)
 		end
 	end)

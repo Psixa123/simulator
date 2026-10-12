@@ -5,6 +5,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Zones = require(Shared.Config.Zones)
+local MapLayout = require(Shared.Config.MapLayout)
 local Formulas = require(Shared.Formulas)
 local ClimateShift = require(Shared.ClimateShift)
 local Format = require(Shared.Util.Format)
@@ -27,6 +29,8 @@ function RebirthService.Rebirth(player: Player)
 	end
 
 	Registry.WeatherService.StopCatch(player)
+	-- Cash in the tank first so its energy still counts toward lifetime Volts instead of vanishing
+	Registry.EconomyService.Sell(player, "Rebirth")
 	data.Volts = 0
 	data.Energy = 0
 	data.TankValue = 0
@@ -36,6 +40,16 @@ function RebirthService.Rebirth(player: Player)
 
 	Registry.DataService.Replicate(player, "Volts", "Energy", "TankValue", "Upgrades", "Rebirths")
 	CharacterGear.DressPlayer(player, data.Rebirths)
+
+	-- Power is back to level 1: move them out of biomes their vacuum is now too weak for
+	local root = Net.GetRoot(player)
+	local catchZone = Formulas.BestCatchableZone(data)
+	if root and MapLayout.ZoneAt(root.Position) > catchZone then
+		local zone = Zones[catchZone]
+		if Registry.ZoneService.TeleportTo(player, MapLayout.ZoneSpawn(catchZone)) then
+			Net.Notify(player, string.format("%s Fresh start! Catch weather in %s to power your vacuum back up.", zone.Icon, zone.Name), "Info")
+		end
+	end
 
 	-- The look this Climate Shift unlocks (if any) rides along so the celebration can show it
 	local unlocked = ClimateShift.UnlockedAt(data.Rebirths)

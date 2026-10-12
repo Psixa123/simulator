@@ -1151,7 +1151,8 @@ local function arena(parent: Instance)
 	cylinder({ Name = "Emblem", Position = center + Vector3.new(0, 0.7, 0), Height = 0.6, Diameter = 30, Color = rgb(36, 42, 66), Parent = stage })
 
 	for index = 0, 7 do
-		local angle = index * math.pi / 4
+		-- Offset by pi/8 so no pylon stands on the hub walkway (z = 0)
+		local angle = index * math.pi / 4 + math.pi / 8
 		local position = center + Vector3.new(math.cos(angle) * (radius + 5), 0, math.sin(angle) * (radius + 5))
 		part({ Name = "PylonBase", Size = Vector3.new(4, 2, 4), CFrame = CFrame.new(position + Vector3.new(0, 1, 0)), Color = rgb(40, 46, 70), Parent = stage })
 		part({ Name = "Pylon", Size = Vector3.new(2, 12, 2), CFrame = CFrame.new(position + Vector3.new(0, 8, 0)), Color = rgb(70, 78, 110), Material = M.Metal, Parent = stage })
@@ -1364,6 +1365,14 @@ function MapService.Init()
 	buildHub(map)
 	for zoneId = 1, #Zones do
 		buildZone(map, zoneId)
+	end
+
+	-- Leftover template spawns (e.g. the Baseplate place's SpawnLocation) would make players
+	-- appear at the zone 1 gate instead of the hub spawn
+	for _, item in Workspace:GetDescendants() do
+		if item:IsA("SpawnLocation") and not item:IsDescendantOf(map) then
+			item:Destroy()
+		end
 	end
 end
 

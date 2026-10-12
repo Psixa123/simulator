@@ -89,12 +89,31 @@ function Formulas.PetBonus(petId: string, tier): number
 	return pet.Bonus * Formulas.TierMultiplier(tier)
 end
 
-function Formulas.PetMultiplier(data): number
-	local total = 1
+-- Equipped pets that actually count: never more than EquipSlots (the best ones, e.g. when a
+-- lost +3 Pet Slots pass leaves extra pets flagged as equipped)
+function Formulas.ActivePets(data)
+	local equipped = {}
 	for _, pet in data.Pets or {} do
 		if pet.Equipped then
-			total += Formulas.PetBonus(pet.Id, Pets.TierOf(pet))
+			table.insert(equipped, pet)
 		end
+	end
+	local slots = Formulas.EquipSlots(data)
+	if #equipped > slots then
+		table.sort(equipped, function(a, b)
+			return Formulas.PetBonus(a.Id, Pets.TierOf(a)) > Formulas.PetBonus(b.Id, Pets.TierOf(b))
+		end)
+		for index = #equipped, slots + 1, -1 do
+			equipped[index] = nil
+		end
+	end
+	return equipped
+end
+
+function Formulas.PetMultiplier(data): number
+	local total = 1
+	for _, pet in Formulas.ActivePets(data) do
+		total += Formulas.PetBonus(pet.Id, Pets.TierOf(pet))
 	end
 	return total
 end
@@ -108,10 +127,8 @@ end
 -- Power (per catch tick) your equipped pets drain weather with on their own
 function Formulas.PetCatchPower(data): number
 	local share = 0
-	for _, pet in data.Pets or {} do
-		if pet.Equipped then
-			share += Formulas.PetCatchShare(Pets.TierOf(pet))
-		end
+	for _, pet in Formulas.ActivePets(data) do
+		share += Formulas.PetCatchShare(Pets.TierOf(pet))
 	end
 	return Formulas.Power(data) * share
 end
@@ -192,10 +209,22 @@ function Formulas.RebirthCost(rebirths: number): number
 end
 
 ---------------------------------------------------------------------------
--- Rewards: one "unit" is a full base tank of the best unlocked zone's energy
+-- Rewards: one "unit" is a full base tank of the best catchable zone's energy
 ---------------------------------------------------------------------------
+-- Highest unlocked zone the player's vacuum is strong enough to catch in (at least zone 1).
+-- After a Climate Shift resets Power this drops back down until they power up again.
+function Formulas.BestCatchableZone(data): number
+	local power = Formulas.Power(data)
+	for zoneId = math.clamp(data.Zone or 1, 1, #Zones), 2, -1 do
+		if power >= Zones[zoneId].MinPower then
+			return zoneId
+		end
+	end
+	return 1
+end
+
 function Formulas.VoltsUnit(data): number
-	local zone = Zones[math.clamp(data.Zone or 1, 1, #Zones)]
+	local zone = Zones[Formulas.BestCatchableZone(data)]
 	return math.floor(Formulas.BaseTank(data) * zone.Value * Formulas.RebirthMultiplier(data.Rebirths or 0))
 end
 
@@ -241,7 +270,7 @@ end
 ---------------------------------------------------------------------------
 function Formulas.MegaStormReward(data, contribution: number, defeated: boolean): number
 	local settings = GameConfig.MegaStorm
-	local zone = Zones[math.clamp(data.Zone or 1, 1, #Zones)]
+	local zone = Zones[Formulas.BestCatchableZone(data)]
 	local outcome = if defeated then settings.DefeatBonus else settings.EscapeMultiplier
 	return math.floor(contribution * zone.Value * settings.RewardMultiplier * outcome * Formulas.VoltsMultiplier(data))
 end

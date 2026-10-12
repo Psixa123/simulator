@@ -23,42 +23,42 @@ local RARITY_BASE = { Common = 0.1, Uncommon = 0.18, Rare = 0.35, Epic = 0.7, Le
 local ZONE_FACTOR = { 1, 1.6, 2.5, 4, 6.5, 10 }
 
 Pets.Pets = {
-	-------------------------------------------------------------------- Plains Egg
+	-------------------------------------------------------------------- Plains Cloud Egg
 	Puffling = { Name = "Puffling", Rarity = "Common", Zone = 1, Look = { Body = "Cloud", Color = rgb(250, 252, 255), Accent = rgb(180, 215, 255) } },
 	Droplet = { Name = "Droplet", Rarity = "Uncommon", Zone = 1, Look = { Body = "Drop", Color = rgb(90, 170, 255), Accent = rgb(190, 230, 255) } },
 	Sunny = { Name = "Sunny", Rarity = "Rare", Zone = 1, Look = { Body = "Round", Color = rgb(255, 215, 60), Accent = rgb(255, 150, 40), Features = { "Rays" }, Effect = "Glow" } },
 	Prism = { Name = "Prism", Rarity = "Epic", Zone = 1, Look = { Body = "Cloud", Color = rgb(255, 185, 225), Accent = rgb(130, 220, 255), Features = { "Halo" }, Effect = "Rainbow" } },
 	BreezeKing = { Name = "Breeze King", Rarity = "Legendary", Zone = 1, Look = { Body = "Cloud", Color = rgb(255, 255, 255), Accent = rgb(255, 205, 60), Features = { "Crown", "Wings" }, Effect = "Sparkle" } },
 
-	-------------------------------------------------------------------- Thunder Egg
+	-------------------------------------------------------------------- Thunder Cloud Egg
 	Static = { Name = "Static", Rarity = "Common", Zone = 2, Look = { Body = "Round", Color = rgb(150, 155, 172), Accent = rgb(255, 230, 80), Features = { "Antenna" } } },
 	Zappy = { Name = "Zappy", Rarity = "Uncommon", Zone = 2, Look = { Body = "Bean", Color = rgb(255, 225, 70), Accent = rgb(255, 255, 210), Features = { "BunnyEars", "Bolt" }, Effect = "Zap" } },
 	VoltBat = { Name = "Volt Bat", Rarity = "Rare", Zone = 2, Look = { Body = "Round", Color = rgb(92, 62, 142), Accent = rgb(255, 220, 70), Features = { "Wings", "Ears" }, Effect = "Zap" } },
 	ThunderPup = { Name = "Thunder Pup", Rarity = "Epic", Zone = 2, Look = { Body = "Round", Color = rgb(82, 122, 205), Accent = rgb(255, 230, 90), Features = { "Ears", "Tail", "Bolt" }, Effect = "Zap" } },
 	StormLord = { Name = "Storm Lord", Rarity = "Legendary", Zone = 2, Look = { Body = "Cloud", Color = rgb(62, 62, 88), Accent = rgb(255, 225, 60), Features = { "Horns", "Crown" }, Effect = "Zap", EyeColor = rgb(255, 235, 90) } },
 
-	-------------------------------------------------------------------- Dune Egg
+	-------------------------------------------------------------------- Dune Cloud Egg
 	Sandy = { Name = "Sandy", Rarity = "Common", Zone = 3, Look = { Body = "Round", Color = rgb(232, 202, 142), Accent = rgb(200, 160, 100) } },
 	CactusCub = { Name = "Cactus Cub", Rarity = "Uncommon", Zone = 3, Look = { Body = "Bean", Color = rgb(92, 172, 82), Accent = rgb(255, 120, 170), Features = { "Spikes", "Flower" } } },
 	DustBunny = { Name = "Dust Bunny", Rarity = "Rare", Zone = 3, Look = { Body = "Round", Color = rgb(215, 186, 136), Accent = rgb(255, 240, 212), Features = { "BunnyEars", "Tail" }, Effect = "Smoke" } },
 	Scarab = { Name = "Scarab", Rarity = "Epic", Zone = 3, Look = { Body = "Bean", Color = rgb(40, 170, 160), Accent = rgb(255, 200, 60), Features = { "Horns", "Wings" }, Effect = "Sparkle" } },
 	MirageDjinn = { Name = "Mirage Djinn", Rarity = "Legendary", Zone = 3, Look = { Body = "Drop", Color = rgb(80, 222, 255), Accent = rgb(255, 205, 60), Features = { "Crown", "Halo" }, Effect = "Glow" } },
 
-	-------------------------------------------------------------------- Frost Egg
+	-------------------------------------------------------------------- Frost Cloud Egg
 	Snowball = { Name = "Snowball", Rarity = "Common", Zone = 4, Look = { Body = "Round", Color = rgb(245, 250, 255), Accent = rgb(150, 200, 255) } },
 	Icicle = { Name = "Icicle", Rarity = "Uncommon", Zone = 4, Look = { Body = "Crystal", Color = rgb(170, 225, 255), Accent = rgb(230, 250, 255), Effect = "Snow" } },
 	Frostbite = { Name = "Frostbite", Rarity = "Rare", Zone = 4, Look = { Body = "Bean", Color = rgb(42, 46, 62), Accent = rgb(255, 150, 40), Features = { "Beak", "Belly" }, Effect = "Snow" } },
 	AuroraFox = { Name = "Aurora Fox", Rarity = "Epic", Zone = 4, Look = { Body = "Round", Color = rgb(240, 245, 255), Accent = rgb(110, 255, 190), Features = { "Ears", "Tail" }, Effect = "Glow" } },
 	YetiKing = { Name = "Yeti King", Rarity = "Legendary", Zone = 4, Look = { Body = "Round", Color = rgb(235, 240, 250), Accent = rgb(120, 190, 255), Features = { "Horns", "Crown" }, Effect = "Snow" } },
 
-	-------------------------------------------------------------------- Magma Egg
+	-------------------------------------------------------------------- Magma Cloud Egg
 	Ember = { Name = "Ember", Rarity = "Common", Zone = 5, Look = { Body = "Round", Color = rgb(255, 120, 40), Accent = rgb(255, 210, 80), Features = { "Flame" } } },
 	Coal = { Name = "Coal", Rarity = "Uncommon", Zone = 5, Look = { Body = "Cube", Color = rgb(52, 46, 46), Accent = rgb(255, 110, 30), Features = { "Cracks" } } },
 	LavaPup = { Name = "Lava Pup", Rarity = "Rare", Zone = 5, Look = { Body = "Round", Color = rgb(230, 80, 30), Accent = rgb(255, 200, 60), Features = { "Ears", "Tail" }, Effect = "Fire" } },
 	PhoenixChick = { Name = "Phoenix Chick", Rarity = "Epic", Zone = 5, Look = { Body = "Round", Color = rgb(255, 90, 50), Accent = rgb(255, 210, 70), Features = { "Wings", "Beak", "Flame" }, Effect = "Fire" } },
 	InfernoDrake = { Name = "Inferno Drake", Rarity = "Legendary", Zone = 5, Look = { Body = "Bean", Color = rgb(150, 32, 32), Accent = rgb(255, 150, 40), Features = { "Horns", "Wings", "Tail" }, Effect = "Fire", EyeColor = rgb(255, 200, 60) } },
 
-	-------------------------------------------------------------------- Cosmic Egg
+	-------------------------------------------------------------------- Cosmic Cloud Egg
 	Stardust = { Name = "Stardust", Rarity = "Common", Zone = 6, Look = { Body = "Round", Color = rgb(150, 120, 255), Accent = rgb(255, 240, 150), Effect = "Sparkle" } },
 	Comet = { Name = "Comet", Rarity = "Uncommon", Zone = 6, Look = { Body = "Drop", Color = rgb(90, 150, 255), Accent = rgb(200, 240, 255), Effect = "Sparkle" } },
 	Nebula = { Name = "Nebula", Rarity = "Rare", Zone = 6, Look = { Body = "Cloud", Color = rgb(220, 120, 255), Accent = rgb(120, 200, 255), Features = { "Halo" }, Effect = "Sparkle" } },
@@ -79,7 +79,7 @@ Pets.Pets = {
 
 Pets.Eggs = {
 	MeadowEgg = {
-		Name = "Plains Egg",
+		Name = "Plains Cloud Egg",
 		Zone = 1,
 		Cost = 400,
 		Color = rgb(150, 230, 110),
@@ -93,7 +93,7 @@ Pets.Eggs = {
 		},
 	},
 	ThunderEgg = {
-		Name = "Thunder Egg",
+		Name = "Thunder Cloud Egg",
 		Zone = 2,
 		Cost = 22000,
 		Color = rgb(112, 112, 165),
@@ -107,7 +107,7 @@ Pets.Eggs = {
 		},
 	},
 	DuneEgg = {
-		Name = "Dune Egg",
+		Name = "Dune Cloud Egg",
 		Zone = 3,
 		Cost = 1.6e6,
 		Color = rgb(232, 196, 130),
@@ -121,7 +121,7 @@ Pets.Eggs = {
 		},
 	},
 	FrostEgg = {
-		Name = "Frost Egg",
+		Name = "Frost Cloud Egg",
 		Zone = 4,
 		Cost = 1.2e8,
 		Color = rgb(205, 236, 255),
@@ -135,7 +135,7 @@ Pets.Eggs = {
 		},
 	},
 	MagmaEgg = {
-		Name = "Magma Egg",
+		Name = "Magma Cloud Egg",
 		Zone = 5,
 		Cost = 5e9,
 		Color = rgb(92, 42, 36),
@@ -149,7 +149,7 @@ Pets.Eggs = {
 		},
 	},
 	CosmicEgg = {
-		Name = "Cosmic Egg",
+		Name = "Cosmic Cloud Egg",
 		Zone = 6,
 		Cost = 3e11,
 		Color = rgb(62, 36, 122),
