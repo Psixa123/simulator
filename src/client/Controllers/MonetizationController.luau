@@ -26,6 +26,7 @@ MonetizationController.RandomItems = {
 	LuckBoost = true,
 	LuckyHatcher = true,
 	TripleHatch = true,
+	SummonMegaStorm = true, -- top contributors roll for exclusive pets
 }
 
 local player = Players.LocalPlayer

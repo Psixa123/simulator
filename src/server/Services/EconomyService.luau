@@ -100,24 +100,29 @@ function EconomyService.Init()
 	end
 end
 
-function EconomyService.Start()
-	local pads = MapLayout.AllSellPads()
+local sellPads = MapLayout.AllSellPads()
+
+-- True when a position is standing on one of the Weather Lab sell pads
+function EconomyService.OnSellPad(position: Vector3): boolean
 	local radius = MapLayout.SellPadRadius
+	for _, pad in sellPads do
+		local dx, dz = position.X - pad.X, position.Z - pad.Z
+		if dx * dx + dz * dz <= radius * radius and math.abs(position.Y - pad.Y) < 12 then
+			return true
+		end
+	end
+	return false
+end
+
+function EconomyService.Start()
 	while true do
 		task.wait(0.25)
 		for _, player in Players:GetPlayers() do
 			local data = Registry.DataService.Get(player)
 			if data and data.Energy > 0 then
 				local root = Net.GetRoot(player)
-				if root then
-					local position = root.Position
-					for _, pad in pads do
-						local dx, dz = position.X - pad.X, position.Z - pad.Z
-						if dx * dx + dz * dz <= radius * radius and math.abs(position.Y - pad.Y) < 12 then
-							EconomyService.Sell(player, "Pad")
-							break
-						end
-					end
+				if root and EconomyService.OnSellPad(root.Position) then
+					EconomyService.Sell(player, "Pad")
 				end
 			end
 		end

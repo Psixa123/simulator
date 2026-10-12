@@ -535,6 +535,9 @@ function handlers.CellCaught(position: Vector3, typeId: string, value: number)
 end
 
 function handlers.Sell(volts: number, source: string)
+	if source == "Rebirth" then
+		return -- the tank is cashed in right before a Climate Shift resets Volts; no payout to show
+	end
 	Registry.HudController.PlaySell(volts)
 	Registry.SoundController.Play("Sell", if source == "Auto" then 1.1 else 1)
 end

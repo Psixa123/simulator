@@ -20,7 +20,8 @@ StormRadar.PassKey = "StormRadar"
 -- regular "rare weather nearby" announcement.
 function StormRadar.Alert(player: Player, cell): boolean
 	local data = Registry.DataService.Get(player)
-	if not data or not Formulas.HasPass(data, StormRadar.PassKey) or cell.Zone > data.Zone then
+	-- Only zones they can actually catch in (after a Climate Shift their Power starts over)
+	if not data or not Formulas.HasPass(data, StormRadar.PassKey) or cell.Zone > Formulas.BestCatchableZone(data) then
 		return false
 	end
 	Net.Effect(player, "RadarSpawn", cell.Type, cell.Position, cell.Zone, cell.Id)

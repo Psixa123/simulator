@@ -41,19 +41,26 @@ function RebirthService.Rebirth(player: Player)
 	Registry.DataService.Replicate(player, "Volts", "Energy", "TankValue", "Upgrades", "Rebirths")
 	CharacterGear.DressPlayer(player, data.Rebirths)
 
-	-- Power is back to level 1: move them out of biomes their vacuum is now too weak for
-	local root = Net.GetRoot(player)
-	local catchZone = Formulas.BestCatchableZone(data)
-	if root and MapLayout.ZoneAt(root.Position) > catchZone then
-		local zone = Zones[catchZone]
-		if Registry.ZoneService.TeleportTo(player, MapLayout.ZoneSpawn(catchZone)) then
-			Net.Notify(player, string.format("%s Fresh start! Catch weather in %s to power your vacuum back up.", zone.Icon, zone.Name), "Info")
-		end
-	end
-
 	-- The look this Climate Shift unlocks (if any) rides along so the celebration can show it
 	local unlocked = ClimateShift.UnlockedAt(data.Rebirths)
 	Net.Effect(player, "Rebirth", data.Rebirths, unlocked)
+
+	-- Power is back to level 1: once the celebration has played, move them out of biomes
+	-- their vacuum is now too weak for (an earlier zone title would replace the celebration)
+	task.delay(3, function()
+		local root = player.Parent and Net.GetRoot(player)
+		local current = Registry.DataService.Get(player)
+		if not root or not current then
+			return
+		end
+		local catchZone = Formulas.BestCatchableZone(current)
+		if MapLayout.ZoneAt(root.Position) > catchZone then
+			local zone = Zones[catchZone]
+			if Registry.ZoneService.TeleportTo(player, MapLayout.ZoneSpawn(catchZone)) then
+				Net.Notify(player, string.format("%s Fresh start! Catch weather in %s to power your vacuum back up.", zone.Icon, zone.Name), "Info")
+			end
+		end
+	end)
 	if unlocked then
 		Net.NotifyAll(
 			string.format("🌀 %s reached Climate Shift %d and unlocked the %s %s look!", player.DisplayName, data.Rebirths, unlocked.Icon, unlocked.Name),

@@ -9,7 +9,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
-if not RunService:IsStudio() then
+-- Studio only, and never in a published place: the test grants huge balances that would
+-- otherwise be saved to real player data and the live leaderboards
+if not RunService:IsStudio() or game.PlaceId ~= 0 then
 	return
 end
 
@@ -439,8 +441,14 @@ end)
 step("mega storm", function()
 	Command:InvokeServer("AddVolts", 1e13)
 	Remotes.BuyUpgrade:InvokeServer("Power", "Max")
-	Command:InvokeServer("Summon")
 	local state = ReplicatedStorage:WaitForChild("MegaStormState")
+	-- A scheduled storm may already be running (the first one comes 3 minutes after start)
+	local idleWait = 0
+	while state:GetAttribute("Phase") ~= "Idle" and idleWait < 200 do
+		task.wait(1)
+		idleWait += 1
+	end
+	Command:InvokeServer("Summon")
 	task.wait(1)
 	check("storm warning", state:GetAttribute("Phase") == "Warning", state:GetAttribute("Phase"))
 	task.wait(1)

@@ -187,7 +187,7 @@ Monetization.Products = {
 		Icon = "🌪️",
 		Price = 99,
 		Kind = "MegaStorm",
-		Description = "Summon a Mega Storm for the whole server in 20 seconds!",
+		Description = "Summon a Mega Storm for the whole server! It arrives in 20 seconds, or right after any storm that is already on its way.",
 	},
 }
 

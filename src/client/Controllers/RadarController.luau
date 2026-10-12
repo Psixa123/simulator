@@ -133,7 +133,7 @@ local function scan()
 	end
 	for _, model in cellFolder:GetChildren() do
 		local zoneId = model:GetAttribute("Zone")
-		if type(zoneId) == "number" and zoneId <= data.Zone and isRare(model:GetAttribute("Type")) then
+		if type(zoneId) == "number" and zoneId <= Formulas.BestCatchableZone(data) and isRare(model:GetAttribute("Type")) then
 			addMarker(model)
 		end
 	end
@@ -324,7 +324,7 @@ function RadarController.Start()
 		end
 	end)
 	cellFolder.ChildRemoved:Connect(removeMarker)
-	Registry.DataController.ObserveMany({ "Passes", "Zone" }, scan)
+	Registry.DataController.ObserveMany({ "Passes", "Zone", "Upgrades" }, scan)
 
 	while true do
 		update()

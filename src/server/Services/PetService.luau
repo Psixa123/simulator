@@ -20,12 +20,11 @@ local PetService = {}
 local rng = Random.new()
 local MAX_BULK_DELETE = 100 -- pets per "DeleteMany" request
 
+-- Only the pets that actually count (up to the slot limit) follow you around
 local function equippedString(data): string
 	local entries = {}
-	for _, pet in data.Pets do
-		if pet.Equipped then
-			table.insert(entries, pet.Id .. ":" .. Pets.Tiers[Pets.TierOf(pet)].Code)
-		end
+	for _, pet in Formulas.ActivePets(data) do
+		table.insert(entries, pet.Id .. ":" .. Pets.Tiers[Pets.TierOf(pet)].Code)
 	end
 	return table.concat(entries, ";")
 end

@@ -58,7 +58,9 @@ function StormSchedule.Upcoming(state: Instance, now: number, count: number)
 	local nextTime = state:GetAttribute("NextTime") or now
 	local rainbowTime = state:GetAttribute("RainbowTime") or StormSchedule.NextRainbow(now)
 	local queued = state:GetAttribute("Queued") or 0
+	local regularTime = state:GetAttribute("RegularTime") or nextTime
 	local current = StormSchedule.Current(state)
+	local currentSummoned = (state:GetAttribute("Summoner") or "") ~= ""
 	local list = {}
 
 	local finish -- when the current (or next) storm should be over
@@ -72,26 +74,34 @@ function StormSchedule.Upcoming(state: Instance, now: number, count: number)
 		end
 	end
 
-	-- The Rainbow Hurricane doesn't use up a storm from the regular rotation
-	local regularIndex = if current == rainbow then index else index % #settings.Types + 1
-	local function gap(): number
+	-- Mirrors MegaStormService's endStorm: queued summons follow QueueGap after a storm ends,
+	-- while regular storms stay on their own schedule (summoned storms don't move it)
+	local function after(finishedAt: number, wasSummoned: boolean): (number, boolean)
+		if not wasSummoned then
+			regularTime = finishedAt + settings.Interval
+		end
 		if queued > 0 then
 			queued -= 1
-			return StormSchedule.QueueGap
+			return finishedAt + StormSchedule.QueueGap, true
 		end
-		return settings.Interval
+		return math.max(regularTime, finishedAt + StormSchedule.QueueGap), false
 	end
 
-	local cursor = finish + gap()
+	-- The Rainbow Hurricane doesn't use up a storm from the regular rotation
+	local regularIndex = if current == rainbow then index else index % #settings.Types + 1
+	local cursor, summoned = after(finish, currentSummoned and current ~= rainbow)
 	while #list < count do
 		if StormSchedule.RainbowFirst(cursor, rainbowTime) then
+			if summoned then
+				queued += 1 -- the server pushes a summon that would overlap it to right after it
+			end
 			table.insert(list, { Time = rainbowTime, Type = rainbow, Exact = true })
-			cursor = rainbowTime + StormSchedule.Duration(rainbow) + gap()
+			cursor, summoned = after(rainbowTime + StormSchedule.Duration(rainbow), false)
 			rainbowTime = StormSchedule.NextRainbow(rainbowTime)
 		else
 			table.insert(list, { Time = cursor, Type = settings.Types[regularIndex], Exact = false })
 			regularIndex = regularIndex % #settings.Types + 1
-			cursor += settings.Duration + gap()
+			cursor, summoned = after(cursor + settings.Duration, summoned)
 		end
 	end
 	return list

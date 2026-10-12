@@ -280,6 +280,14 @@ local function petTick(player: Player, now: number)
 	end
 	state.Full = false
 
+	-- Pets rest while you stand on a sell pad, otherwise the pad would sell for them forever
+	-- (a free Remote Sell). Remote Sell owners keep their pets working.
+	if not Formulas.HasPass(data, "RemoteSell") and Registry.EconomyService.OnSellPad(root.Position) then
+		state.Target = 0
+		setPetTarget(player, 0)
+		return
+	end
+
 	local cell = targetId and cells[targetId]
 	if not cell then
 		cell = cells[state.Target]

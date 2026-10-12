@@ -9,7 +9,9 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
-if not RunService:IsStudio() then
+-- Studio only, and never in a published place: the test grants huge balances that would
+-- otherwise be saved to real player data and the live leaderboards
+if not RunService:IsStudio() or game.PlaceId ~= 0 then
 	return
 end
 
@@ -79,6 +81,8 @@ function handlers.GivePets(player, petId, count)
 end
 
 function handlers.Summon(player)
+	-- Keep the Rainbow Hurricane out of the way so the summon starts right away
+	Registry.MegaStormService.ScheduleRainbow(3600)
 	Registry.MegaStormService.Summon(player)
 	return true
 end

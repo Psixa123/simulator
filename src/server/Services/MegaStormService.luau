@@ -65,6 +65,7 @@ local function publish()
 	stateFolder:SetAttribute("StormKey", stormKey)
 	stateFolder:SetAttribute("RainbowTime", rainbowTime)
 	stateFolder:SetAttribute("Queued", #summonQueue)
+	stateFolder:SetAttribute("RegularTime", regularTime)
 end
 
 local function currentType()

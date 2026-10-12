@@ -230,8 +230,13 @@ To get a complete `.rbxl` you can open, share or publish:
 rojo build -o StormCatcher.rbxl
 ```
 
-This uses `default.project.json`. Anything in the `build/` folder is ignored by git, so
-`rojo build -o build\StormCatcher.rbxl` keeps your working copy clean.
+This uses `default.project.json`. Place files in a `build/` folder are ignored by git, so this keeps
+your working copy clean (Rojo doesn't create the folder for you):
+
+```powershell
+mkdir build
+rojo build -o build\StormCatcher.rbxl
+```
 
 ---
 
@@ -381,7 +386,12 @@ Open `StormCatcher_Test.rbxl` in Studio, press **Play** (F5) and watch the **Out
 prints `[HARNESS-C] PASS …` or a yellow `[HARNESS-C] FAIL …` warning, and the run ends with
 `[HARNESS-C] SUMMARY passed=… failed=…` (it takes a few minutes because it waits for the Mega Storm).
 The harness also throws one *"HARNESS deliberate error (ignore)"* on purpose, and prints `[SHOT] …` lines
-that an external screenshot tool can use. You can also run it live with `rojo serve test.project.json`.
+that an external screenshot tool can use.
+
+The harness only runs in an **unpublished** place (one opened from the `.rbxl` file, so
+`game.PlaceId` is 0). That's deliberate: it grants huge amounts of Volts, unlocks every biome and
+does a Climate Shift, which must never be saved to real player data or your live leaderboards.
+So don't `rojo serve test.project.json` into your published place; always use the built test file.
 
 > ⚠️ Never publish the test build: it contains a debug remote that gives Volts and pets.
 

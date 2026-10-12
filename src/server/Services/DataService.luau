@@ -27,6 +27,7 @@ local SESSION_KEYS = { Passes = true, GiftsClaimed = true, SessionStart = true }
 local PRIVATE_KEYS = { Receipts = true, Codes = true }
 
 local profiles = {} -- [Player] = { Data, Key, CanSave, Released, PlayTimeMark, Saving, UnsavedReceipts }
+local releasing = {} -- [UserId] = true while a leaving session's final save is running
 local store = nil
 local warnedStudio = false
 
@@ -248,6 +249,7 @@ local function finalSave(player: Player)
 		return
 	end
 	profile.Released = true
+	releasing[player.UserId] = true
 	DataService.PlayerLeaving:Fire(player, profile.Data)
 	-- Let a save that is already running finish first so it can't land after the release
 	local deadline = os.clock() + 10
@@ -256,15 +258,34 @@ local function finalSave(player: Player)
 	end
 	DataService.Save(player, true)
 	profiles[player] = nil
+	releasing[player.UserId] = nil
 end
 
 local loading = {} -- [Player] = true while their data is being fetched
+
+local function hasPreviousSession(player: Player): boolean
+	if releasing[player.UserId] then
+		return true
+	end
+	for other in profiles do
+		if other ~= player and other.UserId == player.UserId then
+			return true
+		end
+	end
+	return false
+end
 
 local function onPlayerAdded(player: Player)
 	if loading[player] or profiles[player] then
 		return
 	end
 	loading[player] = true
+	-- Rejoining this same server: our own session lock looks free, so wait for the previous
+	-- session to finish its final save first or we'd load (and later save over) older data
+	local deadline = os.clock() + 30
+	while player.Parent and os.clock() < deadline and hasPreviousSession(player) do
+		task.wait(0.1)
+	end
 	local data, err = loadFromStore(player)
 	loading[player] = nil
 	local canSave = data ~= nil
