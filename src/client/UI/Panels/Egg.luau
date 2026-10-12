@@ -244,7 +244,7 @@ function EggPanel.Build()
 
 	UI.Label({
 		Name = "Tip",
-		Text = "Pets multiply the energy you collect. Craft 5 of the same pet into a Golden one in the Pets menu!",
+		Text = "Pets catch weather for you and multiply your energy! Craft 5 of a pet into a Golden one, and 5 Golden into a Rainbow one 🌈",
 		Font = Theme.BodyFont,
 		TextColor3 = COLORS.SubText,
 		Size = UDim2.new(1, 0, 0, 34),

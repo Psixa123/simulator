@@ -70,22 +70,55 @@ end
 ---------------------------------------------------------------------------
 -- Pets
 ---------------------------------------------------------------------------
-function Formulas.PetBonus(petId: string, golden: boolean?): number
+-- tier: "Normal" | "Golden" | "Rainbow" (anything Pets.TierOf understands)
+function Formulas.TierMultiplier(tier): number
+	local tierName = Pets.TierOf(tier)
+	if tierName == "Rainbow" then
+		return GameConfig.Pets.RainbowMultiplier
+	elseif tierName == "Golden" then
+		return GameConfig.Pets.GoldenMultiplier
+	end
+	return 1
+end
+
+function Formulas.PetBonus(petId: string, tier): number
 	local pet = Pets.Pets[petId]
 	if not pet then
 		return 0
 	end
-	return pet.Bonus * (if golden then GameConfig.Pets.GoldenMultiplier else 1)
+	return pet.Bonus * Formulas.TierMultiplier(tier)
 end
 
 function Formulas.PetMultiplier(data): number
 	local total = 1
 	for _, pet in data.Pets or {} do
 		if pet.Equipped then
-			total += Formulas.PetBonus(pet.Id, pet.Golden)
+			total += Formulas.PetBonus(pet.Id, Pets.TierOf(pet))
 		end
 	end
 	return total
+end
+
+-- Fraction of your vacuum Power one equipped pet catches weather with
+function Formulas.PetCatchShare(tier): number
+	local settings = GameConfig.Pets.AutoCatch
+	return settings.PowerPerPet * (settings.TierFactor[Pets.TierOf(tier)] or 1)
+end
+
+-- Power (per catch tick) your equipped pets drain weather with on their own
+function Formulas.PetCatchPower(data): number
+	local share = 0
+	for _, pet in data.Pets or {} do
+		if pet.Equipped then
+			share += Formulas.PetCatchShare(Pets.TierOf(pet))
+		end
+	end
+	return Formulas.Power(data) * share
+end
+
+-- How far from you pets look for weather to catch
+function Formulas.PetRange(data): number
+	return Formulas.Range(data) + GameConfig.Pets.AutoCatch.ExtraRange
 end
 
 function Formulas.EquipSlots(data): number

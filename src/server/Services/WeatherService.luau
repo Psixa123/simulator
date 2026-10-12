@@ -2,6 +2,7 @@
 -- Spawns weather cells in every zone and runs the authoritative vacuum simulation.
 -- Clients ask to start/stop catching a target; the server validates range, zone access,
 -- power and tank space every tick, drains the cell and fills the player's tank.
+-- Equipped pets also drain weather on their own (the "PetTarget" character attribute).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -28,6 +29,7 @@ WeatherService.MegaTarget = MEGA_TARGET
 local cells = {} -- [id] = cell
 local zoneCells = {} -- [zoneId] = { [id] = cell }
 local catchers = {} -- [Player] = targetId
+local petStates = {} -- [Player] = { Target = cellId, NextSearch = os.clock(), Full = boolean }
 local nextId = 0
 local rng = Random.new()
 local folder: Folder
@@ -175,6 +177,129 @@ local function tankFullMessage(player: Player)
 	Net.NotifyThrottled(player, "TankFull", "🛢️ Your tank is full! Sell it at a Weather Lab (or press SELL).", "Warning", 6)
 end
 
+-- Drains up to `power` from a cell into the player's tank (shared by the vacuum and pets).
+-- Returns false when the tank is full and can't be auto-sold, so the caller should stop.
+local function drainCell(player: Player, data, cell, power: number, now: number): boolean
+	local remoteSell = Formulas.HasPass(data, "RemoteSell")
+	local capacity = Formulas.TankCapacity(data)
+	if data.Energy >= capacity - 1e-6 then
+		if remoteSell then
+			Registry.EconomyService.Sell(player, "Auto")
+		else
+			return false
+		end
+	end
+
+	local multiplier = Formulas.EnergyMultiplier(data, now)
+	local space = capacity - data.Energy
+	local drained = math.min(cell.Health, power, space / multiplier)
+	if drained > 0 then
+		cell.Health -= drained
+		local added = Registry.EconomyService.AddEnergy(player, drained * multiplier, cell.Value)
+		cell.Contributors[player] = (cell.Contributors[player] or 0) + added
+
+		if cell.Health <= 1e-6 then
+			popCell(cell)
+		else
+			cell.Model:SetAttribute("Health", cell.Health)
+		end
+	end
+
+	if remoteSell and data.Energy >= capacity - 1e-6 then
+		Registry.EconomyService.Sell(player, "Auto")
+	end
+	return true
+end
+
+-- Zone unlocked and vacuum strong enough for the cell's zone
+local function canCatchCell(data, cell): boolean
+	return cell.Zone <= data.Zone and Formulas.Power(data) >= Zones[cell.Zone].MinPower
+end
+
+---------------------------------------------------------------------------
+-- Pets catch weather for you
+---------------------------------------------------------------------------
+local function setPetTarget(player: Player, targetId: number)
+	local character = player.Character
+	if character and character:GetAttribute("PetTarget") ~= targetId then
+		character:SetAttribute("PetTarget", targetId)
+	end
+end
+
+-- Nearest catchable cell within `range` (only the player's zone and its neighbours)
+local function findPetCell(data, position: Vector3, range: number)
+	local zoneId = MapLayout.ZoneAt(position)
+	local best, bestDistance = nil, range
+	for id = math.max(1, zoneId - 1), math.min(#Zones, zoneId + 1) do
+		for _, cell in zoneCells[id] do
+			local distance = (cell.Position - position).Magnitude
+			if distance <= bestDistance and canCatchCell(data, cell) then
+				best, bestDistance = cell, distance
+			end
+		end
+	end
+	return best
+end
+
+-- Equipped pets drain the player's vacuum target (cell or Mega Storm), otherwise the nearest
+-- cell in pet range. The chosen cell is kept until it pops or goes out of range; when idle
+-- we only search again every SearchInterval seconds.
+local function petTick(player: Player, now: number)
+	local state = petStates[player]
+	if not state then
+		state = { Target = 0, NextSearch = 0, Full = false }
+		petStates[player] = state
+	end
+
+	local data = Registry.DataService.Get(player)
+	local root = Net.GetRoot(player)
+	local power = if data then Formulas.PetCatchPower(data) else 0
+	if not data or not root or power <= 0 then
+		state.Target = 0
+		setPetTarget(player, 0)
+		return
+	end
+
+	local targetId = catchers[player]
+	if targetId == MEGA_TARGET then
+		state.Target = 0
+		setPetTarget(player, if Registry.MegaStormService.Drain(player, data, root, power) then MEGA_TARGET else 0)
+		return
+	end
+
+	-- Pets stop when the tank is full (Remote Sell empties it inside drainCell instead)
+	if Registry.EconomyService.IsTankFull(data) and not Formulas.HasPass(data, "RemoteSell") then
+		if not state.Full and state.Target ~= 0 then
+			tankFullMessage(player)
+		end
+		state.Full = true
+		setPetTarget(player, 0)
+		return
+	end
+	state.Full = false
+
+	local cell = targetId and cells[targetId]
+	if not cell then
+		cell = cells[state.Target]
+		local range = Formulas.PetRange(data)
+		if cell and ((cell.Position - root.Position).Magnitude > range + GameConfig.CatchRangeLeeway or not canCatchCell(data, cell)) then
+			cell = nil
+		end
+		local clock = os.clock()
+		if not cell and (state.Target ~= 0 or clock >= state.NextSearch) then
+			cell = findPetCell(data, root.Position, range)
+			state.NextSearch = clock + GameConfig.Pets.AutoCatch.SearchInterval
+		end
+	end
+
+	state.Target = if cell then cell.Id else 0
+	if cell and drainCell(player, data, cell, power, now) then
+		setPetTarget(player, cell.Id)
+	else
+		setPetTarget(player, 0)
+	end
+end
+
 local function tick()
 	local now = os.time()
 	for player, targetId in catchers do
@@ -203,36 +328,14 @@ local function tick()
 			continue
 		end
 
-		local remoteSell = Formulas.HasPass(data, "RemoteSell")
-		local capacity = Formulas.TankCapacity(data)
-		if data.Energy >= capacity - 1e-6 then
-			if remoteSell then
-				Registry.EconomyService.Sell(player, "Auto")
-			else
-				WeatherService.StopCatch(player)
-				tankFullMessage(player)
-				continue
-			end
+		if not drainCell(player, data, cell, Formulas.Power(data), now) then
+			WeatherService.StopCatch(player)
+			tankFullMessage(player)
 		end
+	end
 
-		local multiplier = Formulas.EnergyMultiplier(data, now)
-		local space = capacity - data.Energy
-		local drained = math.min(cell.Health, Formulas.Power(data), space / multiplier)
-		if drained > 0 then
-			cell.Health -= drained
-			local added = Registry.EconomyService.AddEnergy(player, drained * multiplier, cell.Value)
-			cell.Contributors[player] = (cell.Contributors[player] or 0) + added
-
-			if cell.Health <= 1e-6 then
-				popCell(cell)
-			else
-				cell.Model:SetAttribute("Health", cell.Health)
-			end
-		end
-
-		if remoteSell and data.Energy >= capacity - 1e-6 then
-			Registry.EconomyService.Sell(player, "Auto")
-		end
+	for _, player in Players:GetPlayers() do
+		petTick(player, now)
 	end
 end
 
@@ -308,6 +411,7 @@ function WeatherService.Init()
 
 	Players.PlayerRemoving:Connect(function(player)
 		catchers[player] = nil
+		petStates[player] = nil
 	end)
 end
 

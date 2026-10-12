@@ -1,5 +1,5 @@
 --!nonstrict
--- Pets panel: inventory (equip, golden crafting, delete) and the pet index.
+-- Pets panel: inventory (equip, golden/rainbow crafting, delete) and the pet index.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -10,6 +10,7 @@ local Pets = require(Shared.Config.Pets)
 local Formulas = require(Shared.Formulas)
 local Format = require(Shared.Util.Format)
 local Remotes = require(Shared.Remotes)
+local PetModels = require(Shared.Models.PetModels)
 
 local Registry = require(script.Parent.Parent.Parent.Registry)
 local UI = require(script.Parent.Parent.UI)
@@ -20,6 +21,11 @@ local Confirm = require(script.Parent.Parent.Overlays.Confirm)
 local PetsPanel = {}
 
 local COLORS = Theme.Colors
+local RAINBOW_CARD = Color3.fromRGB(96, 66, 150)
+
+local function rainbowGradient(parent: Instance): UIGradient
+	return UI.Create("UIGradient", { Name = "Rainbow", Color = PetModels.RainbowSequence, Parent = parent })
+end
 
 local function petAction(action: string, argument: any?)
 	local result = Remotes.PetAction:InvokeServer(action, argument)
@@ -81,7 +87,7 @@ function PetsPanel.Build()
 
 	local emptyHint = UI.Label({
 		Name = "Empty",
-		Text = "You don't have any pets yet!\nHatch an egg in any zone to get your first Stormling.",
+		Text = "You don't have any pets yet!\nHatch an egg in any zone to get your first Stormling. Pets catch weather for you! 🌪️",
 		Font = Theme.BodyFont,
 		TextColor3 = COLORS.SubText,
 		Size = UDim2.new(1, -330, 0, 60),
@@ -118,6 +124,19 @@ function PetsPanel.Build()
 			petAction("UnequipAll")
 		end,
 	})
+	local catchTip = UI.Label({
+		Name = "CatchTip",
+		Text = "",
+		Font = Theme.BodyFont,
+		TextColor3 = COLORS.SubText,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -630, 0, 46),
+		Position = UDim2.new(0, 362, 1, 0),
+		AnchorPoint = Vector2.new(0, 1),
+		MaxTextSize = 15,
+		Stroke = 1.5,
+		Parent = inventoryPage,
+	})
 
 	local detail = UI.Card({
 		Name = "Detail",
@@ -129,14 +148,26 @@ function PetsPanel.Build()
 	local viewHolder = UI.Create("Frame", {
 		Name = "View",
 		BackgroundColor3 = COLORS.Inset,
-		Size = UDim2.new(1, -20, 0, 168),
+		Size = UDim2.new(1, -20, 0, 148),
 		Position = UDim2.fromOffset(10, 10),
 		Parent = detail,
 		UI.Corner(12),
 	})
-	local nameLabel = UI.Label({ Name = "PetName", Text = "", Size = UDim2.new(1, -16, 0, 30), Position = UDim2.fromOffset(8, 184), MaxTextSize = 24, Parent = detail })
-	local rarityLabel = UI.Label({ Name = "Rarity", Text = "", Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 214), MaxTextSize = 18, Parent = detail })
-	local bonusLabel = UI.Label({ Name = "Bonus", Text = "", TextColor3 = COLORS.Energy, Size = UDim2.new(1, -16, 0, 24), Position = UDim2.fromOffset(8, 238), MaxTextSize = 20, Parent = detail })
+	local nameLabel = UI.Label({ Name = "PetName", Text = "", Size = UDim2.new(1, -16, 0, 30), Position = UDim2.fromOffset(8, 164), MaxTextSize = 24, Parent = detail })
+	local nameGradient = rainbowGradient(nameLabel)
+	local rarityLabel = UI.Label({ Name = "Rarity", Text = "", Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 194), MaxTextSize = 18, Parent = detail })
+	local bonusLabel = UI.Label({ Name = "Bonus", Text = "", TextColor3 = COLORS.Energy, Size = UDim2.new(1, -16, 0, 24), Position = UDim2.fromOffset(8, 218), MaxTextSize = 20, Parent = detail })
+	local catchLabel = UI.Label({
+		Name = "Catch",
+		Text = "",
+		Font = Theme.BodyFont,
+		TextColor3 = COLORS.Power,
+		Size = UDim2.new(1, -16, 0, 22),
+		Position = UDim2.fromOffset(8, 244),
+		MaxTextSize = 15,
+		Stroke = 1.5,
+		Parent = detail,
+	})
 	local selectHint = UI.Label({
 		Name = "SelectHint",
 		Text = "Select a pet to see its details",
@@ -153,7 +184,7 @@ function PetsPanel.Build()
 	local selectedUid: string? = nil
 	local detailView = nil
 	local detailKey = nil
-	local equipButton, goldenButton, deleteButton
+	local equipButton, goldenButton, rainbowButton, deleteButton
 
 	local function findPet(uid: string?)
 		local data = Registry.DataController.Data
@@ -168,11 +199,12 @@ function PetsPanel.Build()
 		return nil
 	end
 
-	local function countCopies(petId: string): number
+	-- How many copies of a pet the player owns in one tier ("Normal" / "Golden" / "Rainbow")
+	local function countCopies(petId: string, tier: string): number
 		local data = Registry.DataController.Data
 		local count = 0
 		for _, pet in data.Pets do
-			if pet.Id == petId and not pet.Golden then
+			if pet.Id == petId and Pets.TierOf(pet) == tier then
 				count += 1
 			end
 		end
@@ -182,11 +214,14 @@ function PetsPanel.Build()
 	local function refreshDetail()
 		local pet = findPet(selectedUid)
 		local hasPet = pet ~= nil
+		local tier = if pet then Pets.TierOf(pet) else "Normal"
 		nameLabel.Visible = hasPet
 		rarityLabel.Visible = hasPet
 		bonusLabel.Visible = hasPet
+		catchLabel.Visible = hasPet
 		equipButton.Visible = hasPet
-		goldenButton.Visible = hasPet and not pet.Golden
+		goldenButton.Visible = hasPet and tier == "Normal"
+		rainbowButton.Visible = hasPet and tier == "Golden"
 		deleteButton.Visible = hasPet
 		selectHint.Visible = not hasPet
 
@@ -207,28 +242,35 @@ function PetsPanel.Build()
 
 		local def = Pets.Pets[pet.Id]
 		local rarity = Pets.Rarities[def.Rarity]
-		local key = pet.Id .. (if pet.Golden then "_golden" else "")
+		local key = pet.Id .. ":" .. tier
 		if key ~= detailKey then
 			if detailView then
 				detailView.Destroy()
 			end
-			detailView = Viewport.Pet(pet.Id, pet.Golden, { Parent = viewHolder, Zoom = 1.2 })
+			detailView = Viewport.Pet(pet.Id, tier, { Parent = viewHolder, Zoom = 1.2 })
 			detailKey = key
 		end
 
-		nameLabel.Text = (if pet.Golden then "Golden " else "") .. def.Name
-		nameLabel.TextColor3 = if pet.Golden then COLORS.Volts else COLORS.Text
+		nameLabel.Text = Pets.DisplayName(pet.Id, tier)
+		nameLabel.TextColor3 = if tier == "Golden" then COLORS.Volts elseif tier == "Rainbow" then Color3.new(1, 1, 1) else COLORS.Text
+		nameGradient.Enabled = tier == "Rainbow"
 		rarityLabel.Text = rarity.Name
 		rarityLabel.TextColor3 = rarity.Color
-		bonusLabel.Text = Format.Bonus(Formulas.PetBonus(pet.Id, pet.Golden)) .. " Energy"
+		bonusLabel.Text = Format.Bonus(Formulas.PetBonus(pet.Id, tier)) .. " Energy"
+		catchLabel.Text = "🌪️ Auto-catches with " .. Format.Chance(Formulas.PetCatchShare(tier)) .. " of your Power"
 
 		UI.SetButtonText(equipButton, if pet.Equipped then "Unequip" else "Equip")
 		UI.SetButtonColor(equipButton, if pet.Equipped then "Gray" else "Green")
 
-		local copies = countCopies(pet.Id)
+		local copies = countCopies(pet.Id, "Normal")
 		local required = GameConfig.Pets.GoldenRequirement
 		UI.SetButtonText(goldenButton, string.format("⭐ Make Golden (%d/%d)", math.min(copies, required), required))
 		UI.SetButtonColor(goldenButton, if copies >= required then "Yellow" else "Gray")
+
+		local goldenCopies = countCopies(pet.Id, "Golden")
+		local rainbowRequired = GameConfig.Pets.RainbowRequirement
+		UI.SetButtonText(rainbowButton, string.format("🌈 Make Rainbow (%d/%d)", math.min(goldenCopies, rainbowRequired), rainbowRequired))
+		UI.SetButtonColor(rainbowButton, if goldenCopies >= rainbowRequired then "Pink" else "Gray")
 	end
 
 	local function select(uid: string?)
@@ -251,6 +293,38 @@ function PetsPanel.Build()
 			end
 		end,
 	})
+	-- tier = "Golden" (from 5 normal copies) or "Rainbow" (from 5 golden copies)
+	local function craft(tier: string)
+		local pet = findPet(selectedUid)
+		if not pet then
+			return
+		end
+		local def = Pets.Pets[pet.Id]
+		local rainbow = tier == "Rainbow"
+		local required = if rainbow then GameConfig.Pets.RainbowRequirement else GameConfig.Pets.GoldenRequirement
+		if countCopies(pet.Id, if rainbow then "Golden" else "Normal") < required then
+			local message = if rainbow then "You need %d Golden %s to craft a rainbow one! 🌈" else "You need %d %s to craft a golden one!"
+			Registry.InterfaceController.Notify(string.format(message, required, def.Name), "Error")
+			return
+		end
+		local result = petAction(tier, pet.Id)
+		if result and result.Ok then
+			selectedUid = result.Uid
+			Registry.SoundController.Play("Success", if rainbow then 1.25 else 1.15)
+			Registry.EffectsController.Confetti(if rainbow then 110 else 60)
+			Registry.InterfaceController.Notify(
+				string.format(
+					"%s %s created! (%s bonus)",
+					Pets.Tiers[tier].Icon,
+					Pets.DisplayName(pet.Id, tier),
+					Format.Multiplier(Formulas.TierMultiplier(tier))
+				),
+				"Reward"
+			)
+			refreshDetail()
+		end
+	end
+
 	goldenButton = UI.Button({
 		Name = "Golden",
 		Text = "⭐ Make Golden",
@@ -260,24 +334,19 @@ function PetsPanel.Build()
 		MaxTextSize = 18,
 		Parent = detail,
 		OnClick = function()
-			local pet = findPet(selectedUid)
-			if not pet then
-				return
-			end
-			local def = Pets.Pets[pet.Id]
-			local required = GameConfig.Pets.GoldenRequirement
-			if countCopies(pet.Id) < required then
-				Registry.InterfaceController.Notify(string.format("You need %d %s to craft a golden one!", required, def.Name), "Error")
-				return
-			end
-			local result = petAction("Golden", pet.Id)
-			if result and result.Ok then
-				selectedUid = result.Uid
-				Registry.SoundController.Play("Success", 1.15)
-				Registry.EffectsController.Confetti(60)
-				Registry.InterfaceController.Notify("⭐ Golden " .. def.Name .. " created! (" .. Format.Multiplier(GameConfig.Pets.GoldenMultiplier) .. " bonus)", "Reward")
-				refreshDetail()
-			end
+			craft("Golden")
+		end,
+	})
+	rainbowButton = UI.Button({
+		Name = "Rainbow",
+		Text = "🌈 Make Rainbow",
+		Color = "Pink",
+		Size = UDim2.new(1, -20, 0, 46),
+		Position = UDim2.fromOffset(10, 324),
+		MaxTextSize = 18,
+		Parent = detail,
+		OnClick = function()
+			craft("Rainbow")
 		end,
 	})
 	deleteButton = UI.Button({
@@ -293,10 +362,9 @@ function PetsPanel.Build()
 			if not pet then
 				return
 			end
-			local def = Pets.Pets[pet.Id]
 			Confirm.Show({
 				Title = "Delete pet?",
-				Text = "Delete " .. (if pet.Golden then "Golden " else "") .. def.Name .. " forever?\nThis can't be undone.",
+				Text = "Delete " .. Pets.DisplayName(pet.Id, Pets.TierOf(pet)) .. " forever?\nThis can't be undone.",
 				ConfirmText = "Delete",
 				Color = "Red",
 				OnConfirm = function()
@@ -309,6 +377,8 @@ function PetsPanel.Build()
 	local function createSlot(pet)
 		local def = Pets.Pets[pet.Id] or Pets.Pets.Puffling
 		local rarity = Pets.Rarities[def.Rarity]
+		local tier = Pets.TierOf(pet)
+		local rainbow = tier == "Rainbow"
 		local button = UI.Create("TextButton", {
 			Name = pet.Uid,
 			AutoButtonColor = false,
@@ -316,19 +386,22 @@ function PetsPanel.Build()
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			Parent = grid,
 			UI.Corner(14),
-			UI.Gradient(COLORS.Card, COLORS.CardDark, 90),
+			UI.Gradient(if rainbow then RAINBOW_CARD else COLORS.Card, COLORS.CardDark, 90),
 		})
-		local stroke = UI.Stroke(3, rarity.Color)
+		-- Rainbow cards get a shimmering rainbow outline (the stroke color tints the gradient)
+		local strokeColor = if rainbow then Color3.new(1, 1, 1) else rarity.Color
+		local stroke = UI.Stroke(3, strokeColor)
 		stroke.Parent = button
+		local shimmer = if rainbow then rainbowGradient(stroke) else nil
 
-		Viewport.Pet(pet.Id, pet.Golden, {
+		Viewport.Pet(pet.Id, tier, {
 			Size = UDim2.new(1, -8, 1, -30),
 			Position = UDim2.fromOffset(4, 2),
 			Parent = button,
 		})
 		UI.Label({
 			Name = "Bonus",
-			Text = Format.Bonus(Formulas.PetBonus(pet.Id, pet.Golden)),
+			Text = Format.Bonus(Formulas.PetBonus(pet.Id, tier)),
 			TextColor3 = COLORS.Energy,
 			Size = UDim2.new(1, -8, 0, 22),
 			Position = UDim2.new(0, 4, 1, -4),
@@ -349,8 +422,8 @@ function PetsPanel.Build()
 			UI.Stroke(2.5),
 		})
 		UI.Label({ Text = "✓", Size = UDim2.fromScale(0.72, 0.72), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 4, Parent = equipped })
-		if pet.Golden then
-			UI.Label({ Name = "Golden", Text = "⭐", Stroke = false, Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -4, 0, 4), AnchorPoint = Vector2.new(1, 0), ZIndex = 3, Parent = button })
+		if tier ~= "Normal" then
+			UI.Label({ Name = tier, Text = Pets.Tiers[tier].Icon, Stroke = false, Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -4, 0, 4), AnchorPoint = Vector2.new(1, 0), ZIndex = 3, Parent = button })
 		end
 
 		UI.Bounce(button, 1.04)
@@ -359,7 +432,7 @@ function PetsPanel.Build()
 			select(pet.Uid)
 		end)
 
-		return { Button = button, Stroke = stroke, RarityColor = rarity.Color, Equipped = equipped }
+		return { Button = button, Stroke = stroke, RarityColor = strokeColor, Equipped = equipped, Shimmer = shimmer }
 	end
 
 	local function refreshInventory()
@@ -372,8 +445,8 @@ function PetsPanel.Build()
 			if a.Equipped ~= b.Equipped then
 				return a.Equipped
 			end
-			local bonusA = Formulas.PetBonus(a.Id, a.Golden)
-			local bonusB = Formulas.PetBonus(b.Id, b.Golden)
+			local bonusA = Formulas.PetBonus(a.Id, Pets.TierOf(a))
+			local bonusB = Formulas.PetBonus(b.Id, Pets.TierOf(b))
 			if bonusA ~= bonusB then
 				return bonusA > bonusB
 			end
@@ -410,6 +483,10 @@ function PetsPanel.Build()
 			GameConfig.Pets.MaxStorage,
 			Format.Multiplier(Formulas.PetMultiplier(data))
 		)
+		local catchShare = Formulas.PetCatchPower(data) / math.max(1, Formulas.Power(data))
+		catchTip.Text = if catchShare > 0
+			then "🌪️ Your equipped pets catch weather for you with +" .. Format.Chance(catchShare) .. " Power!"
+			else "🌪️ Equip pets and they'll catch weather for you!"
 		refreshDetail()
 	end
 
@@ -529,6 +606,15 @@ function PetsPanel.Build()
 	RunService.RenderStepped:Connect(function()
 		if detailView and window.Frame.Visible then
 			detailView.SetRotation(os.clock() * 0.9)
+		end
+		if window.Frame.Visible and inventoryPage.Visible then
+			local rotation = (os.clock() * 90) % 360
+			nameGradient.Rotation = rotation
+			for _, slot in slots do
+				if slot.Shimmer then
+					slot.Shimmer.Rotation = rotation
+				end
+			end
 		end
 	end)
 

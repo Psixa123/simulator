@@ -1,5 +1,5 @@
 --!nonstrict
--- Eggs, hatching, and managing pets (equip, unequip, equip best, delete, golden crafting).
+-- Eggs, hatching, and managing pets (equip, unequip, equip best, delete, golden/rainbow crafting).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,7 +23,7 @@ local function equippedString(data): string
 	local entries = {}
 	for _, pet in data.Pets do
 		if pet.Equipped then
-			table.insert(entries, pet.Id .. ":" .. (if pet.Golden then "1" else "0"))
+			table.insert(entries, pet.Id .. ":" .. Pets.Tiers[Pets.TierOf(pet)].Code)
 		end
 	end
 	return table.concat(entries, ";")
@@ -61,7 +61,7 @@ end
 local function equipBest(data)
 	local sorted = table.clone(data.Pets)
 	table.sort(sorted, function(a, b)
-		return Formulas.PetBonus(a.Id, a.Golden) > Formulas.PetBonus(b.Id, b.Golden)
+		return Formulas.PetBonus(a.Id, Pets.TierOf(a)) > Formulas.PetBonus(b.Id, Pets.TierOf(b))
 	end)
 	local slots = Formulas.EquipSlots(data)
 	for index, pet in sorted do
@@ -70,15 +70,18 @@ local function equipBest(data)
 end
 
 -- Adds a pet without replicating (callers batch their updates). Returns entry, isNew.
-function PetService.AddPet(player: Player, petId: string, golden: boolean?)
+-- tier: "Normal" | "Golden" | "Rainbow" (true still means Golden)
+function PetService.AddPet(player: Player, petId: string, tier)
 	local data = Registry.DataService.Get(player)
 	if not data or not Pets.Pets[petId] or #data.Pets >= GameConfig.Pets.MaxStorage then
 		return nil, false
 	end
+	local tierName = Pets.TierOf(tier)
 	local entry = {
 		Uid = "p" .. data.NextPetId,
 		Id = petId,
-		Golden = golden == true,
+		Golden = tierName == "Golden",
+		Rainbow = tierName == "Rainbow",
 		Equipped = false,
 	}
 	data.NextPetId += 1
@@ -94,9 +97,9 @@ function PetService.AddPet(player: Player, petId: string, golden: boolean?)
 end
 
 -- Gives a pet and replicates right away (rewards, Mega Storm drops)
-function PetService.GivePet(player: Player, petId: string, golden: boolean?)
+function PetService.GivePet(player: Player, petId: string, tier)
 	local data = Registry.DataService.Get(player)
-	local entry, isNew = PetService.AddPet(player, petId, golden)
+	local entry, isNew = PetService.AddPet(player, petId, tier)
 	if entry and data then
 		Registry.DataService.Replicate(player, "Index")
 		refresh(player, data)
@@ -176,6 +179,59 @@ function PetService.Hatch(player: Player, eggId: string, count: number?, free: b
 	return { Ok = true, Egg = eggId, Results = results }
 end
 
+-- What each crafted tier is made from (5 Normal -> Golden, 5 Golden -> Rainbow)
+local RECIPES = {
+	Golden = { From = "Normal", Requirement = GameConfig.Pets.GoldenRequirement, Message = "You need %d %s to craft a golden one!" },
+	Rainbow = { From = "Golden", Requirement = GameConfig.Pets.RainbowRequirement, Message = "You need %d Golden %s to craft a rainbow one! 🌈" },
+}
+
+-- Turns `Requirement` copies of a pet in the recipe's From tier into one pet of `tier`.
+-- Unequipped copies are used first; the new pet stays equipped if any used copy was.
+local function craft(player: Player, data, petId, tier: string)
+	local recipe = RECIPES[tier]
+	local def = type(petId) == "string" and Pets.Pets[petId]
+	if not recipe or not def then
+		return Net.Fail("Invalid pet.")
+	end
+	local required = recipe.Requirement
+	local candidates = {}
+	for _, pet in data.Pets do
+		if pet.Id == petId and Pets.TierOf(pet) == recipe.From then
+			table.insert(candidates, pet)
+		end
+	end
+	if #candidates < required then
+		return Net.Fail(string.format(recipe.Message, required, def.Name))
+	end
+	table.sort(candidates, function(a, b)
+		return (if a.Equipped then 1 else 0) < (if b.Equipped then 1 else 0)
+	end)
+	local remove = {}
+	local wasEquipped = false
+	for index = 1, required do
+		remove[candidates[index]] = true
+		wasEquipped = wasEquipped or candidates[index].Equipped
+	end
+	local kept = {}
+	for _, pet in data.Pets do
+		if not remove[pet] then
+			table.insert(kept, pet)
+		end
+	end
+	data.Pets = kept
+	local entry = {
+		Uid = "p" .. data.NextPetId,
+		Id = petId,
+		Golden = tier == "Golden",
+		Rainbow = tier == "Rainbow",
+		Equipped = wasEquipped,
+	}
+	data.NextPetId += 1
+	table.insert(data.Pets, entry)
+	refresh(player, data)
+	return { Ok = true, Uid = entry.Uid }
+end
+
 local function petAction(player: Player, action: string, argument)
 	local data = Registry.DataService.Get(player)
 	if not data then
@@ -211,42 +267,8 @@ local function petAction(player: Player, action: string, argument)
 		for _, pet in data.Pets do
 			pet.Equipped = false
 		end
-	elseif action == "Golden" then
-		local def = type(argument) == "string" and Pets.Pets[argument]
-		if not def then
-			return Net.Fail("Invalid pet.")
-		end
-		local required = GameConfig.Pets.GoldenRequirement
-		local candidates = {}
-		for _, pet in data.Pets do
-			if pet.Id == argument and not pet.Golden then
-				table.insert(candidates, pet)
-			end
-		end
-		if #candidates < required then
-			return Net.Fail(string.format("You need %d %s to craft a golden one!", required, def.Name))
-		end
-		table.sort(candidates, function(a, b)
-			return (if a.Equipped then 1 else 0) < (if b.Equipped then 1 else 0)
-		end)
-		local remove = {}
-		local wasEquipped = false
-		for index = 1, required do
-			remove[candidates[index]] = true
-			wasEquipped = wasEquipped or candidates[index].Equipped
-		end
-		local kept = {}
-		for _, pet in data.Pets do
-			if not remove[pet] then
-				table.insert(kept, pet)
-			end
-		end
-		data.Pets = kept
-		local entry = { Uid = "p" .. data.NextPetId, Id = argument, Golden = true, Equipped = wasEquipped }
-		data.NextPetId += 1
-		table.insert(data.Pets, entry)
-		refresh(player, data)
-		return { Ok = true, Uid = entry.Uid }
+	elseif action == "Golden" or action == "Rainbow" then
+		return craft(player, data, argument, action)
 	else
 		return Net.Fail("Unknown action.")
 	end

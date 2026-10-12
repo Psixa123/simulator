@@ -39,11 +39,12 @@ local function frame(camera: Camera, model: Model, zoom: number?)
 	camera.CFrame = CFrame.lookAt(center + Vector3.new(0, radius * 0.35, -distance), center)
 end
 
--- Shows a pet. Returns { Frame, Model, SetRotation(angle), Destroy() }
-function Viewport.Pet(petId: string, golden: boolean?, props)
+-- Shows a pet. tier = "Normal" | "Golden" | "Rainbow" (or a golden boolean).
+-- Returns { Frame, Model, SetRotation(angle), Destroy() }
+function Viewport.Pet(petId: string, tier, props)
 	props = props or {}
 	local viewport, camera = newViewport(props)
-	local model = PetModels.Build(petId, golden, { Effects = false })
+	local model = PetModels.Build(petId, tier, { Effects = false })
 	model:PivotTo(CFrame.Angles(0, math.rad(props.Angle or 20), 0))
 	model.Parent = viewport
 	frame(camera, model, props.Zoom)

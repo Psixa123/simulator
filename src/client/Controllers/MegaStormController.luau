@@ -207,6 +207,9 @@ function MegaStormController.Start()
 			local data = Registry.DataController.Data
 			if data and character and character:GetAttribute("CatchTarget") == -1 and MegaStormController.IsActive() then
 				contribution += Formulas.Power(data)
+				if character:GetAttribute("PetTarget") == -1 then
+					contribution += Formulas.PetCatchPower(data)
+				end
 			end
 		end
 	end)

@@ -1,5 +1,5 @@
 --!nonstrict
--- Stormlings: pets that follow you and multiply the energy you collect.
+-- Stormlings: pets that follow you, catch weather for you and multiply the energy you collect.
 -- Bonus is additive: total energy multiplier = 1 + sum of equipped pet bonuses.
 -- Look describes how Shared/Models/PetModels builds the pet out of parts.
 
@@ -195,6 +195,41 @@ end
 function Pets.RarityOf(petId: string)
 	local pet = Pets.Pets[petId]
 	return pet and Pets.Rarities[pet.Rarity]
+end
+
+-- Pet tiers: 5 of the same pet craft a Golden one, 5 Golden craft a Rainbow one
+-- (requirements and multipliers live in GameConfig.Pets). Saved pets store their tier as
+-- Golden = true or Rainbow = true (never both). Code is used in the "EquippedPets" attribute.
+Pets.Tiers = {
+	Normal = { Order = 1, Name = "Normal", Prefix = "", Icon = "", Code = "0", Color = rgb(255, 255, 255) },
+	Golden = { Order = 2, Name = "Golden", Prefix = "Golden ", Icon = "⭐", Code = "1", Color = rgb(255, 214, 64) },
+	Rainbow = { Order = 3, Name = "Rainbow", Prefix = "Rainbow ", Icon = "🌈", Code = "2", Color = rgb(255, 150, 230) },
+}
+
+Pets.TierCodes = {} -- [code] = tier name
+for name, tier in Pets.Tiers do
+	Pets.TierCodes[tier.Code] = name
+end
+
+-- Tier name of a saved pet ({ Golden, Rainbow }), a tier name, or a legacy "golden" boolean
+function Pets.TierOf(value): string
+	if type(value) == "table" then
+		if value.Rainbow then
+			return "Rainbow"
+		end
+		return if value.Golden then "Golden" else "Normal"
+	elseif value == true then
+		return "Golden"
+	elseif type(value) == "string" and Pets.Tiers[value] then
+		return value
+	end
+	return "Normal"
+end
+
+-- "Rainbow Prism", "Golden Puffling", "Puffling"
+function Pets.DisplayName(petId: string, tier): string
+	local pet = Pets.Pets[petId]
+	return Pets.Tiers[Pets.TierOf(tier)].Prefix .. (if pet then pet.Name else petId)
 end
 
 return Pets

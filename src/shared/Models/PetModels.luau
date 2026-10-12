@@ -2,9 +2,11 @@
 -- Builds Stormling pet models out of primitives from the Look table in Config/Pets.
 -- The model faces -Z (its "front") and is centered on an invisible Root part.
 --
--- PetModels.Build(petId, golden, options) -> model, parts
+-- PetModels.Build(petId, tier, options) -> model, parts
+--   tier = "Normal" | "Golden" | "Rainbow" (a boolean still means golden)
 --   parts = { { Part = BasePart, Offset = CFrame, Anim = string? } } (offsets relative to Root)
 --   options.Effects = false skips particles/lights (used for viewports)
+-- Rainbow pets get a pastel hue per tinted part; PetController cycles those hues in the world.
 
 local Config = script.Parent.Parent:WaitForChild("Config")
 local Pets = require(Config.Pets)
@@ -13,6 +15,7 @@ local PetModels = {}
 
 local GOLD = Color3.fromRGB(255, 202, 58)
 local GOLD_ACCENT = Color3.fromRGB(255, 160, 35)
+local RAINBOW_LIGHT = Color3.fromRGB(255, 170, 235)
 local EYE = Color3.fromRGB(28, 26, 38)
 local WHITE = Color3.new(1, 1, 1)
 local BLUSH = Color3.fromRGB(255, 140, 170)
@@ -20,6 +23,18 @@ local BLUSH = Color3.fromRGB(255, 140, 170)
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local FIRE = "rbxasset://textures/particles/fire_main.dds"
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
+
+local RAINBOW_SEQUENCE = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 110)),
+	ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 240, 90)),
+	ColorSequenceKeypoint.new(0.66, Color3.fromRGB(100, 200, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 120, 255)),
+})
+PetModels.RainbowSequence = RAINBOW_SEQUENCE
+
+-- Hue step between tinted parts of a rainbow pet, and the saturation per tint
+local RAINBOW_HUE_STEP = 0.11
+local RAINBOW_SATURATION = { Body = 0.42, Accent = 0.62 }
 
 -- Where the front surface and the top of each body type are (body radius = 1)
 local BODY = {
@@ -42,6 +57,10 @@ local function colorFor(ctx, color: Color3?, tint: string?): Color3
 		elseif tint == "Accent" then
 			return GOLD_ACCENT
 		end
+	elseif ctx.Rainbow and tint then
+		ctx.HueIndex += 1
+		local hue = (ctx.HueIndex * RAINBOW_HUE_STEP + (if tint == "Accent" then 0.5 else 0)) % 1
+		return Color3.fromHSV(hue, RAINBOW_SATURATION[tint] or 0.5, 1)
 	end
 	return color or ctx.Look.Color
 end
@@ -72,6 +91,8 @@ local function add(ctx, props)
 	part.Transparency = props.Transparency or 0
 	if ctx.Golden and props.Tint then
 		part.Reflectance = 0.2
+	elseif ctx.Rainbow and props.Tint then
+		part.Reflectance = 0.12
 	end
 	if props.Tint then
 		part:SetAttribute("Tint", props.Tint)
@@ -353,8 +374,21 @@ function Features.Cracks(ctx, look, info)
 	end
 end
 
+local function rainbowSparkles(rate: number, size: number)
+	return {
+		Texture = SPARKLE,
+		Color = RAINBOW_SEQUENCE,
+		Size = NumberSequence.new(size, 0),
+		Lifetime = NumberRange.new(0.8, 1.2),
+		Rate = rate,
+		Speed = NumberRange.new(1, 2),
+		SpreadAngle = Vector2.new(180, 180),
+		LightEmission = 1,
+	}
+end
+
 local function addEffects(ctx, look, root)
-	local accent = if ctx.Golden then GOLD else look.Accent
+	local accent = if ctx.Golden then GOLD elseif ctx.Rainbow then RAINBOW_LIGHT else look.Accent
 	local effect = look.Effect
 	local attachment = Instance.new("Attachment")
 	attachment.Name = "FX"
@@ -369,7 +403,7 @@ local function addEffects(ctx, look, root)
 		return emitter
 	end
 
-	if effect == "Glow" or effect == "Fire" or ctx.Golden then
+	if effect == "Glow" or effect == "Fire" or ctx.Golden or ctx.Rainbow then
 		local pointLight = Instance.new("PointLight")
 		pointLight.Color = if effect == "Fire" then Color3.fromRGB(255, 140, 50) else accent
 		pointLight.Brightness = 1.2
@@ -435,22 +469,8 @@ local function addEffects(ctx, look, root)
 			Speed = NumberRange.new(0.5, 1),
 			SpreadAngle = Vector2.new(180, 180),
 		})
-	elseif effect == "Rainbow" then
-		particles({
-			Texture = SPARKLE,
-			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 110)),
-				ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 240, 90)),
-				ColorSequenceKeypoint.new(0.66, Color3.fromRGB(100, 200, 255)),
-				ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 120, 255)),
-			}),
-			Size = NumberSequence.new(0.4, 0),
-			Lifetime = NumberRange.new(0.8, 1.2),
-			Rate = 8,
-			Speed = NumberRange.new(1, 2),
-			SpreadAngle = Vector2.new(180, 180),
-			LightEmission = 1,
-		})
+	elseif effect == "Rainbow" and not ctx.Rainbow then
+		particles(rainbowSparkles(8, 0.4))
 	end
 
 	if ctx.Golden then
@@ -464,20 +484,27 @@ local function addEffects(ctx, look, root)
 			SpreadAngle = Vector2.new(180, 180),
 			LightEmission = 1,
 		})
+	elseif ctx.Rainbow then
+		particles(rainbowSparkles(10, 0.45))
 	end
 end
 
-function PetModels.Scale(petId: string, golden: boolean?): number
+-- tier: "Normal" | "Golden" | "Rainbow" (a boolean still means golden)
+function PetModels.Scale(petId: string, tier): number
 	local rarity = Pets.RarityOf(petId)
 	local scale = if rarity then rarity.Scale else 1
-	if golden then
+	local tierName = Pets.TierOf(tier)
+	if tierName == "Golden" then
 		scale *= 1.06
+	elseif tierName == "Rainbow" then
+		scale *= 1.12
 	end
 	return scale
 end
 
-function PetModels.Build(petId: string, golden: boolean?, options)
+function PetModels.Build(petId: string, tier, options)
 	options = options or {}
+	local tierName = Pets.TierOf(tier)
 	local def = Pets.Pets[petId] or Pets.Pets.Puffling
 	local look = def.Look
 	local info = BODY[look.Body] or BODY.Round
@@ -500,9 +527,11 @@ function PetModels.Build(petId: string, golden: boolean?, options)
 	local ctx = {
 		Model = model,
 		Look = look,
-		Scale = (options.Scale or 1) * PetModels.Scale(petId, golden),
-		Golden = golden == true,
-		Material = if golden then Enum.Material.SmoothPlastic else (look.Material or Enum.Material.SmoothPlastic),
+		Scale = (options.Scale or 1) * PetModels.Scale(petId, tierName),
+		Golden = tierName == "Golden",
+		Rainbow = tierName == "Rainbow",
+		HueIndex = 0,
+		Material = if tierName ~= "Normal" then Enum.Material.SmoothPlastic else (look.Material or Enum.Material.SmoothPlastic),
 		Parts = {},
 	}
 
@@ -519,9 +548,11 @@ function PetModels.Build(petId: string, golden: boolean?, options)
 		addEffects(ctx, look, root)
 	end
 
+	-- Rainbow = some tinted parts cycle their hue in the world (rainbow tier or Rainbow effect)
 	model:SetAttribute("PetId", petId)
+	model:SetAttribute("Tier", tierName)
 	model:SetAttribute("Golden", ctx.Golden)
-	model:SetAttribute("Rainbow", look.Effect == "Rainbow" and not ctx.Golden)
+	model:SetAttribute("Rainbow", ctx.Rainbow or (look.Effect == "Rainbow" and not ctx.Golden))
 	return model, ctx.Parts
 end
 

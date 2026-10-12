@@ -2,9 +2,9 @@
 -- Full-screen egg hatching animation and pet reveal.
 --
 -- Hatch.Play(result, options) yields until the animation is finished.
---   result  = { Egg = eggId?, Results = { { Id = petId, New = boolean?, Golden = boolean? } } }
+--   result  = { Egg = eggId?, Results = { { Id = petId, New = boolean?, Golden = boolean?, Rainbow = boolean? } } }
 --   options = { Title = string?, Hold = seconds? }
--- Hatch.Reveal(petId, golden, title) shows a single pet without an egg (rewards, drops).
+-- Hatch.Reveal(petId, tier, title) shows a single pet without an egg (rewards, drops).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -13,6 +13,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Pets = require(Shared.Config.Pets)
 local Formulas = require(Shared.Formulas)
 local Format = require(Shared.Util.Format)
+local PetModels = require(Shared.Models.PetModels)
 
 local Registry = require(script.Parent.Parent.Parent.Registry)
 local UI = require(script.Parent.Parent.UI)
@@ -26,6 +27,7 @@ local playing = false
 local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 	local def = Pets.Pets[entry.Id] or Pets.Pets.Puffling
 	local rarity = Pets.Rarities[def.Rarity]
+	local tier = Pets.TierOf(entry)
 
 	local slot = UI.Create("Frame", {
 		Name = "Slot" .. index,
@@ -100,8 +102,8 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 
 	local nameLabel = UI.Label({
 		Name = "PetName",
-		Text = (if entry.Golden then "Golden " else "") .. def.Name,
-		TextColor3 = if entry.Golden then Color3.fromRGB(255, 214, 64) else Color3.new(1, 1, 1),
+		Text = Pets.DisplayName(def.Id, tier),
+		TextColor3 = Pets.Tiers[tier].Color,
 		Size = UDim2.new(1, 0, 0, 42),
 		Position = UDim2.fromOffset(0, 288),
 		Stroke = 3.5,
@@ -109,6 +111,10 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 		ZIndex = 34,
 		Parent = slot,
 	})
+	if tier == "Rainbow" then
+		nameLabel.TextColor3 = Color3.new(1, 1, 1)
+		UI.Create("UIGradient", { Color = PetModels.RainbowSequence, Parent = nameLabel })
+	end
 	local rarityLabel = UI.Label({
 		Name = "Rarity",
 		Text = string.upper(rarity.Name),
@@ -122,7 +128,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 	})
 	local bonusLabel = UI.Label({
 		Name = "Bonus",
-		Text = Format.Bonus(Formulas.PetBonus(entry.Id, entry.Golden)) .. " Energy",
+		Text = Format.Bonus(Formulas.PetBonus(entry.Id, tier)) .. " Energy",
 		TextColor3 = Theme.Colors.Energy,
 		Size = UDim2.new(1, 0, 0, 28),
 		Position = UDim2.fromOffset(0, 366),
@@ -166,7 +172,7 @@ local function reveal(slot)
 		slot.EggView.Frame:Destroy()
 		slot.EggView = nil
 	end
-	slot.PetView = Viewport.Pet(slot.Entry.Id, slot.Entry.Golden, {
+	slot.PetView = Viewport.Pet(slot.Entry.Id, Pets.TierOf(slot.Entry), {
 		Size = UDim2.fromOffset(250, 250),
 		Position = UDim2.fromScale(0.5, 0.5),
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -313,8 +319,12 @@ function Hatch.Play(result, options)
 	playing = false
 end
 
-function Hatch.Reveal(petId: string, golden: boolean?, title: string?)
-	task.spawn(Hatch.Play, { Results = { { Id = petId, Golden = golden == true, New = false } } }, { Title = title or "NEW PET!" })
+-- tier: "Normal" | "Golden" | "Rainbow" (a boolean still means golden)
+function Hatch.Reveal(petId: string, tier, title: string?)
+	local tierName = Pets.TierOf(tier)
+	task.spawn(Hatch.Play, {
+		Results = { { Id = petId, Golden = tierName == "Golden", Rainbow = tierName == "Rainbow", New = false } },
+	}, { Title = title or "NEW PET!" })
 end
 
 return Hatch

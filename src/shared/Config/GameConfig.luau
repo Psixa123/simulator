@@ -113,8 +113,17 @@ GameConfig.Pets = {
 	PassEquipSlots = 3,
 	GoldenRequirement = 5,
 	GoldenMultiplier = 2.5,
+	RainbowRequirement = 5, -- Golden copies of a pet needed to craft a Rainbow one
+	RainbowMultiplier = 6,
 	HatchDistance = 26,
 	AutoHatchDelay = 0.4,
+	-- Equipped pets catch weather near you on their own
+	AutoCatch = {
+		PowerPerPet = 0.08, -- fraction of your vacuum Power each equipped pet catches with
+		TierFactor = { Normal = 1, Golden = 1.6, Rainbow = 2.4 },
+		ExtraRange = 10, -- studs pets reach beyond your vacuum range
+		SearchInterval = 1, -- seconds between searches for a new cell when idle
+	},
 }
 
 ---------------------------------------------------------------------------

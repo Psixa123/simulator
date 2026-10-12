@@ -55,11 +55,12 @@ end
 
 local endStorm
 
-function MegaStormService.Drain(player: Player, data, root: BasePart): boolean
+-- amount defaults to the player's vacuum Power (pets pass their own catch power)
+function MegaStormService.Drain(player: Player, data, root: BasePart, amount: number?): boolean
 	if not MegaStormService.CanCatch(root) then
 		return false
 	end
-	local drained = math.min(health, Formulas.Power(data))
+	local drained = math.min(health, amount or Formulas.Power(data))
 	health -= drained
 	contributions[player] = (contributions[player] or 0) + drained
 	stateFolder:SetAttribute("Health", health)
@@ -75,7 +76,7 @@ local function beginStorm()
 	for _, player in Players:GetPlayers() do
 		local data = Registry.DataService.Get(player)
 		if data then
-			totalPower += Formulas.Power(data)
+			totalPower += Formulas.Power(data) + Formulas.PetCatchPower(data)
 		end
 	end
 

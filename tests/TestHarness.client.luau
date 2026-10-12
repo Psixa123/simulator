@@ -233,6 +233,25 @@ step("eggs and pets", function()
 	action = Remotes.PetAction:InvokeServer("Golden", "Puffling")
 	check("craft golden", action and action.Ok, action and (action.Uid or action.Error))
 	task.wait(0.2)
+	action = Remotes.PetAction:InvokeServer("Rainbow", "Puffling")
+	check("rainbow needs 5 golden", action and not action.Ok, action and action.Error)
+	Command:InvokeServer("GivePets", "Puffling", 25)
+	for _ = 1, 5 do
+		task.wait(0.1)
+		Remotes.PetAction:InvokeServer("Golden", "Puffling")
+	end
+	task.wait(0.1)
+	action = Remotes.PetAction:InvokeServer("Rainbow", "Puffling")
+	check("craft rainbow", action and action.Ok, action and (action.Uid or action.Error))
+	task.wait(0.4)
+	local rainbowPet = nil
+	for _, pet in Data.Data.Pets do
+		if pet.Rainbow then
+			rainbowPet = pet
+		end
+	end
+	check("rainbow replicated", rainbowPet ~= nil and not rainbowPet.Golden)
+	task.wait(0.2)
 	action = Remotes.PetAction:InvokeServer("UnequipAll")
 	check("unequip all", action and action.Ok)
 	task.wait(0.2)
@@ -261,6 +280,30 @@ step("eggs and pets", function()
 		Results = { { Id = "GalaxyGuardian", New = true }, { Id = "Comet" }, { Id = "Nebula", Golden = true } },
 	}, { Hold = 3 })
 	check("triple hatch animation", not Registry.HatchOverlay.IsPlaying())
+end)
+
+step("pets catch weather", function()
+	Remotes.PetAction:InvokeServer("EquipBest")
+	local before = stats()
+	local id, origin = Command:InvokeServer("NearestCell", 1)
+	check("found a cell for pets", id ~= nil)
+	Command:InvokeServer("Teleport", Vector3.new(origin.X + 8, 4, origin.Z + 8))
+	local sawTarget = false
+	local start = os.clock()
+	while os.clock() - start < 3 do
+		task.wait(0.1)
+		local character = player.Character
+		if character and (character:GetAttribute("PetTarget") or 0) ~= 0 then
+			sawTarget = true
+			if os.clock() - start > 1 then
+				break
+			end
+		end
+	end
+	check("pets picked a target", sawTarget)
+	shot("pets_catching", 1.4)
+	local after = stats()
+	check("pets caught energy", after.Energy > before.Energy or after.Volts > before.Volts, after.Energy)
 end)
 
 step("zones", function()
