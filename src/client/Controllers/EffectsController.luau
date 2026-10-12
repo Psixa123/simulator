@@ -24,6 +24,9 @@ local UI = require(script.Parent.Parent.UI.UI)
 local EffectsController = {}
 
 local TEXTURES = WeatherModels.Textures
+local ANIMATE_RANGE = 200 -- cells further from the camera than this stay still
+local STRIKE_FADE = 0.3 -- seconds a storm cloud's lightning flash takes to fade
+local STRIKE_GAP = 0.35 -- at most ~3 storm-cloud flashes per second across the whole screen
 local player = Players.LocalPlayer
 
 local fxFolder: Folder
@@ -31,6 +34,7 @@ local cellFolder: Folder
 local cells = {} -- [Model] = entry
 local cellsById = {} -- [id] = Model
 local beams = {} -- [Player] = { Target, Beams, Suction }
+local nextCloudStrike = 0
 
 local function lowGraphics(): boolean
 	local settings = Registry.DataController.Get("Settings")
@@ -168,6 +172,9 @@ local function registerCell(model: Model)
 		Lock = lock,
 		Flash = root:FindFirstChild("Flash"),
 		Bolts = bolts,
+		NextStrike = os.clock() + math.random() * 5,
+		StrikeAt = -math.huge,
+		Glow = -1, -- forces the first frame to set the resting flash/bolt look
 	}
 	cells[model] = entry
 	local id = model:GetAttribute("CellId")
@@ -204,10 +211,14 @@ end
 
 local function animateCells(dt: number)
 	local now = os.clock()
-	local cameraPosition = Workspace.CurrentCamera.CFrame.Position
+	local cameraFrame = Workspace.CurrentCamera.CFrame
+	local cameraPosition, cameraLook = cameraFrame.Position, cameraFrame.LookVector
+	local low = lowGraphics()
 	for model, entry in cells do
 		local origin = entry.Origin
-		if (origin - cameraPosition).Magnitude < 280 then
+		local offset = origin - cameraPosition
+		-- Only cells near the camera and not behind it are animated
+		if offset.Magnitude < ANIMATE_RANGE and offset:Dot(cameraLook) > -20 then
 			if math.abs(entry.Scale - entry.TargetScale) > 0.002 then
 				entry.Scale += (entry.TargetScale - entry.Scale) * math.min(1, dt * 6)
 				if math.abs(entry.AppliedScale - entry.Scale) > 0.015 then
@@ -216,25 +227,38 @@ local function animateCells(dt: number)
 				end
 			end
 
-			local phase = entry.Phase
-			local yaw, bob
-			local style = entry.Style
-			if style == "Tornado" then
-				yaw, bob = now * 4 + phase, 0
-			elseif style == "Orb" then
-				yaw, bob = now * 1.2 + phase, math.sin(now * 1.6 + phase) * 0.7
-			elseif style == "Starburst" then
-				yaw, bob = now * 0.9 + phase, math.sin(now * 1.3 + phase) * 0.6
-			else
-				yaw, bob = phase + math.sin(now * 0.3 + phase) * 0.35, math.sin(now * 1.1 + phase) * 0.6
+			-- Performance Mode keeps cells still (they still shrink as they're drained)
+			if not low then
+				local phase = entry.Phase
+				local yaw, bob
+				local style = entry.Style
+				if style == "Tornado" then
+					yaw, bob = now * 4 + phase, 0
+				elseif style == "Orb" then
+					yaw, bob = now * 1.2 + phase, math.sin(now * 1.6 + phase) * 0.7
+				elseif style == "Starburst" then
+					yaw, bob = now * 0.9 + phase, math.sin(now * 1.3 + phase) * 0.6
+				else
+					yaw, bob = phase + math.sin(now * 0.3 + phase) * 0.35, math.sin(now * 1.1 + phase) * 0.6
+				end
+				model:PivotTo(CFrame.new(origin + Vector3.new(0, bob, 0)) * CFrame.Angles(0, yaw, 0))
 			end
-			model:PivotTo(CFrame.new(origin + Vector3.new(0, bob, 0)) * CFrame.Angles(0, yaw, 0))
 
+			-- Storm clouds strike every few seconds: a bright flash that fades smoothly (no strobing)
 			if entry.Flash then
-				local strike = math.random() < 0.06
-				entry.Flash.Brightness = if strike then 5 else 1.2
-				for _, bolt in entry.Bolts do
-					bolt.Transparency = if strike or math.random() < 0.5 then 0 else 0.7
+				if not low and now >= entry.NextStrike and now >= nextCloudStrike then
+					entry.StrikeAt = now
+					entry.NextStrike = now + 3 + math.random() * 4
+					nextCloudStrike = now + STRIKE_GAP
+				end
+				local glow = math.clamp(1 - (now - entry.StrikeAt) / STRIKE_FADE, 0, 1)
+				if glow ~= entry.Glow then
+					entry.Glow = glow
+					entry.Flash.Brightness = 1.2 + 3.8 * glow * glow
+					local transparency = 0.7 * (1 - glow)
+					for _, bolt in entry.Bolts do
+						bolt.Transparency = transparency
+					end
 				end
 			end
 		end

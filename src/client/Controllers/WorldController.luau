@@ -20,7 +20,7 @@ local WorldController = {}
 
 local spinners = {} -- [Instance] = { Base, Speed, Axis, Bob, Phase }
 local bobbers = {} -- [Instance] = { Base, Height, Speed, Phase }
-local pulsers = {} -- [BasePart] = { Base }
+local pulsers = {} -- [BasePart] = { Base, Phase, Position }
 local flickers = {} -- [BasePart] = true
 
 local function pivotOf(instance: Instance): CFrame
@@ -59,7 +59,7 @@ end
 
 local function addPulser(instance: Instance)
 	if instance:IsA("BasePart") then
-		pulsers[instance] = { Base = instance.Transparency, Phase = math.random() * 10 }
+		pulsers[instance] = { Base = instance.Transparency, Phase = math.random() * 10, Position = instance.Position }
 	end
 end
 
@@ -88,12 +88,17 @@ local function animate()
 			setPivot(instance, (base + bob) * rotation)
 		end
 	end
+	-- Far-away props stay still (too far to notice, and it saves frame time on phones)
 	for instance, state in bobbers do
-		local offset = math.sin(now * state.Speed + state.Phase) * state.Height
-		setPivot(instance, state.Base + Vector3.new(0, offset, 0))
+		if (state.Base.Position - cameraPosition).Magnitude < 500 then
+			local offset = math.sin(now * state.Speed + state.Phase) * state.Height
+			setPivot(instance, state.Base + Vector3.new(0, offset, 0))
+		end
 	end
 	for part, state in pulsers do
-		part.Transparency = math.clamp(state.Base + (math.sin(now * 3 + state.Phase) + 1) * 0.12, 0, 1)
+		if (state.Position - cameraPosition).Magnitude < 400 then
+			part.Transparency = math.clamp(state.Base + (math.sin(now * 3 + state.Phase) + 1) * 0.12, 0, 1)
+		end
 	end
 	for part in flickers do
 		if math.random() < 0.04 then

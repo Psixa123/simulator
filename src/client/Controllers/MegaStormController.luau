@@ -1,6 +1,6 @@
 --!nonstrict
 -- Client side of the Mega Storm event: HUD widget/banner, storm animation, lightning,
--- camera shake, announcements and reward popups. The Rainbow Hurricane cycles its colours.
+-- a gentle camera sway, announcements and reward popups. The Rainbow Hurricane cycles its colours.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,11 +20,18 @@ local Registry = require(script.Parent.Parent.Registry)
 
 local MegaStormController = {}
 
+local ANIMATE_RANGE = 400 -- the storm isn't animated while the camera is further away than this
+local SWAY_RANGE = 110 -- the camera sways gently within this distance of an active storm
+local SWAY_STRENGTH = 0.3 -- studs of sway at the storm's centre
+local SWAY_SPEED = 0.7
+
 local player = Players.LocalPlayer
 local state: Configuration
 local contribution = 0
 local storm = nil -- { Model, Pivot, Spin = {}, Debris = {}, Collapsing, Rainbow = { bands } or nil }
 local lightningTimer = 0
+local swaySeed = math.random() * 1000
+local swaying = false
 
 local function stormType()
 	return StormSchedule.Current(state)
@@ -94,15 +101,41 @@ local function registerStorm(model: Model)
 	storm = entry
 end
 
+-- Smooth, low-amplitude camera sway near the active storm (none in Performance Mode)
+local function updateSway(now: number)
+	if not storm and not swaying then
+		return
+	end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not root then
+		return
+	end
+	local distance = if storm then (root.Position - storm.Pivot.Position).Magnitude else math.huge
+	if distance < SWAY_RANGE and not storm.Collapsing and MegaStormController.IsActive() and not lowGraphics() then
+		local strength = (1 - distance / SWAY_RANGE) * SWAY_STRENGTH
+		local t = now * SWAY_SPEED
+		humanoid.CameraOffset = Vector3.new(math.noise(t, swaySeed), math.noise(t, swaySeed + 17.3) * 0.5, math.noise(t, swaySeed + 41.7)) * strength
+		swaying = true
+	elseif swaying then
+		humanoid.CameraOffset = Vector3.zero
+		swaying = false
+	end
+end
+
 local function animateStorm(dt: number)
+	local now = os.clock()
+	if storm and not storm.Model.Parent then
+		storm = nil
+	end
+	updateSway(now)
 	if not storm then
 		return
 	end
-	if not storm.Model.Parent then
-		storm = nil
-		return
+	if (Workspace.CurrentCamera.CFrame.Position - storm.Pivot.Position).Magnitude > ANIMATE_RANGE then
+		return -- too far away to see the storm move
 	end
-	local now = os.clock()
 	local speedBoost = if storm.Collapsing then 3 else 1
 	for _, item in storm.Spin do
 		item.Part.CFrame = storm.Pivot * CFrame.Angles(0, now * item.Speed * speedBoost, 0) * item.Offset
@@ -131,20 +164,6 @@ local function animateStorm(dt: number)
 			local bottom = storm.Pivot.Position + Vector3.new(math.cos(angle) * (radius + 12), 0, math.sin(angle) * (radius + 12))
 			local boltColor = if storm.Rainbow then rainbowColor(math.random()) else stormType().Accent
 			Registry.EffectsController.LightningBolt(top, bottom, boltColor, 1.2)
-		end
-	end
-
-	-- Camera shake when close to the storm
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if humanoid and root then
-		local distance = (root.Position - storm.Pivot.Position).Magnitude
-		if MegaStormController.IsActive() and distance < 110 then
-			local strength = (1 - distance / 110) * 0.35
-			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * strength
-		else
-			humanoid.CameraOffset = Vector3.zero
 		end
 	end
 end

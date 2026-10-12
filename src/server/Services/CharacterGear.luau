@@ -50,7 +50,7 @@ end
 function CharacterGear.BuildVacuum(): Tool
 	local tool = Instance.new("Tool")
 	tool.Name = "StormVacuum"
-	tool.ToolTip = "Hold click to catch weather!"
+	tool.ToolTip = "Hold to vacuum up weather!"
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
 	tool.Grip = CFrame.new(0, 0, 0)

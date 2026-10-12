@@ -1,6 +1,6 @@
 --!nonstrict
--- Player input for the Storm Vacuum. Hold click/tap (or use Auto Catch) to vacuum the weather
--- under your mouse or the nearest one in range. The server validates everything.
+-- Player input for the Storm Vacuum. Hold click, the screen or R2 (or use Auto Catch) to vacuum
+-- the weather under your mouse or the nearest one in range. The server validates everything.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -155,13 +155,18 @@ local function update(force: boolean?)
 		return
 	end
 
+	-- A full tank only blocks regular weather: the Mega Storm pays out Volts, not energy
 	local remoteSell = Formulas.HasPass(data, "RemoteSell")
-	if data.Energy >= Formulas.TankCapacity(data) - 1e-6 and not remoteSell then
+	local tankFull = data.Energy >= Formulas.TankCapacity(data) - 1e-6 and not remoteSell
+	if tankFull and not inMegaRange(root) then
 		stop()
 		if holding then
 			Registry.InterfaceController.Hint("🛢️ Tank full! Press SELL or visit a Weather Lab.", "Full", 3)
 		end
 		return
+	end
+	if tankFull and requested ~= MEGA_TARGET then
+		force = true -- drop any regular cell and switch to the storm
 	end
 
 	local serverTarget = character:GetAttribute("CatchTarget") or 0
@@ -241,11 +246,34 @@ function VacuumController.IsHolding(): boolean
 	return holding
 end
 
+-- True while the Mega Storm is active and we're close enough to vacuum it
+function VacuumController.InMegaRange(): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return root ~= nil and inMegaRange(root)
+end
+
 function VacuumController.Start()
 	player.CharacterAdded:Connect(onCharacter)
 	if player.Character then
 		onCharacter(player.Character)
 	end
+
+	-- Gamepad: hold R2 to vacuum (same as holding click / the screen with the Tool equipped)
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if input.KeyCode == Enum.KeyCode.ButtonR2 and not processed and not holding then
+			holding = true
+			update(true)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.ButtonR2 and holding then
+			holding = false
+			if not autoCatch() then
+				stop()
+			end
+		end
+	end)
 
 	RunService.Heartbeat:Connect(function(dt)
 		accumulator += dt

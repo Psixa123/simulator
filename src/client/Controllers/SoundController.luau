@@ -1,8 +1,10 @@
 --!nonstrict
 -- Plays interface/gameplay sound effects, the vacuum loop and background music.
+-- Sounds whose Id isn't uploaded yet use a built-in fallback (see Shared/Config/Sounds).
 
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -81,21 +83,36 @@ function SoundController.Init()
 	folder.Name = "GameSounds"
 	folder.Parent = SoundService
 
+	local missing = {} -- sounds with a file in assets/audio that hasn't been uploaded yet
 	for name, def in Sounds do
-		local soundId = if def.Id and def.Id ~= 0 then "rbxassetid://" .. tostring(def.Id) else def.Fallback
+		local uploaded = def.Id ~= nil and def.Id ~= 0
+		local soundId = if uploaded then "rbxassetid://" .. tostring(def.Id) else def.Fallback
+		if def.File and not uploaded then
+			table.insert(missing, if soundId then name else name .. " (silent)")
+		end
 		if soundId then
 			local sound = Instance.new("Sound")
 			sound.Name = name
 			sound.SoundId = soundId
-			sound.Volume = def.Volume or 0.5
+			-- The built-in stand-ins get their own pitch/volume so they don't affect the real upload
+			sound.Volume = (if uploaded then nil else def.FallbackVolume) or def.Volume or 0.5
 			sound.Looped = def.Looped == true
-			sound.PlaybackSpeed = def.PlaybackSpeed or 1
+			sound.PlaybackSpeed = (if uploaded then nil else def.FallbackSpeed) or def.PlaybackSpeed or 1
 			sound.Parent = folder
 			templates[name] = sound
 		end
 	end
 	music = templates.Music
 	vacuum = templates.Vacuum
+
+	if #missing > 0 and RunService:IsStudio() then
+		table.sort(missing)
+		warn(
+			"🔇 These sounds still need an uploaded asset Id in src/shared/Config/Sounds.luau: "
+				.. table.concat(missing, ", ")
+				.. ". Built-in Roblox stand-ins play until then. See README -> \"Sounds and music\"."
+		)
+	end
 
 	UI.ClickHook = function()
 		SoundController.Play("Click")

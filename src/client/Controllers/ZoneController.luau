@@ -25,6 +25,9 @@ ZoneController.LightingFilter = nil :: ((zoneId: number, preset: any) -> any)?
 
 local TEXTURES = WeatherModels.Textures
 local BLEND = TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+local ZONE_SETTLE = 0.6 -- a new zone must hold this long before we switch (no flicker at borders)
+local TITLE_REPEAT = 8 -- stepping back into the zone you just left within this many seconds skips its title
+local MAX_REWIND = 6 -- hours ClockTime may step back; longer gaps blend forward past midnight
 
 local player = Players.LocalPlayer
 local clouds: Clouds
@@ -32,6 +35,10 @@ local ambiencePart: Part
 local ambience = {} -- [name] = ParticleEmitter
 local lightningThread = nil
 local seenZones = {}
+local clockValue: NumberValue
+local clockTween: Tween? = nil
+local pendingZone, pendingSince = nil, 0
+local leftZone, leftAt = nil, 0
 
 local function blend(instance: Instance?, props)
 	if instance then
@@ -44,9 +51,25 @@ local function lowGraphics(): boolean
 	return settings ~= nil and settings.LowGraphics == true
 end
 
+-- Blends ClockTime through a NumberValue so it can wrap past midnight: the sun moves forward
+-- instead of sweeping back across the sky (only a short step back is taken directly, so
+-- neighbouring zones don't flash through a whole day).
+local function blendClock(target: number)
+	if clockTween then
+		clockTween:Cancel()
+	end
+	local current = Lighting.ClockTime
+	local forward = (target - current) % 24
+	local goal = if 24 - forward <= MAX_REWIND then current + forward - 24 else current + forward
+	clockValue.Value = current
+	local tween = TweenService:Create(clockValue, BLEND, { Value = goal })
+	clockTween = tween
+	tween:Play()
+end
+
 local function applyLighting(preset)
+	blendClock(preset.ClockTime)
 	blend(Lighting, {
-		ClockTime = preset.ClockTime,
 		Brightness = preset.Brightness,
 		ExposureCompensation = preset.ExposureCompensation or 0,
 		Ambient = preset.Ambient,
@@ -123,19 +146,26 @@ local function startLightning(zoneId: number)
 end
 
 local function enterZone(zoneId: number)
+	local previous = ZoneController.Current
 	ZoneController.Current = zoneId
 	local zone = Zones.Get(zoneId)
 	applyLighting(lightingFor(zoneId))
 	setAmbience(zone.Lighting.Ambience)
 	startLightning(zoneId)
 
-	local subtitle = zone.Description
-	if not seenZones[zoneId] then
-		seenZones[zoneId] = true
-	else
-		subtitle = nil
+	-- Hopping back over a border you just crossed doesn't stack another title
+	local now = os.clock()
+	local quickReturn = zoneId == leftZone and now - leftAt < TITLE_REPEAT
+	leftZone, leftAt = previous, now
+	if not quickReturn then
+		local subtitle = zone.Description
+		if not seenZones[zoneId] then
+			seenZones[zoneId] = true
+		else
+			subtitle = nil
+		end
+		Registry.InterfaceController.BigText(zone.Icon .. " " .. string.upper(zone.Name), zone.Color, subtitle, if subtitle then 3 else 1.8)
 	end
-	Registry.InterfaceController.BigText(zone.Icon .. " " .. string.upper(zone.Name), zone.Color, subtitle, if subtitle then 3 else 1.8)
 	Registry.HazardController.ShowZoneHazard(zoneId)
 end
 
@@ -175,6 +205,14 @@ function ZoneController.Init()
 	clouds.Cover = 0.5
 	clouds.Density = 0.55
 	clouds.Parent = Workspace.Terrain
+
+	clockValue = Instance.new("NumberValue")
+	clockValue.Name = "ZoneClockTime"
+	clockValue.Value = Lighting.ClockTime
+	clockValue.Changed:Connect(function(value)
+		Lighting.ClockTime = value % 24
+	end)
+	clockValue.Parent = script
 
 	ambiencePart = Instance.new("Part")
 	ambiencePart.Name = "Ambience"
@@ -283,7 +321,14 @@ function ZoneController.Start()
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if root then
 			local zoneId = MapLayout.ZoneAt(root.Position)
-			if zoneId ~= ZoneController.Current then
+			if zoneId == ZoneController.Current then
+				pendingZone = nil
+			elseif ZoneController.Current < 0 then
+				enterZone(zoneId) -- first zone after joining: no need to wait
+			elseif zoneId ~= pendingZone then
+				pendingZone, pendingSince = zoneId, os.clock()
+			elseif os.clock() - pendingSince >= ZONE_SETTLE then
+				pendingZone = nil
 				enterZone(zoneId)
 			end
 		end

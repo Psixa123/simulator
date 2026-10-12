@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -52,6 +53,30 @@ local function nearestCell(zoneId: number): Vector3?
 	return best
 end
 
+-- "How do I vacuum?" in the words of the device the player is using right now
+local function vacuumHowTo(): string
+	local lastInput = UserInputService:GetLastInputType()
+	local device = "Mouse"
+	if string.sub(lastInput.Name, 1, 7) == "Gamepad" then
+		device = "Gamepad"
+	elseif lastInput == Enum.UserInputType.Touch then
+		device = "Touch"
+	elseif lastInput ~= Enum.UserInputType.Keyboard and string.sub(lastInput.Name, 1, 5) ~= "Mouse" then
+		-- Nothing useful pressed yet: guess from the hardware
+		if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
+			device = "Touch"
+		elseif UserInputService.GamepadEnabled and not UserInputService.MouseEnabled then
+			device = "Gamepad"
+		end
+	end
+	if device == "Gamepad" then
+		return "🌪️ Go near a cloud and hold R2 to vacuum it!"
+	elseif device == "Touch" then
+		return "🌪️ Go near a cloud and hold the screen to vacuum!"
+	end
+	return "🌪️ Hold click on a cloud to vacuum it!"
+end
+
 -- Returns text, world position to point at (or nil), menu button to highlight (or nil)
 local function compute(data)
 	local zoneHere = currentZone()
@@ -59,11 +84,15 @@ local function compute(data)
 	local remoteSell = Formulas.HasPass(data, "RemoteSell")
 
 	if data.Energy >= Formulas.TankCapacity(data) - 1e-6 and not remoteSell then
+		-- The Mega Storm pays Volts, so a full tank doesn't stop you from fighting it
+		if Registry.VacuumController.InMegaRange() then
+			return "🌪️ Tank full, but you can still vacuum the Mega Storm!", nil, nil
+		end
 		return "🛢️ Tank full! Sell it at a ⚡ Weather Lab", MapLayout.SellPad(zoneHere), nil
 	end
 	if data.TotalVolts <= 0 then
 		if data.Energy <= 0 then
-			return "🌪️ Hold click on a cloud to vacuum it!", nearestCell(1), nil
+			return vacuumHowTo(), nearestCell(1), nil
 		end
 		return "⚡ Sell your energy at the Weather Lab", MapLayout.SellPad(math.max(zoneHere, 1)), nil
 	end
