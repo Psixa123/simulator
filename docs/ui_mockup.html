@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Visual target for the in-game UI (docs/STYLE_GUIDE.md). Render: open in a browser at 1280x720. -->
+<style>
+  @font-face { font-family: "Fredoka One"; src: url("../assets/source/fonts/FredokaOne-Regular.ttf"); }
+  :root {
+    --ink: #2b3467; --subink: #6e7ba8; --hudink: #1b1f3b;
+    --panel-top: #ffffff; --panel-bottom: #eef3ff; --panel-stroke: #c7d2f2;
+    --card: #f4f7ff; --card-stroke: #d9e1f7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1280px; height: 720px; overflow: hidden; font-family: "Fredoka One", sans-serif; }
+  body { background: linear-gradient(#9ed8ff 0%, #c9ecff 38%, #7fe06a 38.2%, #6fd25a 100%); position: relative; }
+  /* fake world */
+  .field { position: absolute; left: 330px; top: 300px; width: 620px; height: 330px; background: #8bea5e; border-radius: 6px;
+           box-shadow: 0 0 0 34px #c9d0f7, 0 0 0 36px #a9b3e6; }
+  .field::after { content: ""; position: absolute; inset: 10px; border: 3px dashed rgba(255,255,255,.85); border-radius: 4px; }
+  .tree { position: absolute; width: 90px; height: 90px; border-radius: 40%; }
+  .stroke { -webkit-text-stroke: 3px var(--hudink); paint-order: stroke fill; color: #fff; }
+  /* left menu */
+  .menu { position: absolute; left: 16px; top: 150px; display: grid; grid-template-columns: 76px 76px; gap: 26px 12px; }
+  .mbtn { position: relative; width: 76px; height: 76px; border-radius: 18px; background: linear-gradient(#ffffff, #e6edff);
+          border: 3px solid var(--hudink); box-shadow: 0 5px 0 #8e99bd; display: flex; align-items: center; justify-content: center; font-size: 38px; }
+  .mbtn span { position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); font-size: 15px; white-space: nowrap; }
+  .badge { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; background: #ff3b55; border: 3px solid var(--hudink);
+           color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  /* currency pills */
+  .pills { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); display: flex; gap: 22px; }
+  .pill { position: relative; height: 46px; min-width: 210px; padding: 0 52px 0 58px; border-radius: 23px; background: linear-gradient(#ffffff, #e4ecff);
+          border: 3px solid var(--hudink); display: flex; align-items: center; font-size: 27px; }
+  .pill .ico { position: absolute; left: -14px; top: 50%; transform: translateY(-50%); width: 60px; height: 60px; border-radius: 50%;
+               display: flex; align-items: center; justify-content: center; font-size: 36px; border: 3px solid var(--hudink); }
+  .pill .plus { position: absolute; right: 6px; width: 34px; height: 34px; border-radius: 11px; background: linear-gradient(#6be05a, #2fb344);
+                border: 2px solid #1e7a2e; box-shadow: 0 3px 0 #1e7a2e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+  /* tank */
+  .tank { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; }
+  .bar { position: relative; width: 420px; height: 44px; border-radius: 22px; background: #dce4fa; border: 3px solid var(--hudink); overflow: hidden; }
+  .bar .fill { position: absolute; inset: 0 38% 0 0; background: linear-gradient(#7fe4ff, #2e9bff); }
+  .bar .fill::after { content: ""; position: absolute; left: 8px; right: 8px; top: 5px; height: 9px; border-radius: 6px; background: rgba(255,255,255,.55); }
+  .bar .txt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .btn3d { position: relative; padding: 0 22px; height: 50px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center;
+           font-size: 24px; color: #fff; border: 3px solid var(--hudink); }
+  .green { background: linear-gradient(#6be05a, #2fb344); box-shadow: 0 6px 0 #1e7a2e; -webkit-text-stroke: 2.5px #1e7a2e; paint-order: stroke fill; }
+  .blue { background: linear-gradient(#5cc2ff, #2c86f0); box-shadow: 0 6px 0 #1a5bb0; -webkit-text-stroke: 2.5px #1a5bb0; paint-order: stroke fill; }
+  .yellow { background: linear-gradient(#ffd84a, #f5a623); box-shadow: 0 6px 0 #b8741a; -webkit-text-stroke: 2.5px #a8650f; paint-order: stroke fill; }
+  .red { background: linear-gradient(#ff6b7a, #e2364f); box-shadow: 0 6px 0 #9e1f33; -webkit-text-stroke: 2.5px #9e1f33; paint-order: stroke fill; }
+  /* window */
+  .win { position: absolute; left: 245px; top: 120px; width: 790px; height: 470px; border-radius: 24px; background: linear-gradient(var(--panel-top), var(--panel-bottom));
+         border: 4px solid var(--panel-stroke); outline: 3px solid var(--ink); box-shadow: 0 10px 0 rgba(27,31,59,.35); }
+  .win .badgeicon { position: absolute; left: -22px; top: -26px; width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(#ff8ad0, #e0479e);
+                    border: 3px solid var(--ink); box-shadow: 0 5px 0 #9c2a6c; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+  .win .title { position: absolute; left: 66px; top: 14px; font-size: 36px; color: var(--ink); }
+  .win .close { position: absolute; right: -18px; top: -20px; width: 54px; height: 54px; font-size: 30px; padding: 0; }
+  .tabs { position: absolute; left: 24px; top: 70px; display: flex; gap: 10px; }
+  .tab { padding: 6px 16px; border-radius: 12px; font-size: 18px; border: 2px solid var(--card-stroke); background: #fff; color: var(--subink); }
+  .tab.on { background: linear-gradient(#5cc2ff, #2c86f0); color: #fff; border-color: var(--ink); -webkit-text-stroke: 2px #1a5bb0; paint-order: stroke fill; }
+  .grid { position: absolute; left: 24px; top: 118px; width: 500px; display: grid; grid-template-columns: repeat(5, 90px); gap: 10px; }
+  .tile { position: relative; height: 104px; border-radius: 16px; background: var(--card); border: 2px solid var(--card-stroke); overflow: hidden; }
+  .tile .top { position: absolute; left: 0; right: 0; top: 0; height: 62px; }
+  .tile .pet { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font-size: 42px; }
+  .tile .nm { position: absolute; bottom: 6px; width: 100%; text-align: center; font-size: 13px; color: var(--ink); }
+  .tile .eq { position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 6px; background: #2fb344; border: 2px solid var(--ink); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .detail { position: absolute; right: 24px; top: 70px; width: 228px; height: 372px; border-radius: 18px; background: var(--card); border: 2px solid var(--card-stroke); text-align: center; }
+  .detail .big { margin: 18px auto 6px; width: 120px; height: 120px; border-radius: 24px; background: linear-gradient(#ffe36b, #ffb21e); display: flex; align-items: center; justify-content: center; font-size: 70px; border: 3px solid var(--ink); }
+  .detail h3 { margin: 6px 0 0; font-weight: normal; font-size: 24px; color: var(--ink); }
+  .detail p { margin: 2px 0 10px; font-size: 16px; color: var(--subink); }
+  .detail .btn3d { width: 190px; margin-top: 8px; height: 44px; font-size: 20px; }
+  .toast { position: absolute; top: 108px; left: 50%; transform: translateX(-50%); height: 40px; padding: 0 18px 0 48px; border-radius: 20px; background: #fff;
+           border: 3px solid var(--ink); color: var(--ink); font-size: 18px; display: flex; align-items: center; }
+  .toast i { position: absolute; left: 4px; width: 30px; height: 30px; border-radius: 50%; background: #6be05a; border: 2px solid var(--ink); font-style: normal; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+</style>
+</head>
+<body>
+  <div class="tree" style="left:180px;top:250px;background:#ff9ad5"></div>
+  <div class="tree" style="left:1020px;top:240px;background:#b58cff"></div>
+  <div class="tree" style="left:1080px;top:330px;background:#5be8d3"></div>
+  <div class="tree" style="left:150px;top:420px;background:#ffd84a"></div>
+  <div class="field"></div>
+
+  <div class="pills">
+    <div class="pill stroke"><div class="ico" style="background:linear-gradient(#fff36b,#ffb21e)">⚡</div>12.4M<div class="plus">+</div></div>
+    <div class="pill stroke"><div class="ico" style="background:linear-gradient(#a6eeff,#2e9bff)">🌀</div>Shift 3</div>
+  </div>
+  <div class="toast"><i>✓</i>Upgraded Vacuum Power to level 12!</div>
+
+  <div class="menu">
+    <div class="mbtn">🐾<span class="stroke">Pets</span><div class="badge">!</div></div>
+    <div class="mbtn">🥚<span class="stroke">Eggs</span></div>
+    <div class="mbtn">🛒<span class="stroke">Shop</span></div>
+    <div class="mbtn">⬆️<span class="stroke">Upgrades</span></div>
+    <div class="mbtn">🎁<span class="stroke">Rewards</span><div class="badge">2</div></div>
+    <div class="mbtn">🗺️<span class="stroke">Teleport</span></div>
+    <div class="mbtn">🌀<span class="stroke">Shift</span></div>
+    <div class="mbtn">⚙️<span class="stroke">Settings</span></div>
+  </div>
+
+  <div class="tank">
+    <div class="bar"><div class="fill"></div><div class="txt stroke">🛢️ 620 / 1,000</div></div>
+    <div class="btn3d green">SELL</div>
+  </div>
+
+  <div class="win">
+    <div class="badgeicon">🐾</div>
+    <div class="title">Pets</div>
+    <div class="btn3d red close">✕</div>
+    <div class="tabs"><div class="tab on">All 24</div><div class="tab">Equipped 3/6</div><div class="tab">Golden</div><div class="tab">Rainbow</div></div>
+    <div class="grid">
+      <div class="tile"><div class="eq">✓</div><div class="top" style="background:linear-gradient(#ffe36b,#ffb21e)"></div><div class="pet">🐰</div><div class="nm">Zappy</div></div>
+      <div class="tile"><div class="eq">✓</div><div class="top" style="background:linear-gradient(#d0a6ff,#9a5cff)"></div><div class="pet">☁️</div><div class="nm">Prism</div></div>
+      <div class="tile"><div class="eq">✓</div><div class="top" style="background:linear-gradient(#8fd0ff,#3a9cff)"></div><div class="pet">🦇</div><div class="nm">Volt Bat</div></div>
+      <div class="tile"><div class="top" style="background:linear-gradient(#a6f5b0,#4fd25a)"></div><div class="pet">💧</div><div class="nm">Droplet</div></div>
+      <div class="tile"><div class="top" style="background:linear-gradient(#e2e7f2,#b9c3d8)"></div><div class="pet">🌥️</div><div class="nm">Puffling</div></div>
+      <div class="tile"><div class="top" style="background:linear-gradient(#e2e7f2,#b9c3d8)"></div><div class="pet">🌥️</div><div class="nm">Puffling</div></div>
+      <div class="tile"><div class="top" style="background:linear-gradient(#a6f5b0,#4fd25a)"></div><div class="pet">🌵</div><div class="nm">Cactus Cub</div></div>
+      <div class="tile"><div class="top" style="background:linear-gradient(#ff9ad5,#e0479e)"></div><div class="pet">🌈</div><div class="nm">Rainbow Puff</div></div>
+      <div class="tile"><div class="top" style="background:linear-gradient(#e2e7f2,#b9c3d8)"></div><div class="pet">⚪</div><div class="nm">Snowball</div></div>
+      <div class="tile"><div class="top" style="background:linear-gradient(#8fd0ff,#3a9cff)"></div><div class="pet">🦊</div><div class="nm">Aurora Fox</div></div>
+    </div>
+    <div class="detail">
+      <div class="big">🐰</div>
+      <h3>Golden Zappy</h3>
+      <p>Uncommon · +45% energy</p>
+      <div class="btn3d green">Equip</div>
+      <div class="btn3d yellow">🌈 Rainbow (2/5)</div>
+      <div class="btn3d red">Delete</div>
+    </div>
+  </div>
+</body>
+</html>
