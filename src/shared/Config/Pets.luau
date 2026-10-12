@@ -23,7 +23,7 @@ local RARITY_BASE = { Common = 0.1, Uncommon = 0.18, Rare = 0.35, Epic = 0.7, Le
 local ZONE_FACTOR = { 1, 1.6, 2.5, 4, 6.5, 10 }
 
 Pets.Pets = {
-	-------------------------------------------------------------------- Meadow Egg
+	-------------------------------------------------------------------- Plains Egg
 	Puffling = { Name = "Puffling", Rarity = "Common", Zone = 1, Look = { Body = "Cloud", Color = rgb(250, 252, 255), Accent = rgb(180, 215, 255) } },
 	Droplet = { Name = "Droplet", Rarity = "Uncommon", Zone = 1, Look = { Body = "Drop", Color = rgb(90, 170, 255), Accent = rgb(190, 230, 255) } },
 	Sunny = { Name = "Sunny", Rarity = "Rare", Zone = 1, Look = { Body = "Round", Color = rgb(255, 215, 60), Accent = rgb(255, 150, 40), Features = { "Rays" }, Effect = "Glow" } },
@@ -78,7 +78,7 @@ Pets.Pets = {
 
 Pets.Eggs = {
 	MeadowEgg = {
-		Name = "Meadow Egg",
+		Name = "Plains Egg",
 		Zone = 1,
 		Cost = 400,
 		Color = rgb(150, 230, 110),

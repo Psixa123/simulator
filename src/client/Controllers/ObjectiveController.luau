@@ -73,7 +73,7 @@ local function compute(data)
 	if #data.Pets == 0 then
 		local egg = Pets.Eggs.MeadowEgg
 		if data.Volts >= egg.Cost then
-			return "🥚 Hatch your first pet at the Meadow Egg!", MapLayout.EggStation(1), nil
+			return "🥚 Hatch your first pet at the " .. egg.Name .. "!", MapLayout.EggStation(1), nil
 		end
 		return "⚡ Earn " .. Format.Number(egg.Cost) .. " Volts for your first pet", nearestCell(catchZone), nil
 	end

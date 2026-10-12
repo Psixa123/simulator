@@ -35,7 +35,7 @@ Weather.Rarities = {
 
 -- Style decides which model builder is used (see Shared/Models/WeatherModels)
 Weather.Types = {
-	-- Sunny Meadows
+	-- Sunny Plains
 	Breeze = { Name = "Breeze Puff", Rarity = "Common", Style = "Cloud", Color = rgb(255, 255, 255), Accent = rgb(185, 225, 255) },
 	RainCloud = { Name = "Rain Cloud", Rarity = "Uncommon", Style = "RainCloud", Color = rgb(160, 170, 190), Accent = rgb(120, 185, 255) },
 	RainbowMist = { Name = "Rainbow Mist", Rarity = "Rare", Style = "Rainbow", Color = rgb(255, 210, 235), Accent = rgb(255, 150, 220) },
@@ -60,7 +60,7 @@ Weather.Types = {
 	FireTornado = { Name = "Fire Tornado", Rarity = "Uncommon", Style = "Tornado", Color = rgb(255, 110, 40), Accent = rgb(255, 210, 80), Fire = true },
 	MagmaCore = { Name = "Magma Core", Rarity = "Rare", Style = "Orb", Color = rgb(255, 80, 30), Accent = rgb(255, 200, 60), Fire = true },
 
-	-- Sky Citadel
+	-- Upper Atmosphere
 	SolarFlare = { Name = "Solar Flare", Rarity = "Common", Style = "Orb", Color = rgb(255, 170, 60), Accent = rgb(255, 240, 150), Fire = true },
 	CosmicVortex = { Name = "Cosmic Vortex", Rarity = "Uncommon", Style = "Tornado", Color = rgb(140, 80, 255), Accent = rgb(255, 130, 240) },
 	Starstorm = { Name = "Starstorm", Rarity = "Rare", Style = "Starburst", Color = rgb(255, 240, 140), Accent = rgb(150, 200, 255) },

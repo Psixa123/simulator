@@ -13,6 +13,7 @@ local MapLayout = require(Shared.Config.MapLayout)
 local Zones = require(Shared.Config.Zones)
 local Pets = require(Shared.Config.Pets)
 local Format = require(Shared.Util.Format)
+local Hazards = require(Shared.Hazards)
 local EggModels = require(Shared.Models.EggModels)
 
 local MapService = {}
@@ -514,6 +515,56 @@ local function eggStation(parent: Instance, zoneId: number)
 	local host = promptHost(station, position + Vector3.new(0, 4, 0))
 	local instance = prompt(host, "Open Egg", egg.Name, 0, 16)
 	instance:SetAttribute("EggId", eggId)
+end
+
+-- Translucent blue ring with cool mist: a safe spot from Ashfall Volcano's heat (HazardService)
+local function coolingArea(parent: Instance, position: Vector3, radius: number)
+	local area = model("CoolingArea", parent)
+	local color = rgb(110, 200, 255)
+	local ghost = { CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false }
+	local function props(extra)
+		for key, value in ghost do
+			extra[key] = value
+		end
+		extra.Parent = area
+		return extra
+	end
+
+	local floor = cylinder(props({ Name = "CoolFloor", Position = position + Vector3.new(0, 0.08, 0), Height = 0.16, Diameter = radius * 2, Color = color, Material = M.Neon, Transparency = 0.86 }))
+	local segments = 20
+	local length = 2 * radius * math.sin(math.pi / segments) + 0.3
+	for index = 1, segments do
+		local angle = index / segments * math.pi * 2
+		local point = position + Vector3.new(math.cos(angle) * radius, 0.18, math.sin(angle) * radius)
+		local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
+		part(props({ Name = "CoolRing", Size = Vector3.new(0.8, 0.36, length), CFrame = CFrame.lookAt(point, point + tangent), Color = color, Material = M.Neon, Transparency = 0.2 }))
+	end
+	emitter(floor, {
+		Texture = SMOKE,
+		Color = ColorSequence.new(rgb(205, 238, 255)),
+		Size = NumberSequence.new(3, 7),
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.35, 0.78), NumberSequenceKeypoint.new(1, 1) }),
+		Lifetime = NumberRange.new(3, 4.5),
+		Rate = 5,
+		Speed = NumberRange.new(1, 2.5),
+		EmissionDirection = Enum.NormalId.Right, -- the cylinder's X axis points up
+		SpreadAngle = Vector2.new(25, 25),
+		RotSpeed = NumberRange.new(-20, 20),
+	})
+	emitter(floor, {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(rgb(170, 225, 255)),
+		Size = NumberSequence.new(0.45, 0),
+		Lifetime = NumberRange.new(1.5, 2.5),
+		Rate = 6,
+		Speed = NumberRange.new(2, 4),
+		EmissionDirection = Enum.NormalId.Right,
+		LightEmission = 1,
+	})
+
+	local anchor = part(props({ Name = "SignAnchor", Size = Vector3.one, CFrame = CFrame.new(position + Vector3.new(radius, 3, 0)), Transparency = 1 }))
+	local gui = billboard(anchor, UDim2.fromOffset(170, 36), Vector3.zero, 90)
+	textLabel(gui, { Text = "❄️ COOL ZONE", TextColor3 = rgb(170, 225, 255) })
 end
 
 local function zoneArch(parent: Instance, x: number, title: string, color: Color3)
@@ -1207,6 +1258,11 @@ local function buildZone(parent: Instance, zoneId: number)
 	kiosk(zoneFolder, sell + Vector3.new(0, 0, -22), Vector3.zAxis, "Weather Lab", "⚡", zone.Color, nil)
 	sellPad(zoneFolder, sell, rgb(255, 214, 64))
 	eggStation(zoneFolder, zoneId)
+	if zone.Hazard and zone.Hazard.Kind == "Heat" then
+		for _, spot in Hazards.CoolingSpots(zoneId) do
+			coolingArea(zoneFolder, spot, zone.Hazard.SafeRadius)
+		end
+	end
 
 	for x = x0 + 40, x0 + 90, 25 do
 		lamp(zoneFolder, Vector3.new(x, 0, -12), zone.Accent)

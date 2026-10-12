@@ -18,6 +18,7 @@ local ORDER = {
 	"RewardService",
 	"RebirthService",
 	"WeatherService",
+	"HazardService",
 	"MegaStormService",
 	"LeaderboardService",
 }

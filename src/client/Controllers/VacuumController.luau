@@ -147,7 +147,8 @@ local function update(force: boolean?)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local tool = character and character:FindFirstChild("StormVacuum")
-	local active = tool ~= nil and (holding or autoCatch())
+	-- Stunned by lightning (HazardService): the server rejects catching until it wears off
+	local active = tool ~= nil and (holding or autoCatch()) and not character:GetAttribute("Stunned")
 
 	if not data or not root or not active then
 		stop()

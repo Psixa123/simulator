@@ -82,6 +82,17 @@ function handlers.Summon(player)
 	return true
 end
 
+-- enabled = false makes the player immune to biome hazards (keeps catch checks deterministic)
+function handlers.Hazards(player, enabled)
+	Registry.HazardService.SetImmune(player, not enabled)
+	return true
+end
+
+function handlers.Sandstorm(player)
+	Registry.HazardService.StartSandstorm()
+	return true
+end
+
 function handlers.World(player)
 	local parts = 0
 	for _, descendant in Workspace.Map:GetDescendants() do

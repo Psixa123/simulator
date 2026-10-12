@@ -1,7 +1,8 @@
 --!nonstrict
 -- Tracks which zone the player is in: blends lighting/atmosphere per biome, shows the zone
 -- title, runs ambient weather (rain, sand, snow, embers, stars), lightning in Thunder Valley,
--- and opens the gates the player has unlocked.
+-- and opens the gates the player has unlocked. Hazards can tweak a zone's lighting through
+-- ZoneController.LightingFilter (HazardController uses it for sandstorm haze).
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -20,6 +21,7 @@ local Registry = require(script.Parent.Parent.Registry)
 
 local ZoneController = {}
 ZoneController.Current = -1
+ZoneController.LightingFilter = nil :: ((zoneId: number, preset: any) -> any)?
 
 local TEXTURES = WeatherModels.Textures
 local BLEND = TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
@@ -57,6 +59,21 @@ local function applyLighting(preset)
 	end
 	if clouds and preset.Clouds then
 		blend(clouds, preset.Clouds)
+	end
+end
+
+local function lightingFor(zoneId: number)
+	local preset = Zones.Get(zoneId).Lighting
+	if ZoneController.LightingFilter then
+		preset = ZoneController.LightingFilter(zoneId, preset) or preset
+	end
+	return preset
+end
+
+-- Blends back to the current zone's lighting (call after a LightingFilter input changes)
+function ZoneController.RefreshLighting()
+	if ZoneController.Current >= 0 then
+		applyLighting(lightingFor(ZoneController.Current))
 	end
 end
 
@@ -108,7 +125,7 @@ end
 local function enterZone(zoneId: number)
 	ZoneController.Current = zoneId
 	local zone = Zones.Get(zoneId)
-	applyLighting(zone.Lighting)
+	applyLighting(lightingFor(zoneId))
 	setAmbience(zone.Lighting.Ambience)
 	startLightning(zoneId)
 
@@ -119,6 +136,7 @@ local function enterZone(zoneId: number)
 		subtitle = nil
 	end
 	Registry.InterfaceController.BigText(zone.Icon .. " " .. string.upper(zone.Name), zone.Color, subtitle, if subtitle then 3 else 1.8)
+	Registry.HazardController.ShowZoneHazard(zoneId)
 end
 
 ---------------------------------------------------------------------------

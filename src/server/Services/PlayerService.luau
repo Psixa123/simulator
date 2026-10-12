@@ -10,6 +10,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Formulas = require(Shared.Formulas)
 local Format = require(Shared.Util.Format)
+local Hazards = require(Shared.Hazards)
 
 local Registry = require(script.Parent.Registry)
 local CharacterGear = require(script.Parent.CharacterGear)
@@ -65,12 +66,29 @@ local function updateOverhead(player: Player)
 	end
 end
 
-local function updateWalkSpeed(player: Player)
+-- The one place that sets WalkSpeed: Storm Boots speed, slowed by hazards such as Frostpeak's
+-- cold (HazardService) and frozen in place, without jumping, while stunned by lightning.
+function PlayerService.RefreshWalkSpeed(player: Player)
 	local data = Registry.DataService.Get(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if data and humanoid then
-		humanoid.WalkSpeed = Formulas.WalkSpeed(data)
+	if not data or not humanoid then
+		return
+	end
+	local stunned = character:GetAttribute("Stunned") == true
+	local hazard = Registry.HazardService and Registry.HazardService.CurrentHazard(player)
+	humanoid.WalkSpeed = if stunned then 0 else Formulas.WalkSpeed(data) * Hazards.SpeedMultiplier(data, hazard)
+
+	-- Jump settings are kept on the humanoid while stunned and restored afterwards
+	local saved = humanoid:GetAttribute("JumpBeforeStun")
+	if stunned and saved == nil then
+		humanoid:SetAttribute("JumpBeforeStun", Vector2.new(humanoid.JumpPower, humanoid.JumpHeight))
+		humanoid.JumpPower = 0
+		humanoid.JumpHeight = 0
+	elseif not stunned and typeof(saved) == "Vector2" then
+		humanoid.JumpPower = saved.X
+		humanoid.JumpHeight = saved.Y
+		humanoid:SetAttribute("JumpBeforeStun", nil)
 	end
 end
 
@@ -152,7 +170,7 @@ local function setupCharacter(player: Player, character: Model)
 		return
 	end
 
-	humanoid.WalkSpeed = Formulas.WalkSpeed(data)
+	PlayerService.RefreshWalkSpeed(player)
 	character:SetAttribute("CatchTarget", 0)
 
 	for _, descendant in character:GetDescendants() do
@@ -223,7 +241,7 @@ local function onDataChanged(player: Player, key: string, value)
 		player:SetAttribute("Rebirths", value)
 		updateOverhead(player)
 	elseif key == "Upgrades" then
-		updateWalkSpeed(player)
+		PlayerService.RefreshWalkSpeed(player)
 	elseif key == "Energy" then
 		PlayerService.UpdateTank(player)
 	elseif key == "Passes" then

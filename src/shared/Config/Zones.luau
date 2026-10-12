@@ -2,6 +2,8 @@
 -- The six biomes players progress through, plus the hub's look.
 -- Cost = Volts to unlock, MinPower = vacuum power needed to enter and catch weather,
 -- Value = Volts earned per unit of energy caught in this zone.
+-- Hazard = what makes the biome dangerous (rules in Shared/Hazards, run by HazardService on the
+-- server and HazardController on the client). Hazards never apply in the hub or the arena.
 
 local function rgb(r, g, b)
 	return Color3.fromRGB(r, g, b)
@@ -19,11 +21,17 @@ local MEADOW_LIGHTING = {
 	Bloom = { Intensity = 0.45, Size = 24, Threshold = 1.6 },
 }
 
+-- Storm Boots (Upgrades.Speed) level that keeps Frostpeak's cold away. Boots Lv 8 -> 9 costs
+-- 6.55M Volts (8.7M in total from Lv 1) while Frostpeak itself costs 60M, saved up in the Dune Sea
+-- at 40 Volts per energy - so Lv 9 is affordable on the way there (or after a few Frostpeak tanks
+-- at 280 Volts per energy) and Boots survive rebirths. Lv 10 would need another 26M: too grindy.
+local FROST_BOOTS_LEVEL = 9
+
 local Zones = {
 	{
 		Id = 1,
 		Key = "Meadows",
-		Name = "Sunny Meadows",
+		Name = "Sunny Plains",
 		Icon = "🌤️",
 		Description = "Gentle breezes and spring showers. Every storm chaser starts here!",
 		Cost = 0,
@@ -36,6 +44,7 @@ local Zones = {
 		Weather = { "Breeze", "RainCloud", "RainbowMist" },
 		Egg = "MeadowEgg",
 		Lighting = MEADOW_LIGHTING,
+		Hazard = nil, -- the starter biome is safe
 	},
 	{
 		Id = 2,
@@ -65,6 +74,19 @@ local Zones = {
 			Ambience = "Rain",
 			Lightning = true,
 		},
+		Hazard = {
+			Kind = "Lightning",
+			Name = "Lightning Strikes",
+			Icon = "⚡",
+			Description = "Lightning stuns you! Dodge the glowing circles.",
+			Color = rgb(255, 225, 70),
+			Interval = NumberRange.new(5, 9), -- seconds between strikes aimed at each player
+			Spread = 7, -- strikes land up to this many studs from their target
+			Radius = 9, -- studs: everyone inside the circle is stunned
+			WarnTime = 1.3, -- seconds the warning circle shows before the bolt hits
+			StunTime = 1.6,
+			Grace = 5, -- seconds of safety after entering the zone or respawning
+		},
 	},
 	{
 		Id = 3,
@@ -92,6 +114,18 @@ local Zones = {
 			Clouds = { Cover = 0.3, Density = 0.4, Color = rgb(255, 240, 220) },
 			Bloom = { Intensity = 0.5, Size = 24, Threshold = 1.5 },
 			Ambience = "Sand",
+		},
+		Hazard = {
+			Kind = "Sandstorm",
+			Name = "Sandstorms",
+			Icon = "🌪️",
+			Description = "Sandstorms sweep in and bury the view in dust.",
+			Color = rgb(240, 190, 100),
+			Calm = NumberRange.new(30, 45), -- seconds between sandstorms (server-wide)
+			Duration = 15,
+			-- Replace the zone's lighting while a sandstorm rages
+			Atmosphere = { Density = 0.64, Offset = 0.02, Color = rgb(222, 176, 108), Decay = rgb(168, 110, 56), Glare = 0, Haze = 3.6 },
+			ColorCorrection = { Brightness = -0.03, Contrast = 0.04, Saturation = -0.18, TintColor = rgb(255, 226, 186) },
 		},
 	},
 	{
@@ -121,6 +155,15 @@ local Zones = {
 			Bloom = { Intensity = 0.5, Size = 24, Threshold = 1.5 },
 			Ambience = "Snow",
 		},
+		Hazard = {
+			Kind = "Cold",
+			Name = "Freezing Cold",
+			Icon = "🥶",
+			Description = string.format("The cold slows you! Storm Boots Lv %d keep you warm.", FROST_BOOTS_LEVEL),
+			Color = rgb(150, 210, 255),
+			SpeedMultiplier = 0.55,
+			BootsLevel = FROST_BOOTS_LEVEL,
+		},
 	},
 	{
 		Id = 5,
@@ -149,13 +192,23 @@ local Zones = {
 			Bloom = { Intensity = 0.9, Size = 30, Threshold = 1.2 },
 			Ambience = "Embers",
 		},
+		Hazard = {
+			Kind = "Heat",
+			Name = "Scorching Heat",
+			Icon = "🔥",
+			Description = "The heat hurts! Cool off near Weather Labs and eggs.",
+			Color = rgb(255, 120, 50),
+			Damage = 4, -- HP per second (characters regenerate about 1 HP per second)
+			SafeRadius = 20, -- studs around the sell pad, egg station and zone spawn
+			CoolHeal = 8, -- HP per second while cooling off
+		},
 	},
 	{
 		Id = 6,
 		Key = "Sky",
-		Name = "Sky Citadel",
+		Name = "Upper Atmosphere",
 		Icon = "🌌",
-		Description = "Above the clouds, cosmic storms swirl between the stars.",
+		Description = "Above the clouds: solar flares, auroras and barely any gravity.",
 		Cost = 3e11,
 		MinPower = 11000,
 		Value = 15000,
@@ -176,6 +229,14 @@ local Zones = {
 			Clouds = { Cover = 0.45, Density = 0.5, Color = rgb(190, 150, 255) },
 			Bloom = { Intensity = 1, Size = 32, Threshold = 1.1 },
 			Ambience = "Stars",
+		},
+		Hazard = {
+			Kind = "LowGravity",
+			Name = "Low Gravity",
+			Icon = "🪐",
+			Description = "Gravity is weak up here. Enjoy the floaty jumps!",
+			Color = rgb(190, 140, 255),
+			Gravity = 70, -- studs/s² (normal is 196.2)
 		},
 	},
 }

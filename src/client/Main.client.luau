@@ -27,6 +27,7 @@ local ORDER = {
 	"VacuumController",
 	"PetController",
 	"ZoneController",
+	"HazardController",
 	"WorldController",
 	"MegaStormController",
 	"ObjectiveController",

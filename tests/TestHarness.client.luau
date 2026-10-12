@@ -46,6 +46,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared.Remotes)
 local MapLayout = require(Shared.Config.MapLayout)
 local Zones = require(Shared.Config.Zones)
+local Hazards = require(Shared.Hazards)
 local Registry = require(script.Parent:WaitForChild("Client"):WaitForChild("Registry"))
 
 -- Wait for the game client to finish starting
@@ -263,6 +264,7 @@ step("eggs and pets", function()
 end)
 
 step("zones", function()
+	Command:InvokeServer("Hazards", false) -- no lightning stuns during the catch checks
 	Command:InvokeServer("AddVolts", 1e13)
 	local buy = Remotes.BuyUpgrade:InvokeServer("Power", "Max")
 	check("max power", buy and buy.Ok, buy and (buy.Level or buy.Error))
@@ -301,6 +303,78 @@ step("zones", function()
 			check("cell exists in zone " .. zoneId, false)
 		end
 	end
+end)
+
+step("hazards", function()
+	Command:InvokeServer("Hazards", true)
+	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+	local function zoneField(zoneId: number): Vector3
+		return Vector3.new(MapLayout.ZoneStart(zoneId) + 200, 4, 20)
+	end
+
+	Remotes.Teleport:InvokeServer("Hub")
+	task.wait(1.5)
+	local baseSpeed = humanoid.WalkSpeed
+	local baseGravity = Workspace.Gravity
+
+	-- Frostpeak: slowed while the Storm Boots are below the required level
+	task.wait(1.5)
+	Remotes.Teleport:InvokeServer(4)
+	task.wait(1.5)
+	check("cold slows", humanoid.WalkSpeed < baseSpeed, humanoid.WalkSpeed)
+	shot("hazard_cold", 1.4)
+
+	-- Upper Atmosphere: low gravity on the client
+	task.wait(0.4)
+	Remotes.Teleport:InvokeServer(6)
+	task.wait(1.5)
+	check("cold lifted", humanoid.WalkSpeed == baseSpeed, humanoid.WalkSpeed)
+	check("low gravity", Workspace.Gravity < baseGravity, Workspace.Gravity)
+	humanoid.Jump = true
+	task.wait(0.5)
+	shot("hazard_low_gravity", 1)
+
+	-- Ashfall Volcano: heat damage away from the cooling areas, healing inside them
+	Command:InvokeServer("Teleport", zoneField(5))
+	task.wait(0.5)
+	local healthBefore = humanoid.Health
+	task.wait(2.5)
+	check("heat damage", humanoid.Health < healthBefore, humanoid.Health)
+	shot("hazard_heat", 1)
+	Command:InvokeServer("Teleport", MapLayout.SellPad(5) + Vector3.new(6, 4, 6))
+	local hurt = humanoid.Health
+	task.wait(1.5)
+	check("cooling area heals", humanoid.Health > hurt, humanoid.Health)
+	shot("hazard_cooling_area", 1)
+
+	-- Dune Sea: forced sandstorm
+	Command:InvokeServer("Sandstorm")
+	Command:InvokeServer("Teleport", zoneField(3))
+	task.wait(3)
+	local state = ReplicatedStorage:FindFirstChild(Hazards.StateName)
+	check("sandstorm active", state and state:GetAttribute(Hazards.SandstormAttribute(3)) == true)
+	shot("hazard_sandstorm", 1.4)
+
+	-- Thunder Valley: standing still gets you stunned by the next strike
+	Command:InvokeServer("Teleport", zoneField(2))
+	local stunned, waited = false, 0
+	while not stunned and waited < 18 do
+		task.wait(0.1)
+		waited += 0.1
+		stunned = player.Character:GetAttribute("Stunned") == true
+	end
+	check("lightning stun", stunned, waited)
+	if stunned then
+		task.wait(0.2)
+		check("stun freezes", humanoid.WalkSpeed == 0, humanoid.WalkSpeed)
+		shot("hazard_stunned", 0.6)
+	end
+
+	Remotes.Teleport:InvokeServer("Hub")
+	task.wait(2)
+	check("gravity restored", Workspace.Gravity == baseGravity, Workspace.Gravity)
+	check("speed restored", humanoid.WalkSpeed == baseSpeed, humanoid.WalkSpeed)
+	Command:InvokeServer("Hazards", false)
 end)
 
 step("rebirth", function()

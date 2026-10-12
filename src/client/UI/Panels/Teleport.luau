@@ -1,5 +1,6 @@
 --!nonstrict
 -- Teleport panel: travel to the hub, the arena or any unlocked zone, and unlock the next zone.
+-- Zone cards also show the biome's hazard.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -7,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Zones = require(Shared.Config.Zones)
 local Formulas = require(Shared.Formulas)
 local Format = require(Shared.Util.Format)
+local Hazards = require(Shared.Hazards)
 local Remotes = require(Shared.Remotes)
 
 local Registry = require(script.Parent.Parent.Parent.Registry)
@@ -113,6 +115,22 @@ function Teleport.Build()
 	local zoneRows = {}
 	for zoneId, zone in ipairs(Zones) do
 		local card, info = row(list, 2 + zoneId, zone.Icon, zone.Color, zone.Name)
+		local hazardLabel = nil
+		if zone.Hazard then
+			card.Size = UDim2.new(1, -8, 0, 92)
+			hazardLabel = UI.Label({
+				Name = "Hazard",
+				Text = Hazards.Describe(zone.Hazard, nil),
+				Font = Theme.BodyFont,
+				TextColor3 = zone.Hazard.Color,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size = UDim2.new(1, -250, 0, 18),
+				Position = UDim2.fromOffset(74, 64),
+				MaxTextSize = 14,
+				Stroke = 1.5,
+				Parent = card,
+			})
+		end
 		local button
 		button = UI.Button({
 			Text = "GO",
@@ -139,7 +157,7 @@ function Teleport.Build()
 				end
 			end,
 		})
-		zoneRows[zoneId] = { Info = info, Button = button }
+		zoneRows[zoneId] = { Info = info, Button = button, Hazard = hazardLabel }
 	end
 
 	local function refresh()
@@ -150,6 +168,9 @@ function Teleport.Build()
 		local power = Formulas.Power(data)
 		for zoneId, zoneRow in zoneRows do
 			local zone = Zones[zoneId]
+			if zoneRow.Hazard then
+				zoneRow.Hazard.Text = Hazards.Describe(zone.Hazard, data)
+			end
 			if zoneId <= data.Zone then
 				if power >= zone.MinPower then
 					zoneRow.Info.Text = "Unlocked  •  ⚡ x" .. Format.Number(zone.Value) .. " Volts per energy"

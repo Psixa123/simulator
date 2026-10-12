@@ -254,6 +254,9 @@ local function onCatch(player: Player, action, targetId)
 	if not data or not root or not character or not character:FindFirstChild("StormVacuum") then
 		return
 	end
+	if character:GetAttribute("Stunned") then
+		return -- zapped by lightning (HazardService)
+	end
 
 	if targetId == MEGA_TARGET then
 		if Registry.MegaStormService.CanCatch(root) then
