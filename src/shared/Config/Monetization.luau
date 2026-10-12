@@ -65,7 +65,7 @@ Monetization.Gamepasses = {
 		Icon = "🛢️",
 		Price = 149,
 		Color = Color3.fromRGB(110, 140, 255),
-		Description = "Triple your Storm Tank capacity forever.",
+		Description = "Double your Storm Tank capacity forever.",
 	},
 	LuckyHatcher = {
 		Id = 0,

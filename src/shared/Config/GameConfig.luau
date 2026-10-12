@@ -133,7 +133,7 @@ GameConfig.PassEffects = {
 	VipBonus = 0.25,
 	DoubleVolts = 2,
 	DoubleEnergy = 2,
-	MegaTank = 3,
+	MegaTank = 2,
 	LuckyHatcher = 1.5,
 }
 
