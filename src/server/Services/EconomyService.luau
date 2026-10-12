@@ -1,0 +1,127 @@
+--!nonstrict
+-- Volts, the energy tank and selling (sell pads, remote sell and auto sell).
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Formulas = require(Shared.Formulas)
+local MapLayout = require(Shared.Config.MapLayout)
+local Remotes = require(Shared.Remotes)
+
+local Registry = require(script.Parent.Registry)
+local Net = require(script.Parent.Net)
+
+local EconomyService = {}
+
+function EconomyService.AddVolts(player: Player, amount: number, countAsEarned: boolean?)
+	local data = Registry.DataService.Get(player)
+	if not data then
+		return
+	end
+	amount = math.floor(amount)
+	data.Volts += amount
+	if countAsEarned ~= false and amount > 0 then
+		data.TotalVolts += amount
+	end
+	Registry.DataService.Replicate(player, "Volts", "TotalVolts")
+end
+
+function EconomyService.SpendVolts(player: Player, amount: number): boolean
+	local data = Registry.DataService.Get(player)
+	if not data or amount < 0 or data.Volts < amount then
+		return false
+	end
+	data.Volts -= amount
+	Registry.DataService.Replicate(player, "Volts")
+	return true
+end
+
+-- Adds energy to the tank, capped by capacity. Returns how much was actually added.
+function EconomyService.AddEnergy(player: Player, units: number, valuePerUnit: number): number
+	local data = Registry.DataService.Get(player)
+	if not data or units <= 0 then
+		return 0
+	end
+	local capacity = Formulas.TankCapacity(data)
+	local added = math.min(math.max(0, capacity - data.Energy), units)
+	if added <= 0 then
+		return 0
+	end
+	data.Energy += added
+	data.TankValue += added * valuePerUnit
+	Registry.DataService.Replicate(player, "Energy", "TankValue")
+	return added
+end
+
+function EconomyService.IsTankFull(data): boolean
+	return data.Energy >= Formulas.TankCapacity(data) - 1e-6
+end
+
+-- Converts the whole tank into Volts. source: "Pad" | "Remote" | "Auto"
+function EconomyService.Sell(player: Player, source: string): number
+	local data = Registry.DataService.Get(player)
+	if not data or data.Energy <= 0 then
+		return 0
+	end
+	local volts = math.floor(data.TankValue * Formulas.VoltsMultiplier(data))
+	data.Energy = 0
+	data.TankValue = 0
+	data.Volts += volts
+	data.TotalVolts += volts
+	data.Stats.Sells += 1
+	Registry.DataService.Replicate(player, "Energy", "TankValue", "Volts", "TotalVolts")
+	Net.Effect(player, "Sell", volts, source)
+	return volts
+end
+
+function EconomyService.Init()
+	Remotes.Sell.OnServerInvoke = function(player)
+		if not Net.RateLimit(player, "Sell", 0.6) then
+			return Net.Fail("Slow down!")
+		end
+		local data = Registry.DataService.Get(player)
+		if not data then
+			return Net.Fail("Still loading...")
+		end
+		if data.Energy <= 0 then
+			return Net.Fail("Your tank is empty! Catch some weather first.")
+		end
+		if Formulas.HasPass(data, "RemoteSell") then
+			return { Ok = true, Sold = EconomyService.Sell(player, "Remote") }
+		end
+		local root = Net.GetRoot(player)
+		if not root then
+			return Net.Fail("You can't sell right now.")
+		end
+		local pad = MapLayout.SellPad(MapLayout.ZoneAt(root.Position))
+		Registry.ZoneService.TeleportTo(player, CFrame.new(pad + Vector3.new(0, 4, 0)))
+		return { Ok = true, Teleported = true }
+	end
+end
+
+function EconomyService.Start()
+	local pads = MapLayout.AllSellPads()
+	local radius = MapLayout.SellPadRadius
+	while true do
+		task.wait(0.25)
+		for _, player in Players:GetPlayers() do
+			local data = Registry.DataService.Get(player)
+			if data and data.Energy > 0 then
+				local root = Net.GetRoot(player)
+				if root then
+					local position = root.Position
+					for _, pad in pads do
+						local dx, dz = position.X - pad.X, position.Z - pad.Z
+						if dx * dx + dz * dz <= radius * radius and math.abs(position.Y - pad.Y) < 12 then
+							EconomyService.Sell(player, "Pad")
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+return EconomyService

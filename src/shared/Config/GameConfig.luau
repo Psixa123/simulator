@@ -1,0 +1,222 @@
+--!nonstrict
+-- Core tuning values for Storm Catcher Simulator.
+-- Every number that shapes progression lives here (or in the other Config modules)
+-- so the game can be rebalanced without touching gameplay code.
+
+local GameConfig = {}
+
+GameConfig.GameName = "Storm Catcher Simulator"
+GameConfig.Version = "1.0.0"
+
+-- Group / social links shown in the UI (leave empty to hide)
+GameConfig.GroupName = ""
+
+---------------------------------------------------------------------------
+-- Data
+---------------------------------------------------------------------------
+GameConfig.DataStoreName = "StormCatcherData_v1"
+GameConfig.AutosaveInterval = 90 -- seconds
+GameConfig.SessionLockTimeout = 300 -- seconds before a lock from a crashed server is ignored
+GameConfig.MaxStoredReceipts = 40
+
+---------------------------------------------------------------------------
+-- Catching
+---------------------------------------------------------------------------
+GameConfig.CatchTickRate = 0.2 -- seconds between vacuum ticks (5 per second)
+GameConfig.CatchRangeLeeway = 8 -- extra studs tolerated server-side (latency)
+GameConfig.CompletionBonus = 0.25 -- bonus energy for helping finish a weather cell
+GameConfig.CellRespawnTime = NumberRange.new(4, 8)
+GameConfig.CellSpacing = 22 -- minimum distance between weather cells
+
+---------------------------------------------------------------------------
+-- Upgrades
+-- Value(level) -> stat at that level, Cost(level) -> price to go from level to level + 1
+---------------------------------------------------------------------------
+GameConfig.Upgrades = {
+	Power = {
+		Order = 1,
+		Name = "Vacuum Power",
+		Icon = "💨",
+		Description = "Drain weather faster and catch stronger storms.",
+		MaxLevel = 60,
+		ResetsOnRebirth = true,
+		Value = function(level: number): number
+			return math.floor(10 * 1.16 ^ (level - 1))
+		end,
+		Cost = function(level: number): number
+			return math.floor(25 * 1.6 ^ (level - 1))
+		end,
+	},
+	Tank = {
+		Order = 2,
+		Name = "Storm Tank",
+		Icon = "🛢️",
+		Description = "Carry more energy before you need to sell.",
+		MaxLevel = 60,
+		ResetsOnRebirth = true,
+		Value = function(level: number): number
+			return math.floor(250 * 1.21 ^ (level - 1))
+		end,
+		Cost = function(level: number): number
+			return math.floor(35 * 1.6 ^ (level - 1))
+		end,
+	},
+	Range = {
+		Order = 3,
+		Name = "Vacuum Range",
+		Icon = "📡",
+		Description = "Reach weather from further away.",
+		MaxLevel = 10,
+		Suffix = " studs",
+		Value = function(level: number): number
+			return 22 + (level - 1) * 3
+		end,
+		Cost = function(level: number): number
+			return math.floor(500 * 4 ^ (level - 1))
+		end,
+	},
+	Speed = {
+		Order = 4,
+		Name = "Storm Boots",
+		Icon = "👟",
+		Description = "Run faster between storms.",
+		MaxLevel = 10,
+		Suffix = " speed",
+		Value = function(level: number): number
+			return 16 + (level - 1) * 2
+		end,
+		Cost = function(level: number): number
+			return math.floor(400 * 4 ^ (level - 1))
+		end,
+	},
+}
+
+GameConfig.UpgradeOrder = { "Power", "Tank", "Range", "Speed" }
+
+---------------------------------------------------------------------------
+-- Rebirth
+---------------------------------------------------------------------------
+GameConfig.Rebirth = {
+	BaseCost = 1e7,
+	CostGrowth = 5,
+	VoltsBonus = 0.5, -- +50% Volts for every rebirth
+	Resets = { "Volts", "Power", "Tank" },
+	Keeps = { "Pets", "Zones", "Range", "Speed", "Gamepasses" },
+}
+
+---------------------------------------------------------------------------
+-- Pets
+---------------------------------------------------------------------------
+GameConfig.Pets = {
+	MaxStorage = 60,
+	BaseEquipSlots = 3,
+	PassEquipSlots = 3,
+	GoldenRequirement = 5,
+	GoldenMultiplier = 2.5,
+	HatchDistance = 26,
+	AutoHatchDelay = 0.4,
+}
+
+---------------------------------------------------------------------------
+-- Gamepass effects & boosts
+---------------------------------------------------------------------------
+GameConfig.PassEffects = {
+	VipBonus = 0.25,
+	DoubleVolts = 2,
+	DoubleEnergy = 2,
+	MegaTank = 3,
+	LuckyHatcher = 1.5,
+}
+
+GameConfig.Boosts = {
+	Energy = {
+		Name = "2x Energy",
+		Icon = "⚡",
+		Multiplier = 2,
+		Color = Color3.fromRGB(80, 200, 255),
+	},
+	Luck = {
+		Name = "2x Luck",
+		Icon = "🍀",
+		Multiplier = 2,
+		Color = Color3.fromRGB(90, 230, 120),
+	},
+}
+
+---------------------------------------------------------------------------
+-- Mega Storm (server-wide event in the hub arena)
+---------------------------------------------------------------------------
+GameConfig.MegaStorm = {
+	FirstDelay = 180, -- seconds after a server starts
+	Interval = 600, -- seconds between storms
+	WarningTime = 30,
+	Duration = 120,
+	SummonDelay = 20,
+	Range = 80, -- studs from the arena center where players can vacuum the storm
+	HealthSecondsPerPlayer = 30, -- storm health ~= everyone's combined power for this many seconds
+	MinHealth = 2500,
+	RewardMultiplier = 4,
+	DefeatBonus = 1.5,
+	EscapeMultiplier = 0.6,
+	MinContribution = 0.02, -- fraction of storm health needed to qualify for pet drops
+	ExclusiveChances = { 0.25, 0.15, 0.10 }, -- 1st, 2nd and 3rd place
+	ParticipantChance = 0.025,
+	Types = {
+		{
+			Key = "Tempest",
+			Name = "Tempest Twister",
+			Color = Color3.fromRGB(150, 205, 255),
+			Accent = Color3.fromRGB(235, 248, 255),
+			Pet = "TempestTitan",
+		},
+		{
+			Key = "Thunder",
+			Name = "Thunder Titan",
+			Color = Color3.fromRGB(95, 85, 165),
+			Accent = Color3.fromRGB(255, 228, 80),
+			Pet = "VoltWyrm",
+		},
+		{
+			Key = "Blizzard",
+			Name = "Blizzard Behemoth",
+			Color = Color3.fromRGB(195, 232, 255),
+			Accent = Color3.fromRGB(110, 190, 255),
+			Pet = "FrostColossus",
+		},
+		{
+			Key = "Inferno",
+			Name = "Inferno Cyclone",
+			Color = Color3.fromRGB(255, 115, 45),
+			Accent = Color3.fromRGB(255, 215, 90),
+			Pet = "CycloneDrake",
+		},
+		{
+			Key = "Cosmic",
+			Name = "Cosmic Maelstrom",
+			Color = Color3.fromRGB(140, 85, 255),
+			Accent = Color3.fromRGB(255, 145, 240),
+			Pet = "MaelstromSpirit",
+		},
+	},
+}
+
+---------------------------------------------------------------------------
+-- Defaults
+---------------------------------------------------------------------------
+GameConfig.DefaultSettings = {
+	Music = true,
+	Sfx = true,
+	OtherPets = true,
+	LowGraphics = false,
+	AutoCatch = true,
+}
+
+GameConfig.SettingsInfo = {
+	{ Key = "Music", Name = "Music", Icon = "🎵", Description = "Background music" },
+	{ Key = "Sfx", Name = "Sound Effects", Icon = "🔊", Description = "Vacuum, rewards and interface sounds" },
+	{ Key = "OtherPets", Name = "Other Players' Pets", Icon = "🐾", Description = "Show pets that follow other players" },
+	{ Key = "LowGraphics", Name = "Performance Mode", Icon = "⚙️", Description = "Fewer particles and effects" },
+	{ Key = "AutoCatch", Name = "Auto Catch", Icon = "🤖", Description = "Requires the Auto Catch gamepass" },
+}
+
+return GameConfig

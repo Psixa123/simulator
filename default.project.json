@@ -1,0 +1,103 @@
+{
+  "name": "StormCatcherSimulator",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": {
+        "$path": "src/shared"
+      },
+      "Remotes": {
+        "$className": "Folder",
+        "GetData": { "$className": "RemoteFunction" },
+        "BuyUpgrade": { "$className": "RemoteFunction" },
+        "UnlockZone": { "$className": "RemoteFunction" },
+        "Teleport": { "$className": "RemoteFunction" },
+        "Rebirth": { "$className": "RemoteFunction" },
+        "Hatch": { "$className": "RemoteFunction" },
+        "PetAction": { "$className": "RemoteFunction" },
+        "ClaimDaily": { "$className": "RemoteFunction" },
+        "ClaimGift": { "$className": "RemoteFunction" },
+        "RedeemCode": { "$className": "RemoteFunction" },
+        "SetSetting": { "$className": "RemoteFunction" },
+        "Sell": { "$className": "RemoteFunction" },
+        "DevGrant": { "$className": "RemoteFunction" },
+        "Catch": { "$className": "RemoteEvent" },
+        "DataChanged": { "$className": "RemoteEvent" },
+        "Notify": { "$className": "RemoteEvent" },
+        "Effect": { "$className": "RemoteEvent" }
+      },
+      "MegaStormState": {
+        "$className": "Configuration"
+      }
+    },
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$properties": {
+        "CameraMaxZoomDistance": 70,
+        "CameraMinZoomDistance": 4,
+        "CharacterWalkSpeed": 16
+      },
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "StreamingEnabled": false,
+        "FallenPartsDestroyHeight": -200
+      }
+    },
+
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "Technology": "Future",
+        "ClockTime": 14.2,
+        "Brightness": 2.4,
+        "GlobalShadows": true,
+        "EnvironmentDiffuseScale": 1,
+        "EnvironmentSpecularScale": 1,
+        "Ambient": [0.39, 0.41, 0.47],
+        "OutdoorAmbient": [0.59, 0.59, 0.65]
+      }
+    },
+
+    "Players": {
+      "$className": "Players",
+      "$properties": {
+        "CharacterAutoLoads": true,
+        "RespawnTime": 3
+      }
+    },
+
+    "SoundService": {
+      "$className": "SoundService",
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    },
+
+    "StarterGui": {
+      "$className": "StarterGui"
+    },
+
+    "ServerStorage": {
+      "$className": "ServerStorage"
+    }
+  }
+}
