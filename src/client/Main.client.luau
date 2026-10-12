@@ -111,9 +111,16 @@ task.spawn(function()
 	end
 end)
 
+-- Messages that arrive while loading (e.g. purchases granted on join) are shown once we're in
+local pendingNotifications = {}
 Remotes.Notify.OnClientEvent:Connect(function(text, kind)
+	if type(text) ~= "string" then
+		return
+	end
 	if loaded then
 		Interface.Notify(text, kind)
+	elseif #pendingNotifications < 8 then
+		table.insert(pendingNotifications, { Text = text, Kind = kind })
 	end
 end)
 
@@ -147,6 +154,10 @@ end
 UI.Tween(loading, 0.6, { BackgroundTransparency = 1 }).Completed:Once(function()
 	loading:Destroy()
 end)
+for _, pending in pendingNotifications do
+	Interface.Notify(pending.Text, pending.Kind)
+end
+table.clear(pendingNotifications)
 
 ---------------------------------------------------------------------------
 -- VIP chat tag

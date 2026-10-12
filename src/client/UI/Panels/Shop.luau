@@ -1,6 +1,9 @@
 --!nonstrict
 -- Shop panel: gamepasses, boosts and Volts packs.
+-- Shows each item's uploaded icon once Roblox returns it, "Coming soon" for items without an Id
+-- in live servers, and hides paid random items where they aren't allowed.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -15,6 +18,8 @@ local Theme = require(script.Parent.Parent.Theme)
 
 local Shop = {}
 
+local player = Players.LocalPlayer
+
 local PRODUCT_COLORS = {
 	Volts = Color3.fromRGB(255, 214, 64),
 	Boost = Color3.fromRGB(110, 220, 255),
@@ -23,7 +28,7 @@ local PRODUCT_COLORS = {
 
 local function itemCard(parent: Instance, order: number, icon: string, color: Color3, name: string, description: string, onClick: () -> ())
 	local card = UI.Card({ Name = name, LayoutOrder = order, Parent = parent })
-	UI.Icon({
+	local iconHolder = UI.Icon({
 		Text = icon,
 		Color = color,
 		Size = UDim2.fromOffset(76, 76),
@@ -46,10 +51,9 @@ local function itemCard(parent: Instance, order: number, icon: string, color: Co
 		TextColor3 = Theme.Colors.SubText,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Top,
-		TextScaled = false,
-		TextSize = 14,
-		Size = UDim2.new(1, -110, 0, 50),
+		Size = UDim2.new(1, -110, 0, 44),
 		Position = UDim2.fromOffset(100, 38),
+		MaxTextSize = 17,
 		Stroke = 1.5,
 		Parent = card,
 	})
@@ -64,7 +68,34 @@ local function itemCard(parent: Instance, order: number, icon: string, color: Co
 		Parent = card,
 		OnClick = onClick,
 	})
-	return card, button, descriptionLabel
+	return card, button, descriptionLabel, iconHolder
+end
+
+-- Swaps the emoji for the icon uploaded to Roblox once we know its asset id
+local function setIcon(holder: Frame, iconId: number?)
+	if not iconId or holder:FindFirstChild("Image") then
+		return
+	end
+	UI.Create("ImageLabel", {
+		Name = "Image",
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://" .. iconId,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 2,
+		Parent = holder,
+		UI.Round(),
+	})
+	local glyph = holder:FindFirstChild("Glyph")
+	if glyph then
+		glyph.Visible = false
+	end
+end
+
+-- Disabled button for an item that has no Id yet (live servers only; the Id can't change mid-game)
+local function showComingSoon(button: GuiButton)
+	UI.SetButtonText(button, "Coming soon")
+	UI.SetButtonColor(button, "Gray")
+	button.Active = false
 end
 
 function Shop.Build()
@@ -108,20 +139,26 @@ function Shop.Build()
 		end,
 	})
 
+	local Monetize = Registry.MonetizationController
 	local unconfigured = false
 	local passButtons = {}
 	local voltsDescriptions = {}
+	local cards = {} -- [item key] = card (hidden while the item is restricted)
 	local refresh
 
 	-- Gamepasses
 	local passPage = page("Passes")
 	for index, pass in Monetization.SortedPasses() do
-		local _, button = itemCard(passPage, index, pass.Icon, pass.Color, pass.Name, pass.Description, function()
-			Registry.MonetizationController.PromptPass(pass.Key)
+		local card, button, _, iconHolder = itemCard(passPage, index, pass.Icon, pass.Color, pass.Name, pass.Description, function()
+			if not Monetize.IsComingSoon(pass) then
+				Monetize.PromptPass(pass.Key)
+			end
 		end)
-		passButtons[pass.Key] = { Button = button, Price = pass.Price }
-		Registry.MonetizationController.GetPrice("Pass", pass.Key, function(price)
+		cards[pass.Key] = card
+		passButtons[pass.Key] = { Button = button, Price = pass.Price, Pass = pass }
+		Monetize.GetPrice("Pass", pass.Key, function(price, icon)
 			passButtons[pass.Key].Price = price
+			setIcon(iconHolder, icon)
 			if refresh then
 				refresh()
 			end
@@ -140,17 +177,26 @@ function Shop.Build()
 		if product.Kind == "Boost" then
 			description = "Doubles your " .. string.lower(product.Boost) .. " for " .. Format.Duration(product.Duration) .. ". Stacks with gamepasses and pauses while you're offline."
 		end
-		local _, button, descriptionLabel = itemCard(parent, index, product.Icon, PRODUCT_COLORS[product.Kind], product.Name, description or "", function()
-			Registry.MonetizationController.PromptProduct(product.Key)
+		local card, button, descriptionLabel, iconHolder = itemCard(parent, index, product.Icon, PRODUCT_COLORS[product.Kind], product.Name, description or "", function()
+			if not Monetize.IsComingSoon(product) then
+				Monetize.PromptProduct(product.Key)
+			end
 		end)
+		cards[product.Key] = card
 		if product.Kind == "Volts" then
 			voltsDescriptions[product.Key] = descriptionLabel
-			descriptionLabel.TextSize = 20
 			descriptionLabel.Font = Theme.Font
 			descriptionLabel.TextColor3 = Theme.Colors.Volts
+			descriptionLabel:FindFirstChildOfClass("UITextSizeConstraint").MaxTextSize = 22
 		end
-		Registry.MonetizationController.GetPrice("Product", product.Key, function(price)
-			UI.SetButtonText(button, "R$ " .. Format.Commas(price))
+		local comingSoon = Monetize.IsComingSoon(product)
+		Monetize.GetPrice("Product", product.Key, function(price, icon)
+			setIcon(iconHolder, icon)
+			if comingSoon then
+				showComingSoon(button)
+			else
+				UI.SetButtonText(button, "R$ " .. Format.Commas(price))
+			end
 		end)
 		if product.Id == 0 then
 			unconfigured = true
@@ -182,6 +228,8 @@ function Shop.Build()
 			if Formulas.HasPass(data, passKey) then
 				UI.SetButtonText(entry.Button, "OWNED ✓")
 				UI.SetButtonColor(entry.Button, "Teal")
+			elseif Monetize.IsComingSoon(entry.Pass) then
+				showComingSoon(entry.Button)
 			else
 				UI.SetButtonText(entry.Button, "R$ " .. Format.Commas(entry.Price))
 				UI.SetButtonColor(entry.Button, "Green")
@@ -193,12 +241,36 @@ function Shop.Build()
 		end
 	end
 
+	-- Paid random items (Volts packs, luck and hatch boosters) are hidden where they aren't allowed
+	local function applyPolicy()
+		for key, card in cards do
+			card.Visible = not Monetize.IsRestricted(key)
+		end
+		local voltsOnSale = false
+		for _, card in cards do
+			if card.Parent == voltsPage and card.Visible then
+				voltsOnSale = true
+			end
+		end
+		tabs.Buttons.Volts.Visible = voltsOnSale
+		if tabs.Selected == "Volts" and not voltsOnSale then
+			tabs.Select("Passes")
+		end
+	end
+	player:GetAttributeChangedSignal("PaidRandomItemsRestricted"):Connect(applyPolicy)
+	applyPolicy()
+
 	Registry.DataController.ObserveMany({ "Passes", "Upgrades", "Zone", "Rebirths" }, refresh)
 
 	return {
 		Window = window,
 		OnOpen = function(tab: string?)
 			refresh()
+			applyPolicy()
+			local tabButton = tab and tabs.Buttons[tab]
+			if tab and not (tabButton and tabButton.Visible) then
+				tab = "Passes" -- e.g. the HUD's "+" asked for Volts packs that are hidden here
+			end
 			tabs.Select(tab or tabs.Selected or "Passes")
 		end,
 	}

@@ -299,24 +299,19 @@ local function update()
 			dismiss(alert.Card)
 		end
 	end
-	-- Sit under the Mega Storm widget (and its banner while a storm is active)
-	local banner = Registry.InterfaceController.HudRoot:FindFirstChild("MegaStormBanner")
-	local top = if banner and banner.Visible then 182 else 80
-	if holder.Position.Y.Offset ~= top then
-		holder.Position = UDim2.new(1, -12, 0, top)
-	end
 end
 
 function RadarController.Init()
 	playerGui = player:WaitForChild("PlayerGui")
+	-- Right side, just above the boost timers: the top right belongs to the Roblox player list
 	holder = UI.Create("Frame", {
 		Name = "RadarAlerts",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(350, 150),
-		Position = UDim2.new(1, -12, 0, 80),
-		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 1, -270),
+		AnchorPoint = Vector2.new(1, 1),
 		Parent = Registry.InterfaceController.HudRoot,
-		UI.List(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top),
+		UI.List(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Bottom),
 	})
 end
 

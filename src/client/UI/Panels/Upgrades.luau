@@ -63,11 +63,12 @@ function Upgrades.Build()
 			AnchorPoint = Vector2.new(0, 0.5),
 			Parent = card,
 		})
+		-- Text column runs up to x 462 and the buttons start at 476, so nothing hides under them
 		UI.Label({
 			Name = "Title",
 			Text = def.Name,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Size = UDim2.fromOffset(250, 26),
+			Size = UDim2.fromOffset(370, 26),
 			Position = UDim2.fromOffset(92, 8),
 			MaxTextSize = 24,
 			Parent = card,
@@ -78,16 +79,16 @@ function Upgrades.Build()
 			Font = Theme.BodyFont,
 			TextColor3 = Theme.Colors.SubText,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Size = UDim2.fromOffset(250, 18),
+			Size = UDim2.fromOffset(370, 22),
 			Position = UDim2.fromOffset(92, 36),
-			MaxTextSize = 14,
+			MaxTextSize = 17,
 			Stroke = 1.5,
 			Parent = card,
 		})
 		local bar = UI.ProgressBar({
 			Name = "Level",
 			Color = "Blue",
-			Size = UDim2.fromOffset(240, 22),
+			Size = UDim2.fromOffset(208, 22),
 			Position = UDim2.new(0, 92, 1, -10),
 			AnchorPoint = Vector2.new(0, 1),
 			StrokeThickness = 2.5,
@@ -98,10 +99,10 @@ function Upgrades.Build()
 			Name = "Value",
 			Text = "",
 			TextColor3 = ICON_COLORS[upgradeId],
-			Size = UDim2.fromOffset(150, 52),
-			Position = UDim2.new(0, 346, 0.5, 0),
-			AnchorPoint = Vector2.new(0, 0.5),
-			MaxTextSize = 22,
+			Size = UDim2.fromOffset(160, 26),
+			Position = UDim2.new(0, 308, 1, -8),
+			AnchorPoint = Vector2.new(0, 1),
+			MaxTextSize = 20,
 			Parent = card,
 		})
 		local buyButton = UI.Button({

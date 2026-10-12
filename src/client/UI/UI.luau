@@ -310,8 +310,13 @@ function UI.Window(props)
 	local accent = props.Color or "Blue"
 	local palette = Theme.Buttons[accent] or Theme.Buttons.Blue
 
-	local frame = Instance.new("Frame")
+	-- A button (not a Frame) so clicks on empty window space never reach the Dim behind it,
+	-- which would close the panel
+	local frame = Instance.new("TextButton")
 	frame.Name = props.Name or "Window"
+	frame.AutoButtonColor = false
+	frame.Selectable = false
+	frame.Text = ""
 	frame.Size = props.Size or UDim2.fromOffset(660, 460)
 	frame.Position = UDim2.fromScale(0.5, 0.52)
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)

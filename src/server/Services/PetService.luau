@@ -1,5 +1,5 @@
 --!nonstrict
--- Eggs, hatching, and managing pets (equip, unequip, equip best, delete, golden/rainbow crafting).
+-- Eggs, hatching, and managing pets (equip, unequip, equip best, delete one or many, golden/rainbow crafting).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -18,6 +18,7 @@ local Net = require(script.Parent.Net)
 local PetService = {}
 
 local rng = Random.new()
+local MAX_BULK_DELETE = 100 -- pets per "DeleteMany" request
 
 local function equippedString(data): string
 	local entries = {}
@@ -263,6 +264,38 @@ local function petAction(player: Player, action: string, argument)
 			return Net.Fail("Pet not found.")
 		end
 		table.remove(data.Pets, index)
+	elseif action == "DeleteMany" then
+		-- Multi-delete from the Pets panel: a list of pet Uids. Equipped pets and exclusives
+		-- (pets no egg can hatch) are never bulk-deleted; those go one at a time.
+		if type(argument) ~= "table" then
+			return Net.Fail("Invalid pets.")
+		end
+		local wanted, count = {}, 0
+		for key, uid in argument do
+			if type(key) ~= "number" or type(uid) ~= "string" or #uid > 32 then
+				return Net.Fail("Invalid pets.")
+			end
+			count += 1
+			if count > MAX_BULK_DELETE then
+				return Net.Fail("You can delete up to " .. MAX_BULK_DELETE .. " pets at once.")
+			end
+			wanted[uid] = true
+		end
+		local kept, removed = {}, 0
+		for _, pet in data.Pets do
+			local def = Pets.Pets[pet.Id]
+			if wanted[pet.Uid] and not pet.Equipped and def and def.Egg then
+				removed += 1
+			else
+				table.insert(kept, pet)
+			end
+		end
+		if removed == 0 then
+			return Net.Fail("None of those pets can be deleted.")
+		end
+		data.Pets = kept
+		refresh(player, data)
+		return { Ok = true, Count = removed }
 	elseif action == "EquipBest" then
 		equipBest(data)
 	elseif action == "UnequipAll" then

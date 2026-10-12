@@ -229,13 +229,15 @@ function Hatch.Play(result, options)
 		end
 	end)
 
+	-- Centred in the space below the Roblox top bar so the title never slides under it on phones
+	local shift = Registry.InterfaceController.SafeTop / 2
 	local title = options.Title or (eggId and Pets.Eggs[eggId] and Pets.Eggs[eggId].Name) or ""
 	UI.Label({
 		Name = "Title",
 		Text = title,
 		TextColor3 = Theme.Colors.Volts,
 		Size = UDim2.fromOffset(700, 54),
-		Position = UDim2.new(0.5, 0, 0.5, -270),
+		Position = UDim2.new(0.5, 0, 0.5, -226 + shift),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Stroke = 4,
 		ZIndex = 34,
@@ -246,7 +248,7 @@ function Hatch.Play(result, options)
 		Name = "Row",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(#results * 310, 410),
-		Position = UDim2.new(0.5, 0, 0.5, 10),
+		Position = UDim2.new(0.5, 0, 0.5, 10 + shift),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		ZIndex = 31,
 		Parent = backdrop,

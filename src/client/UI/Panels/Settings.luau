@@ -60,9 +60,9 @@ function Settings.Build()
 			Font = Theme.BodyFont,
 			TextColor3 = Theme.Colors.SubText,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Size = UDim2.new(1, -190, 0, 18),
-			Position = UDim2.fromOffset(70, 38),
-			MaxTextSize = 14,
+			Size = UDim2.new(1, -190, 0, 22),
+			Position = UDim2.fromOffset(70, 37),
+			MaxTextSize = 17,
 			Stroke = 1.5,
 			Parent = card,
 		})

@@ -19,7 +19,24 @@ local Rewards = {}
 
 local COLORS = Theme.Colors
 
+-- The reward the player will really get: a pet reward turns into its Fallback when they already
+-- own that pet or their storage is full (same rule as RewardService.Grant)
+local function actualReward(reward, data)
+	if reward.Kind == "Pet" and reward.Fallback then
+		if #data.Pets >= GameConfig.Pets.MaxStorage then
+			return reward.Fallback
+		end
+		for _, pet in data.Pets do
+			if pet.Id == reward.Pet then
+				return reward.Fallback
+			end
+		end
+	end
+	return reward
+end
+
 local function rewardText(reward, data): string
+	reward = actualReward(reward, data)
 	if reward.Kind == "Volts" then
 		return "⚡ " .. Format.Number(reward.Amount * Formulas.VoltsUnit(data))
 	elseif reward.Kind == "Boost" then
@@ -68,7 +85,7 @@ local function rewardCard(parent: Instance, order: number, header: string, icon:
 		MaxTextSize = 17,
 		Parent = card,
 	})
-	UI.Label({
+	local iconLabel = UI.Label({
 		Name = "Icon",
 		Text = icon,
 		Stroke = false,
@@ -95,7 +112,7 @@ local function rewardCard(parent: Instance, order: number, header: string, icon:
 		MaxTextSize = 15,
 		Parent = card,
 	})
-	return { Card = card, Header = headerLabel, Text = text, Status = status, Outline = card:FindFirstChild("Outline") }
+	return { Card = card, Header = headerLabel, Icon = iconLabel, Text = text, Status = status, Outline = card:FindFirstChild("Outline") }
 end
 
 function Rewards.Build()
@@ -134,7 +151,7 @@ function Rewards.Build()
 		UI.Grid(UDim2.fromOffset(98, 150), UDim2.fromOffset(8, 8)),
 	})
 	UI.Label({
-		Text = "Come back every day! Day 7 gives an exclusive pet.",
+		Text = "Come back every day! Day 7 gives an exclusive pet (or a Volt vault once you own it).",
 		Font = Theme.BodyFont,
 		TextColor3 = COLORS.SubText,
 		Size = UDim2.new(1, 0, 0, 20),
@@ -334,7 +351,9 @@ function Rewards.Build()
 		end
 
 		for day, card in dailyCards do
-			card.Text.Text = rewardText(RewardsConfig.Daily[day], data)
+			local reward = RewardsConfig.Daily[day]
+			card.Text.Text = rewardText(reward, data)
+			card.Icon.Text = actualReward(reward, data).Icon or reward.Icon or "🎁"
 			if day < nextDay then
 				card.Status.Text = "✓ Claimed"
 				card.Status.TextColor3 = COLORS.Success

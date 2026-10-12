@@ -22,6 +22,7 @@ local PetsPanel = {}
 
 local COLORS = Theme.Colors
 local RAINBOW_CARD = Color3.fromRGB(96, 66, 150)
+local MAX_MULTI_DELETE = 100 -- the server refuses bigger "DeleteMany" requests
 
 local function rainbowGradient(parent: Instance): UIGradient
 	return UI.Create("UIGradient", { Name = "Rainbow", Color = PetModels.RainbowSequence, Parent = parent })
@@ -124,17 +125,14 @@ function PetsPanel.Build()
 			petAction("UnequipAll")
 		end,
 	})
-	local catchTip = UI.Label({
-		Name = "CatchTip",
-		Text = "",
-		Font = Theme.BodyFont,
-		TextColor3 = COLORS.SubText,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Size = UDim2.new(1, -630, 0, 46),
+	local multiButton = UI.Button({
+		Name = "DeleteMany",
+		Text = "🗑️ Delete Many",
+		Color = "Red",
+		Size = UDim2.fromOffset(180, 46),
 		Position = UDim2.new(0, 362, 1, 0),
 		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 15,
-		Stroke = 1.5,
+		MaxTextSize = 20,
 		Parent = inventoryPage,
 	})
 
@@ -179,12 +177,49 @@ function PetsPanel.Build()
 		Stroke = 1.5,
 		Parent = detail,
 	})
+	local catchTip = UI.Label({
+		Name = "CatchTip",
+		Text = "",
+		Font = Theme.BodyFont,
+		TextColor3 = COLORS.Power,
+		Size = UDim2.new(1, -30, 0, 60),
+		Position = UDim2.new(0, 15, 0, 262),
+		MaxTextSize = 17,
+		Stroke = 1.5,
+		Parent = detail,
+	})
+
+	-- Multi-delete mode: tap several unequipped pets, then delete them with one confirm
+	local multiPanel = UI.Create("Frame", {
+		Name = "Multi",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Visible = false,
+		Parent = detail,
+	})
+	UI.Label({ Name = "Title", Text = "🗑️ Delete Many", Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 14), MaxTextSize = 24, Parent = multiPanel })
+	UI.Label({
+		Name = "Help",
+		Text = "Tap the pets you want to delete.\nEquipped and exclusive pets are kept safe.",
+		Font = Theme.BodyFont,
+		TextColor3 = COLORS.SubText,
+		Size = UDim2.new(1, -24, 0, 64),
+		Position = UDim2.fromOffset(12, 52),
+		MaxTextSize = 17,
+		Stroke = 1.5,
+		Parent = multiPanel,
+	})
+	local multiCount = UI.Label({ Name = "Count", Text = "", TextColor3 = COLORS.Volts, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 124), MaxTextSize = 24, Parent = multiPanel })
 
 	local slots = {} -- [uid] = slot
 	local selectedUid: string? = nil
 	local detailView = nil
 	local detailKey = nil
 	local equipButton, goldenButton, rainbowButton, deleteButton
+	local multiMode = false
+	local marked = {} -- [uid] = true, pets picked for deletion
+	local markedCount = 0
+	local multiDeleteButton
 
 	local function findPet(uid: string?)
 		local data = Registry.DataController.Data
@@ -211,8 +246,20 @@ function PetsPanel.Build()
 		return count
 	end
 
+	-- Why a pet can't be picked for multi-delete (nil = it can). Same rule as the server.
+	local function keepReason(pet): string?
+		if pet.Equipped then
+			return "Unequip " .. Pets.DisplayName(pet.Id, Pets.TierOf(pet)) .. " first!"
+		end
+		local def = Pets.Pets[pet.Id]
+		if not def or not def.Egg then
+			return "Exclusive pets can only be deleted one at a time."
+		end
+		return nil
+	end
+
 	local function refreshDetail()
-		local pet = findPet(selectedUid)
+		local pet = if multiMode then nil else findPet(selectedUid)
 		local hasPet = pet ~= nil
 		local tier = if pet then Pets.TierOf(pet) else "Normal"
 		nameLabel.Visible = hasPet
@@ -223,12 +270,26 @@ function PetsPanel.Build()
 		goldenButton.Visible = hasPet and tier == "Normal"
 		rainbowButton.Visible = hasPet and tier == "Golden"
 		deleteButton.Visible = hasPet
-		selectHint.Visible = not hasPet
+		selectHint.Visible = not hasPet and not multiMode
+		catchTip.Visible = not hasPet and not multiMode
+		viewHolder.Visible = not multiMode
+		multiPanel.Visible = multiMode
 
+		markedCount = 0
 		for uid, slot in slots do
-			local selected = uid == selectedUid
-			slot.Stroke.Thickness = if selected then 5 else 3
-			slot.Stroke.Color = if selected then Color3.new(1, 1, 1) else slot.RarityColor
+			local selected = not multiMode and uid == selectedUid
+			local isMarked = multiMode and marked[uid] == true
+			if isMarked then
+				markedCount += 1
+			end
+			slot.Stroke.Thickness = if selected or isMarked then 5 else 3
+			slot.Stroke.Color = if isMarked then COLORS.Danger elseif selected then Color3.new(1, 1, 1) else slot.RarityColor
+			slot.Mark.Visible = isMarked
+		end
+		if multiMode then
+			multiCount.Text = markedCount .. (if markedCount == 1 then " pet" else " pets") .. " selected"
+			UI.SetButtonText(multiDeleteButton, "🗑️ Delete " .. markedCount)
+			UI.SetButtonColor(multiDeleteButton, if markedCount > 0 then "Red" else "Gray")
 		end
 
 		if not pet then
@@ -277,6 +338,117 @@ function PetsPanel.Build()
 		selectedUid = uid
 		refreshDetail()
 	end
+
+	local function setMultiMode(enabled: boolean)
+		multiMode = enabled
+		table.clear(marked)
+		UI.SetButtonText(multiButton, if enabled then "✕ Cancel" else "🗑️ Delete Many")
+		UI.SetButtonColor(multiButton, if enabled then "Gray" else "Red")
+		refreshDetail()
+	end
+
+	local function toggleMark(uid: string)
+		if marked[uid] then
+			marked[uid] = nil
+			refreshDetail()
+			return
+		end
+		local pet = findPet(uid)
+		if not pet then
+			return
+		end
+		local reason = keepReason(pet)
+		if reason then
+			Registry.InterfaceController.Notify(reason, "Error")
+			return
+		end
+		if markedCount >= MAX_MULTI_DELETE then
+			Registry.InterfaceController.Notify("You can delete up to " .. MAX_MULTI_DELETE .. " pets at once.", "Error")
+			return
+		end
+		marked[uid] = true
+		refreshDetail()
+	end
+
+	multiButton.Activated:Connect(function()
+		setMultiMode(not multiMode)
+	end)
+
+	UI.Button({
+		Name = "PickCommons",
+		Text = "Pick Commons & Uncommons",
+		Color = "Blue",
+		Size = UDim2.new(1, -20, 0, 44),
+		Position = UDim2.fromOffset(10, 166),
+		MaxTextSize = 17,
+		Parent = multiPanel,
+		OnClick = function()
+			local data = Registry.DataController.Data
+			if not data then
+				return
+			end
+			local count, picked = markedCount, 0
+			for _, pet in data.Pets do
+				local rarity = Pets.RarityOf(pet.Id)
+				if count < MAX_MULTI_DELETE and not marked[pet.Uid] and not keepReason(pet) and Pets.TierOf(pet) == "Normal" and rarity and rarity.Order <= 2 then
+					marked[pet.Uid] = true
+					count += 1
+					picked += 1
+				end
+			end
+			if picked == 0 then
+				Registry.InterfaceController.Notify("No more unequipped Common or Uncommon pets to pick.", "Info")
+			end
+			refreshDetail()
+		end,
+	})
+	UI.Button({
+		Name = "Clear",
+		Text = "Clear Selection",
+		Color = "Gray",
+		Size = UDim2.new(1, -20, 0, 40),
+		Position = UDim2.fromOffset(10, 218),
+		MaxTextSize = 17,
+		Parent = multiPanel,
+		OnClick = function()
+			table.clear(marked)
+			refreshDetail()
+		end,
+	})
+	multiDeleteButton = UI.Button({
+		Name = "DeleteSelected",
+		Text = "🗑️ Delete 0",
+		Color = "Gray",
+		Size = UDim2.new(1, -20, 0, 48),
+		Position = UDim2.new(0, 10, 1, -10),
+		AnchorPoint = Vector2.new(0, 1),
+		MaxTextSize = 22,
+		Parent = multiPanel,
+		OnClick = function()
+			local uids = {}
+			for uid in marked do
+				table.insert(uids, uid)
+			end
+			if #uids == 0 then
+				Registry.InterfaceController.Notify("Tap the pets you want to delete first!", "Error")
+				return
+			end
+			local amount = #uids .. (if #uids == 1 then " pet" else " pets")
+			Confirm.Show({
+				Title = "Delete " .. amount .. "?",
+				Text = "Delete " .. amount .. " forever?\nThis can't be undone.",
+				ConfirmText = "Delete",
+				Color = "Red",
+				OnConfirm = function()
+					local result = petAction("DeleteMany", uids)
+					if result and result.Ok then
+						Registry.InterfaceController.Notify("🗑️ Deleted " .. (result.Count or #uids) .. (if result.Count == 1 then " pet" else " pets"), "Success")
+						setMultiMode(false)
+					end
+				end,
+			})
+		end,
+	})
 
 	equipButton = UI.Button({
 		Name = "Equip",
@@ -425,14 +597,30 @@ function PetsPanel.Build()
 		if tier ~= "Normal" then
 			UI.Label({ Name = tier, Text = Pets.Tiers[tier].Icon, Stroke = false, Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -4, 0, 4), AnchorPoint = Vector2.new(1, 0), ZIndex = 3, Parent = button })
 		end
+		-- Red cover while the pet is picked for multi-delete
+		local mark = UI.Create("Frame", {
+			Name = "Mark",
+			BackgroundColor3 = COLORS.Danger,
+			BackgroundTransparency = 0.45,
+			Size = UDim2.fromScale(1, 1),
+			Visible = false,
+			ZIndex = 5,
+			Parent = button,
+			UI.Corner(14),
+		})
+		UI.Label({ Text = "🗑️", Stroke = false, Size = UDim2.fromScale(0.45, 0.45), Position = UDim2.fromScale(0.5, 0.45), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 6, Parent = mark })
 
 		UI.Bounce(button, 1.04)
 		button.Activated:Connect(function()
 			Registry.SoundController.Play("Click")
-			select(pet.Uid)
+			if multiMode then
+				toggleMark(pet.Uid)
+			else
+				select(pet.Uid)
+			end
 		end)
 
-		return { Button = button, Stroke = stroke, RarityColor = strokeColor, Equipped = equipped, Shimmer = shimmer }
+		return { Button = button, Stroke = stroke, RarityColor = strokeColor, Equipped = equipped, Shimmer = shimmer, Mark = mark }
 	end
 
 	local function refreshInventory()
@@ -472,6 +660,13 @@ function PetsPanel.Build()
 		end
 		if selectedUid and not seen[selectedUid] then
 			selectedUid = nil
+		end
+		-- Deleted, crafted or newly equipped pets drop out of the multi-delete pick
+		for uid in table.clone(marked) do
+			local pet = findPet(uid)
+			if not pet or keepReason(pet) then
+				marked[uid] = nil
+			end
 		end
 
 		emptyHint.Visible = #sorted == 0
@@ -623,6 +818,11 @@ function PetsPanel.Build()
 		OnOpen = function(tab: string?)
 			tabs.Select(tab or tabs.Selected or "Inventory")
 			refreshInventory()
+		end,
+		OnClose = function()
+			if multiMode then
+				setMultiMode(false)
+			end
 		end,
 	}
 end

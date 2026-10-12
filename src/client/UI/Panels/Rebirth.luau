@@ -38,11 +38,10 @@ local function listCard(parent: Instance, title: string, color: Color3, lines: {
 		Text = table.concat(lines, "\n"),
 		Font = Theme.BodyFont,
 		TextColor3 = Theme.Colors.SubText,
-		TextScaled = false,
-		TextSize = 16,
 		TextYAlignment = Enum.TextYAlignment.Top,
 		Size = UDim2.new(1, -20, 1, -40),
 		Position = UDim2.fromOffset(10, 34),
+		MaxTextSize = 20, -- readable on phones, shrinks only if a line wouldn't fit
 		Stroke = 1.5,
 		Parent = card,
 	})
