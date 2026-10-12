@@ -20,6 +20,18 @@ local COLLISION_GROUP = "Players"
 local vacuumTemplate: Tool
 local tanks = {} -- [Player] = { Model = Model, Fraction = number }
 
+local function spawnCharacter(player: Player)
+	local ok = pcall(function()
+		player:LoadCharacterAsync()
+	end)
+	if not ok and player.Parent then
+		-- Older engine versions only have the non-Async name
+		pcall(function()
+			(player :: any):LoadCharacter()
+		end)
+	end
+end
+
 local function setCollisionGroup(instance: Instance)
 	if instance:IsA("BasePart") then
 		instance.CollisionGroup = COLLISION_GROUP
@@ -130,6 +142,12 @@ local function setupCharacter(player: Player, character: Model)
 
 	humanoid.Died:Connect(function()
 		Registry.WeatherService.StopCatch(player)
+		-- Characters are loaded manually (after data is ready), so respawn them here
+		task.delay(Players.RespawnTime, function()
+			if player.Parent and player.Character == character then
+				spawnCharacter(player)
+			end
+		end)
 	end)
 end
 
@@ -160,6 +178,9 @@ local function onPlayerLoaded(player: Player, data)
 	end)
 	if player.Character then
 		task.spawn(setupCharacter, player, player.Character)
+	else
+		-- CharacterAutoLoads is off so nobody spawns before the map and their data are ready
+		spawnCharacter(player)
 	end
 end
 

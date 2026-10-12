@@ -84,9 +84,10 @@ local function beginStorm()
 	contributions = {}
 	endTime = os.time() + settings.Duration
 
-	stormModel = WeatherModels.BuildMegaStorm(stormType)
-	stormModel:PivotTo(CFrame.new(MapLayout.ArenaCenter))
-	stormModel.Parent = stormFolder
+	local model = WeatherModels.BuildMegaStorm(stormType)
+	model:PivotTo(CFrame.new(MapLayout.ArenaCenter))
+	model.Parent = stormFolder
+	stormModel = model
 
 	phase = "Active"
 	publish()

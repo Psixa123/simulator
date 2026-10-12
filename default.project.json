@@ -80,7 +80,7 @@
     "Players": {
       "$className": "Players",
       "$properties": {
-        "CharacterAutoLoads": true,
+        "CharacterAutoLoads": false,
         "RespawnTime": 3
       }
     },
