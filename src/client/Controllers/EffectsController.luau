@@ -534,12 +534,31 @@ function handlers.CellCaught(position: Vector3, typeId: string, value: number)
 	EffectsController.FloatText(position + Vector3.new(0, 3, 0), "+⚡ " .. Format.Number(volts))
 end
 
+-- Remote Sell's automatic sells can happen several times a second (pets + vacuum), so they
+-- are added up and shown as one payout per second instead of a pile of animations
+local autoSellTotal = 0
+local autoSellPending = false
+
 function handlers.Sell(volts: number, source: string)
 	if source == "Rebirth" then
 		return -- the tank is cashed in right before a Climate Shift resets Volts; no payout to show
 	end
+	if source == "Auto" then
+		autoSellTotal += volts
+		if not autoSellPending then
+			autoSellPending = true
+			task.delay(1, function()
+				local total = autoSellTotal
+				autoSellTotal = 0
+				autoSellPending = false
+				Registry.HudController.PlaySell(total)
+				Registry.SoundController.Play("Sell", 1.1)
+			end)
+		end
+		return
+	end
 	Registry.HudController.PlaySell(volts)
-	Registry.SoundController.Play("Sell", if source == "Auto" then 1.1 else 1)
+	Registry.SoundController.Play("Sell", 1)
 end
 
 function handlers.Upgrade(upgradeId: string, level: number)

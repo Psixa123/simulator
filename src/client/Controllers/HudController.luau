@@ -358,6 +358,17 @@ local function buildTank()
 	})
 end
 
+-- Tablets get Roblox's bigger jump button higher up the screen; keep the boost timers above it
+local function placeBoosts()
+	local camera = workspace.CurrentCamera
+	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+	local bottom = 160
+	if UserInputService.TouchEnabled and math.min(viewport.X, viewport.Y) > 500 then
+		bottom = math.max(bottom, 220 / Registry.InterfaceController.HudScale + 10)
+	end
+	boostHolder.Position = UDim2.new(1, -12, 1, -bottom)
+end
+
 local function buildBoosts()
 	-- Bottom right, above the phone jump button and below where the player list reaches
 	boostHolder = UI.Create("Frame", {
@@ -837,7 +848,9 @@ function HudController.Init()
 	buildStormBanner()
 	Registry.InterfaceController.SetNotificationAnchor(topStack)
 	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeMenu)
+	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeBoosts)
 	placeMenu()
+	placeBoosts()
 end
 
 function HudController.Start()

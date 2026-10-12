@@ -80,7 +80,9 @@ end
 -- Returns text, world position to point at (or nil), menu button to highlight (or nil)
 local function compute(data)
 	local zoneHere = currentZone()
-	local catchZone = math.clamp(if zoneHere > 0 and zoneHere <= data.Zone then zoneHere else data.Zone, 1, #Zones)
+	-- After a Climate Shift Power starts over, so unlocked zones may be too strong for now
+	local bestZone = Formulas.BestCatchableZone(data)
+	local catchZone = math.clamp(if zoneHere > 0 and zoneHere <= bestZone then zoneHere else bestZone, 1, #Zones)
 	local remoteSell = Formulas.HasPass(data, "RemoteSell")
 
 	if data.Energy >= Formulas.TankCapacity(data) - 1e-6 and not remoteSell then
@@ -105,6 +107,10 @@ local function compute(data)
 			return "🥚 Hatch your first pet at the " .. egg.Name .. "!", MapLayout.EggStation(1), nil
 		end
 		return "⚡ Earn " .. Format.Number(egg.Cost) .. " Volts for your first pet", nearestCell(catchZone), nil
+	end
+	if bestZone < data.Zone then
+		local zone = Zones[bestZone + 1]
+		return "💨 Reach " .. Format.Number(zone.MinPower) .. " Power to catch in " .. zone.Name .. " again", nearestCell(bestZone), "Upgrades"
 	end
 	if data.Zone < #Zones then
 		local nextZone = Zones[data.Zone + 1]

@@ -189,7 +189,7 @@ local function showAlert(typeId: string, zoneId: number)
 
 	local card = UI.Create("Frame", {
 		Name = "RadarAlert",
-		Size = UDim2.fromOffset(350, 70),
+		Size = UDim2.new(1, 0, 0, 70),
 		BackgroundColor3 = Color3.fromRGB(20, 26, 58),
 		BackgroundTransparency = 0.06,
 		LayoutOrder = alertOrder, -- newest on top
@@ -313,6 +313,22 @@ function RadarController.Init()
 		Parent = Registry.InterfaceController.HudRoot,
 		UI.List(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Bottom),
 	})
+
+	-- Sit just above the boost timers (which move up on tablets) and, on narrow phones, stay
+	-- right of the centred notification column (470 wide)
+	local hud = Registry.InterfaceController.HudRoot
+	local boosts = hud:FindFirstChild("Boosts")
+	local function place()
+		local bottom = if boosts then -boosts.Position.Y.Offset else 160
+		local width = hud.AbsoluteSize.X / Registry.InterfaceController.HudScale
+		holder.Size = UDim2.fromOffset(math.clamp(width / 2 - 235 - 24, 280, 350), 150)
+		holder.Position = UDim2.new(1, -12, 1, -(bottom + 110))
+	end
+	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+	if boosts then
+		boosts:GetPropertyChangedSignal("Position"):Connect(place)
+	end
+	place()
 end
 
 function RadarController.Start()
