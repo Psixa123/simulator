@@ -1,6 +1,6 @@
 --!nonstrict
 -- Client side of the Mega Storm event: HUD widget/banner, storm animation, lightning,
--- camera shake, announcements and reward popups.
+-- camera shake, announcements and reward popups. The Rainbow Hurricane cycles its colours.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,6 +13,7 @@ local GameConfig = require(Shared.Config.GameConfig)
 local MapLayout = require(Shared.Config.MapLayout)
 local Pets = require(Shared.Config.Pets)
 local Formulas = require(Shared.Formulas)
+local StormSchedule = require(Shared.StormSchedule)
 local Format = require(Shared.Util.Format)
 
 local Registry = require(script.Parent.Parent.Registry)
@@ -22,11 +23,20 @@ local MegaStormController = {}
 local player = Players.LocalPlayer
 local state: Configuration
 local contribution = 0
-local storm = nil -- { Model, Pivot, Spin = {}, Debris = {}, Collapsing }
+local storm = nil -- { Model, Pivot, Spin = {}, Debris = {}, Collapsing, Rainbow = { bands } or nil }
 local lightningTimer = 0
 
 local function stormType()
-	return GameConfig.MegaStorm.Types[state:GetAttribute("StormIndex") or 1] or GameConfig.MegaStorm.Types[1]
+	return StormSchedule.Current(state)
+end
+
+local function lowGraphics(): boolean
+	local settings = Registry.DataController.Get("Settings")
+	return settings ~= nil and settings.LowGraphics == true
+end
+
+local function rainbowColor(offset: number): Color3
+	return Color3.fromHSV((os.clock() * 0.2 + offset) % 1, 0.55, 1)
 end
 
 function MegaStormController.IsActive(): boolean
@@ -54,7 +64,17 @@ end
 ---------------------------------------------------------------------------
 local function registerStorm(model: Model)
 	local pivot = model:GetPivot()
-	local entry = { Model = model, Pivot = pivot, Spin = {}, Debris = {}, Collapsing = false, Fade = 0 }
+	local entry = { Model = model, Pivot = pivot, Spin = {}, Debris = {}, Collapsing = false, Fade = 0, Rainbow = nil }
+	if model:GetAttribute("Rainbow") then
+		-- Rainbow Hurricane: remember each band's hue so the colours can flow up the storm
+		entry.Rainbow = {}
+		for _, part in model:GetChildren() do
+			if part:IsA("BasePart") and (part.Name == "Layer" or part.Name == "Streak" or part.Name == "Eye") then
+				local hue, saturation = part.Color:ToHSV()
+				table.insert(entry.Rainbow, { Part = part, Hue = hue, Saturation = saturation })
+			end
+		end
+	end
 	for _, part in model:GetChildren() do
 		if part:IsA("BasePart") then
 			local speed = part:GetAttribute("SpinSpeed")
@@ -94,6 +114,13 @@ local function animateStorm(dt: number)
 			* CFrame.Angles(now, now * 0.7, 0)
 	end
 
+	if storm.Rainbow and not storm.Collapsing and not lowGraphics() then
+		local shift = now * 0.2
+		for _, band in storm.Rainbow do
+			band.Part.Color = Color3.fromHSV((band.Hue + shift) % 1, band.Saturation, 1)
+		end
+	end
+
 	if MegaStormController.IsActive() then
 		lightningTimer -= dt
 		if lightningTimer <= 0 then
@@ -102,7 +129,8 @@ local function animateStorm(dt: number)
 			local radius = math.random(10, 40)
 			local top = storm.Pivot.Position + Vector3.new(math.cos(angle) * radius, math.random(40, 80), math.sin(angle) * radius)
 			local bottom = storm.Pivot.Position + Vector3.new(math.cos(angle) * (radius + 12), 0, math.sin(angle) * (radius + 12))
-			Registry.EffectsController.LightningBolt(top, bottom, stormType().Accent, 1.2)
+			local boltColor = if storm.Rainbow then rainbowColor(math.random()) else stormType().Accent
+			Registry.EffectsController.LightningBolt(top, bottom, boltColor, 1.2)
 		end
 	end
 
@@ -147,22 +175,48 @@ function MegaStormController.HandleEffect(name: string, ...)
 	local args = { ... }
 	if name == "MegaWarning" then
 		local summoner = args[2]
-		local subtitle = stormType().Name .. "  •  Head to the arena in the Storm Station!"
+		local current = StormSchedule.TypeFor(args[3], args[1])
+		local subtitle = current.Name .. "  •  Head to the arena in the Storm Station!"
 		if summoner and summoner ~= "" then
 			subtitle = "Summoned by " .. summoner .. "!"
 		end
 		Registry.SoundController.Play("Alarm")
-		Registry.InterfaceController.BigText("⚠️ MEGA STORM INCOMING!", Color3.fromRGB(255, 150, 60), subtitle, 3.2)
+		if StormSchedule.IsRainbow(current) then
+			local pet = Pets.Pets[current.Pet]
+			subtitle = "Head to the arena for a shot at the exclusive " .. (if pet then pet.Name else "pet") .. "!"
+			Registry.InterfaceController.BigText("🌈 RAINBOW HURRICANE INCOMING!", current.Color, subtitle, 3.6)
+		else
+			Registry.InterfaceController.BigText("⚠️ MEGA STORM INCOMING!", Color3.fromRGB(255, 150, 60), subtitle, 3.2)
+		end
 	elseif name == "MegaStart" then
+		local current = StormSchedule.TypeFor(args[2], args[1])
 		contribution = 0
 		Registry.SoundController.Play("Alarm", 0.85)
-		Registry.InterfaceController.BigText("🌪️ " .. string.upper(stormType().Name) .. "!", stormType().Color, "Vacuum it together before it escapes!", 3)
+		Registry.InterfaceController.BigText((current.Icon or "🌪️") .. " " .. string.upper(current.Name) .. "!", current.Color, "Vacuum it together before it escapes!", 3)
+	elseif name == "MegaRainbowSoon" then
+		local rainbow = GameConfig.MegaStorm.Rainbow
+		local now = Registry.DataController.Now()
+		local minutes = math.max(1, math.round(((args[1] or now) - now) / 60))
+		local pet = Pets.Pets[rainbow.Pet]
+		Registry.SoundController.Play("Alarm", 1.15)
+		Registry.InterfaceController.BigText(
+			string.format("🌈 %s IN %d MINUTE%s!", string.upper(rainbow.Name), minutes, if minutes == 1 then "" else "S"),
+			rainbow.Color,
+			"Gather at the Mega Storm Arena for the exclusive " .. (if pet then pet.Name else "pet") .. "!",
+			4
+		)
 	elseif name == "MegaEnd" then
 		local defeated = args[1]
+		local current = StormSchedule.TypeFor(args[3], args[2])
 		collapse()
 		if defeated then
 			Registry.SoundController.Play("Success", 0.8)
-			Registry.InterfaceController.BigText("STORM DEFEATED!", Color3.fromRGB(110, 230, 140), "Rewards sent to every storm catcher who helped!", 3)
+			Registry.InterfaceController.BigText(
+				if StormSchedule.IsRainbow(current) then "🌈 RAINBOW HURRICANE DEFEATED!" else "STORM DEFEATED!",
+				Color3.fromRGB(110, 230, 140),
+				"Rewards sent to every storm catcher who helped!",
+				3
+			)
 		else
 			Registry.InterfaceController.BigText("THE STORM ESCAPED!", Color3.fromRGB(255, 120, 120), "Everyone who helped still earns a reward.", 3)
 		end

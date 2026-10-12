@@ -20,6 +20,7 @@ local WeatherModels = require(Shared.Models.WeatherModels)
 
 local Registry = require(script.Parent.Registry)
 local Net = require(script.Parent.Net)
+local StormRadar = require(script.Parent.StormRadar)
 
 local WeatherService = {}
 
@@ -136,7 +137,8 @@ local function spawnCell(zoneId: number)
 	if Weather.Rarities[def.Rarity].Announce then
 		for _, player in Players:GetPlayers() do
 			local root = Net.GetRoot(player)
-			if root and MapLayout.ZoneAt(root.Position) == zoneId then
+			-- Storm Radar owners get their own alert for every zone they've unlocked
+			if not StormRadar.Alert(player, cell) and root and MapLayout.ZoneAt(root.Position) == zoneId then
 				Net.Effect(player, "RareSpawn", typeId, position)
 			end
 		end

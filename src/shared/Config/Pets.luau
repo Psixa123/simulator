@@ -71,6 +71,7 @@ Pets.Pets = {
 	FrostColossus = { Name = "Frost Colossus", Rarity = "Exclusive", Bonus = 8, Source = "Mega Storm: Blizzard Behemoth", Look = { Body = "Cube", Color = rgb(190, 230, 255), Accent = rgb(255, 255, 255), Features = { "Horns", "Crown" }, Effect = "Snow", EyeColor = rgb(90, 200, 255) } },
 	CycloneDrake = { Name = "Cyclone Drake", Rarity = "Exclusive", Bonus = 10, Source = "Mega Storm: Inferno Cyclone", Look = { Body = "Bean", Color = rgb(255, 110, 40), Accent = rgb(255, 220, 90), Features = { "Horns", "Wings", "Tail" }, Effect = "Fire", EyeColor = rgb(255, 245, 160) } },
 	MaelstromSpirit = { Name = "Maelstrom Spirit", Rarity = "Exclusive", Bonus = 13, Source = "Mega Storm: Cosmic Maelstrom", Look = { Body = "Cloud", Color = rgb(122, 62, 222), Accent = rgb(255, 150, 240), Features = { "Halo", "Wings", "Crown" }, Effect = "Rainbow", EyeColor = rgb(255, 200, 250) } },
+	RainbowRoc = { Name = "Rainbow Roc", Rarity = "Exclusive", Bonus = 18, Source = "Mega Storm: Rainbow Hurricane", Look = { Body = "Round", Color = rgb(255, 248, 252), Accent = rgb(255, 120, 200), Features = { "Wings", "Beak", "Crown", "Tail" }, Effect = "Rainbow", EyeColor = rgb(120, 220, 255) } },
 
 	-------------------------------------------------------------------- Rewards
 	Sunbeam = { Name = "Sunbeam", Rarity = "Epic", Bonus = 0.9, Source = "Day 7 daily reward", Look = { Body = "Round", Color = rgb(255, 235, 120), Accent = rgb(255, 255, 255), Features = { "Rays", "Halo" }, Effect = "Glow" } },
@@ -188,7 +189,7 @@ for _, eggId in Pets.EggOrder do
 		table.insert(Pets.IndexOrder, entry.Id)
 	end
 end
-for _, id in { "Sunbeam", "TempestTitan", "VoltWyrm", "FrostColossus", "CycloneDrake", "MaelstromSpirit" } do
+for _, id in { "Sunbeam", "TempestTitan", "VoltWyrm", "FrostColossus", "CycloneDrake", "MaelstromSpirit", "RainbowRoc" } do
 	table.insert(Pets.IndexOrder, id)
 end
 

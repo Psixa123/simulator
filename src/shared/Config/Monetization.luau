@@ -103,6 +103,15 @@ Monetization.Gamepasses = {
 		Color = Color3.fromRGB(255, 120, 160),
 		Description = "Equip 3 more pets at the same time.",
 	},
+	StormRadar = {
+		Id = 0,
+		Order = 11,
+		Name = "Storm Radar",
+		Icon = "🛰️",
+		Price = 149,
+		Color = Color3.fromRGB(56, 201, 176),
+		Description = "Get alerted whenever rare weather spawns in any zone you've unlocked, with a marker that leads you to it.",
+	},
 }
 
 -- Volts products grant `Amount` full tanks of your best zone's energy, so they stay

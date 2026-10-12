@@ -3,6 +3,7 @@
 -- spinning and bobbing props, pulsing neon, flickering lights and the forecast boards.
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -11,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(Shared.Config.GameConfig)
 local Format = require(Shared.Util.Format)
+local StormSchedule = require(Shared.StormSchedule)
 
 local Registry = require(script.Parent.Parent.Registry)
 
@@ -103,6 +105,61 @@ end
 ---------------------------------------------------------------------------
 -- Forecast board + arena sign
 ---------------------------------------------------------------------------
+local RAINBOW = GameConfig.MegaStorm.Rainbow
+local UPCOMING_ROWS = 3
+
+-- Unix time -> "2:40 PM" in the viewer's own time zone
+local function clockTime(time: number): string
+	local ok, text = pcall(function()
+		return DateTime.fromUnixTimestamp(math.floor(time)):FormatLocalTime("LT", Players.LocalPlayer.LocaleId)
+	end)
+	if ok and type(text) == "string" then
+		return text
+	end
+	local date = os.date("*t", math.floor(time))
+	return string.format("%d:%02d", date.hour, date.min)
+end
+
+local function stormLabel(stormType): string
+	return (stormType.Icon or "🌪️") .. " " .. stormType.Name
+end
+
+-- Rainbow Hurricane line + the upcoming storms list
+local function updateForecast(gui: Instance, state: Instance, stormType, phase: string, now, upcoming)
+	local rainbowLabel = gui:FindFirstChild("Rainbow")
+	if rainbowLabel then
+		local untilRainbow = (state:GetAttribute("RainbowTime") or now) - now
+		if StormSchedule.IsRainbow(stormType) and phase == "Active" then
+			rainbowLabel.Text = "🌈 RAINBOW HURRICANE IS HERE! " .. Format.Time((state:GetAttribute("EndTime") or now) - now)
+		elseif StormSchedule.IsRainbow(stormType) and phase == "Warning" then
+			rainbowLabel.Text = "🌈 Rainbow Hurricane in " .. Format.Time((state:GetAttribute("NextTime") or now) - now) .. "!"
+		elseif untilRainbow < 600 then
+			rainbowLabel.Text = "🌈 Rainbow Hurricane in " .. Format.Time(untilRainbow)
+		else
+			rainbowLabel.Text = "🌈 Rainbow Hurricane in " .. Format.Duration(untilRainbow)
+		end
+	end
+
+	for index = 1, UPCOMING_ROWS do
+		local row = gui:FindFirstChild("Upcoming" .. index)
+		local entry = upcoming[index]
+		if row and entry then
+			local whenLabel, nameLabel, inLabel = row:FindFirstChild("When"), row:FindFirstChild("Storm"), row:FindFirstChild("In")
+			local prefix = if entry.Exact then "" else "~"
+			if whenLabel then
+				whenLabel.Text = prefix .. clockTime(entry.Time)
+			end
+			if nameLabel then
+				nameLabel.Text = stormLabel(entry.Type)
+				nameLabel.TextColor3 = if StormSchedule.IsRainbow(entry.Type) then RAINBOW.Color else Color3.new(1, 1, 1)
+			end
+			if inLabel then
+				inLabel.Text = "in " .. prefix .. Format.Duration(entry.Time - now)
+			end
+		end
+	end
+end
+
 local function updateBoards()
 	local state = ReplicatedStorage:FindFirstChild("MegaStormState")
 	if not state then
@@ -110,10 +167,25 @@ local function updateBoards()
 	end
 	local phase = state:GetAttribute("Phase") or "Idle"
 	local now = Registry.DataController.Now()
-	local stormType = GameConfig.MegaStorm.Types[state:GetAttribute("StormIndex") or 1]
+	local stormType = StormSchedule.Current(state)
+	local rainbowStorm = StormSchedule.IsRainbow(stormType) and phase ~= "Idle"
+	local upcoming = StormSchedule.Upcoming(state, now, UPCOMING_ROWS + 1)
+
+	-- The board's main countdown always follows the regular storms (the rainbow has its own line)
+	local nextRegular = upcoming[1]
+	for _, entry in upcoming do
+		if not StormSchedule.IsRainbow(entry.Type) then
+			nextRegular = entry
+			break
+		end
+	end
 
 	local countdown, label, color
-	if phase == "Active" then
+	if StormSchedule.IsRainbow(stormType) then
+		countdown = (if nextRegular.Exact then "" else "~") .. Format.Time(nextRegular.Time - now)
+		label = "NEXT MEGA STORM"
+		color = Color3.fromRGB(255, 214, 64)
+	elseif phase == "Active" then
 		countdown = Format.Time((state:GetAttribute("EndTime") or now) - now)
 		label = "MEGA STORM ACTIVE!"
 		color = Color3.fromRGB(255, 100, 120)
@@ -127,6 +199,7 @@ local function updateBoards()
 		color = Color3.fromRGB(255, 214, 64)
 	end
 
+	local boardType = if StormSchedule.IsRainbow(stormType) then nextRegular.Type else stormType
 	for _, gui in CollectionService:GetTagged("ForecastGui") do
 		local countdownLabel = gui:FindFirstChild("Countdown")
 		local labelLabel = gui:FindFirstChild("Label")
@@ -138,19 +211,22 @@ local function updateBoards()
 		if labelLabel then
 			labelLabel.Text = label
 		end
-		if nameLabel and stormType then
-			nameLabel.Text = "🌪️ " .. stormType.Name
+		if nameLabel and boardType then
+			nameLabel.Text = stormLabel(boardType)
 		end
+		updateForecast(gui, state, stormType, phase, now, upcoming)
 	end
 
 	for _, gui in CollectionService:GetTagged("ArenaGui") do
 		local countdownLabel = gui:FindFirstChild("Countdown")
 		if countdownLabel then
+			local arenaCountdown = Format.Time((state:GetAttribute(if phase == "Active" then "EndTime" else "NextTime") or now) - now)
 			countdownLabel.Text = if phase == "Active"
-				then "🌪️ " .. stormType.Name .. " • " .. countdown
-				elseif phase == "Warning" then "⚠️ Storm arrives in " .. countdown
-				else "Next storm in " .. countdown
-			countdownLabel.TextColor3 = color
+				then stormLabel(stormType) .. " • " .. arenaCountdown
+				elseif phase == "Warning" then "⚠️ " .. (if rainbowStorm then stormType.Name else "Storm") .. " arrives in " .. arenaCountdown
+				elseif StormSchedule.IsRainbow(stormType) then "🌈 Rainbow Hurricane in " .. arenaCountdown
+				else "Next storm in " .. arenaCountdown
+			countdownLabel.TextColor3 = if rainbowStorm then RAINBOW.Color else color
 		end
 	end
 
@@ -158,8 +234,8 @@ local function updateBoards()
 		then Color3.fromRGB(255, 80, 100)
 		elseif phase == "Warning" then (if math.floor(os.clock() * 4) % 2 == 0 then Color3.fromRGB(255, 160, 60) else Color3.fromRGB(255, 80, 100))
 		else Color3.fromRGB(120, 200, 255)
-	for _, pylon in CollectionService:GetTagged("ArenaPylon") do
-		pylon.Color = pylonColor
+	for index, pylon in CollectionService:GetTagged("ArenaPylon") do
+		pylon.Color = if rainbowStorm then Color3.fromHSV((os.clock() * 0.3 + index / 8) % 1, 0.6, 1) else pylonColor
 	end
 end
 

@@ -207,6 +207,23 @@ GameConfig.MegaStorm = {
 			Pet = "MaelstromSpirit",
 		},
 	},
+	-- Rare scheduled storm: strikes in every server at the same real-world time
+	-- (every `Interval` seconds on the hour, UTC). See Shared/StormSchedule.
+	Rainbow = {
+		Key = "Rainbow",
+		Name = "Rainbow Hurricane",
+		Icon = "🌈",
+		Color = Color3.fromRGB(255, 120, 200),
+		Accent = Color3.fromRGB(255, 240, 120),
+		Pet = "RainbowRoc",
+		Interval = 7200, -- every 2 hours on the hour (UTC)
+		AnnounceTime = 300, -- server-wide heads-up this many seconds before it arrives
+		Duration = 180,
+		HealthMultiplier = 3,
+		RewardMultiplier = 3,
+		Clearance = 30, -- seconds kept free before its warning; regular storms that don't fit wait until after it
+		LateGrace = 300, -- a server that was busy at the scheduled time may still start it this many seconds late
+	},
 }
 
 ---------------------------------------------------------------------------

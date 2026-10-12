@@ -31,6 +31,7 @@ local ORDER = {
 	"WorldController",
 	"MegaStormController",
 	"ObjectiveController",
+	"RadarController",
 }
 
 local PANELS = { "Shop", "Pets", "Upgrades", "Rebirth", "Rewards", "Settings", "Teleport", "Egg" }

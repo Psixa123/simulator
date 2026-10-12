@@ -1095,18 +1095,49 @@ local function forecastBoard(parent: Instance, position: Vector3, facing: Vector
 	local stand = model("ForecastBoard", parent)
 	local base = CFrame.lookAt(position, position + facing)
 	for _, x in { -12, 12 } do
-		part({ Name = "Post", Size = Vector3.new(1.6, 22, 1.6), CFrame = base * CFrame.new(x, 11, 0.8), Color = rgb(40, 46, 72), Parent = stand })
+		part({ Name = "Post", Size = Vector3.new(1.6, 27, 1.6), CFrame = base * CFrame.new(x, 13.5, 0.8), Color = rgb(40, 46, 72), Parent = stand })
 	end
-	part({ Name = "Frame", Size = Vector3.new(27, 16, 0.8), CFrame = base * CFrame.new(0, 13.5, 0.9), Color = rgb(110, 200, 255), Material = M.Neon, Parent = stand })
-	local screen = part({ Name = "Screen", Size = Vector3.new(26, 15, 1), CFrame = base * CFrame.new(0, 13.5, 0.4), Color = rgb(16, 22, 50), Parent = stand })
+	part({ Name = "Frame", Size = Vector3.new(27, 21, 0.8), CFrame = base * CFrame.new(0, 16, 0.9), Color = rgb(110, 200, 255), Material = M.Neon, Parent = stand })
+	local screen = part({ Name = "Screen", Size = Vector3.new(26, 20, 1), CFrame = base * CFrame.new(0, 16, 0.4), Color = rgb(16, 22, 50), Parent = stand })
 	local gui = surfaceGui(screen, Enum.NormalId.Front, 24)
 	gui.Name = "ForecastGui"
 	CollectionService:AddTag(gui, "ForecastGui")
-	textLabel(gui, { Name = "Title", Text = "⛈️ STORM FORECAST", TextColor3 = rgb(110, 210, 255), Size = UDim2.fromScale(0.9, 0.18), Position = UDim2.fromScale(0.05, 0.05) })
-	textLabel(gui, { Name = "Label", Text = "NEXT MEGA STORM", Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 195, 235), Size = UDim2.fromScale(0.9, 0.1), Position = UDim2.fromScale(0.05, 0.27), Stroke = 2 })
-	textLabel(gui, { Name = "Countdown", Text = "--:--", TextColor3 = rgb(255, 214, 64), Size = UDim2.fromScale(0.9, 0.28), Position = UDim2.fromScale(0.05, 0.38) })
-	textLabel(gui, { Name = "StormName", Text = "Tempest Twister", Size = UDim2.fromScale(0.9, 0.13), Position = UDim2.fromScale(0.05, 0.68) })
-	textLabel(gui, { Name = "Hint", Text = "Gather at the arena and vacuum it together!", Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 195, 235), Size = UDim2.fromScale(0.9, 0.09), Position = UDim2.fromScale(0.05, 0.85), Stroke = 2 })
+	-- Texts are filled in live by the client (WorldController)
+	textLabel(gui, { Name = "Title", Text = "⛈️ STORM FORECAST", TextColor3 = rgb(110, 210, 255), Size = UDim2.fromScale(0.9, 0.11), Position = UDim2.fromScale(0.05, 0.03) })
+	textLabel(gui, { Name = "Label", Text = "NEXT MEGA STORM", Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 195, 235), Size = UDim2.fromScale(0.9, 0.065), Position = UDim2.fromScale(0.05, 0.15), Stroke = 2 })
+	textLabel(gui, { Name = "Countdown", Text = "--:--", TextColor3 = rgb(255, 214, 64), Size = UDim2.fromScale(0.9, 0.15), Position = UDim2.fromScale(0.05, 0.215) })
+	textLabel(gui, { Name = "StormName", Text = "Tempest Twister", Size = UDim2.fromScale(0.9, 0.075), Position = UDim2.fromScale(0.05, 0.37) })
+	local divider = Instance.new("Frame")
+	divider.Name = "Divider"
+	divider.BackgroundColor3 = rgb(70, 90, 150)
+	divider.BorderSizePixel = 0
+	divider.Size = UDim2.new(0.9, 0, 0, 3)
+	divider.Position = UDim2.fromScale(0.05, 0.465)
+	divider.Parent = gui
+	local rainbowLabel = textLabel(gui, { Name = "Rainbow", Text = "🌈 Rainbow Hurricane", Size = UDim2.fromScale(0.9, 0.085), Position = UDim2.fromScale(0.05, 0.485) })
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, rgb(255, 110, 130)),
+		ColorSequenceKeypoint.new(0.25, rgb(255, 200, 90)),
+		ColorSequenceKeypoint.new(0.5, rgb(130, 240, 140)),
+		ColorSequenceKeypoint.new(0.75, rgb(110, 190, 255)),
+		ColorSequenceKeypoint.new(1, rgb(205, 140, 255)),
+	})
+	gradient.Parent = rainbowLabel
+	textLabel(gui, { Name = "UpcomingTitle", Text = "📅 UPCOMING STORMS", Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 195, 235), Size = UDim2.fromScale(0.9, 0.055), Position = UDim2.fromScale(0.05, 0.59), Stroke = 2 })
+	for index = 1, 3 do
+		local row = Instance.new("Frame")
+		row.Name = "Upcoming" .. index
+		row.BackgroundColor3 = if index % 2 == 0 then rgb(32, 40, 78) else rgb(26, 33, 66)
+		row.Size = UDim2.fromScale(0.9, 0.085)
+		row.Position = UDim2.fromScale(0.05, 0.655 + (index - 1) * 0.095)
+		row.Parent = gui
+		corner(row, 8)
+		textLabel(row, { Name = "When", Text = "", TextColor3 = rgb(255, 214, 64), TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.fromScale(0.27, 0.72), Position = UDim2.fromScale(0.03, 0.14), Stroke = 2 })
+		textLabel(row, { Name = "Storm", Text = "", TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.fromScale(0.47, 0.72), Position = UDim2.fromScale(0.31, 0.14), Stroke = 2 })
+		textLabel(row, { Name = "In", Text = "", Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 195, 235), TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.fromScale(0.19, 0.6), Position = UDim2.fromScale(0.79, 0.2), Stroke = 2 })
+	end
+	textLabel(gui, { Name = "Hint", Text = "Gather at the arena and vacuum it together!", Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 195, 235), Size = UDim2.fromScale(0.9, 0.045), Position = UDim2.fromScale(0.05, 0.945), Stroke = 2 })
 end
 
 local function arena(parent: Instance)
