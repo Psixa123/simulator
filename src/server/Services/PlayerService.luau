@@ -156,6 +156,7 @@ local function maintainGear(player: Player, character: Model)
 		ensureTank(player, character)
 		ensureOverhead(player, character)
 		giveVacuum(player, character)
+		CharacterGear.DressPlayer(player) -- Climate Shift look on the tank + vacuum
 		task.wait(2)
 	end
 end
@@ -202,7 +203,7 @@ local function createLeaderstats(player: Player, data)
 	volts.Parent = folder
 
 	local rebirths = Instance.new("IntValue")
-	rebirths.Name = "Rebirths"
+	rebirths.Name = "Shifts" -- Climate Shifts (data.Rebirths)
 	rebirths.Value = data.Rebirths
 	rebirths.Parent = folder
 
@@ -234,7 +235,7 @@ local function onDataChanged(player: Player, key: string, value)
 		end
 	elseif key == "Rebirths" then
 		local leaderstats = player:FindFirstChild("leaderstats")
-		local stat = leaderstats and leaderstats:FindFirstChild("Rebirths")
+		local stat = leaderstats and leaderstats:FindFirstChild("Shifts")
 		if stat then
 			stat.Value = value
 		end

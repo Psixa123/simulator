@@ -1,15 +1,18 @@
 --!nonstrict
--- Rebirthing: trade your Volts and Power/Tank upgrades for a permanent Volts multiplier.
+-- Rebirthing (called "Climate Shift" in the game): trade your Volts and Power/Tank upgrades for a
+-- permanent Volts multiplier and new looks for your Storm Tank and Storm Vacuum.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Formulas = require(Shared.Formulas)
+local ClimateShift = require(Shared.ClimateShift)
 local Format = require(Shared.Util.Format)
 local Remotes = require(Shared.Remotes)
 
 local Registry = require(script.Parent.Registry)
 local Net = require(script.Parent.Net)
+local CharacterGear = require(script.Parent.CharacterGear)
 
 local RebirthService = {}
 
@@ -20,7 +23,7 @@ function RebirthService.Rebirth(player: Player)
 	end
 	local cost = Formulas.RebirthCost(data.Rebirths)
 	if data.Volts < cost then
-		return Net.Fail("You need ⚡ " .. Format.Number(cost) .. " Volts to rebirth!")
+		return Net.Fail("You need ⚡ " .. Format.Number(cost) .. " Volts for a Climate Shift!")
 	end
 
 	Registry.WeatherService.StopCatch(player)
@@ -32,8 +35,19 @@ function RebirthService.Rebirth(player: Player)
 	data.Rebirths += 1
 
 	Registry.DataService.Replicate(player, "Volts", "Energy", "TankValue", "Upgrades", "Rebirths")
-	Net.Effect(player, "Rebirth", data.Rebirths)
-	Net.NotifyAll(string.format("🔄 %s just reached Rebirth %d!", player.DisplayName, data.Rebirths), "Success")
+	CharacterGear.DressPlayer(player, data.Rebirths)
+
+	-- The look this Climate Shift unlocks (if any) rides along so the celebration can show it
+	local unlocked = ClimateShift.UnlockedAt(data.Rebirths)
+	Net.Effect(player, "Rebirth", data.Rebirths, unlocked)
+	if unlocked then
+		Net.NotifyAll(
+			string.format("🌀 %s reached Climate Shift %d and unlocked the %s %s look!", player.DisplayName, data.Rebirths, unlocked.Icon, unlocked.Name),
+			"Success"
+		)
+	else
+		Net.NotifyAll(string.format("🌀 %s just reached Climate Shift %d!", player.DisplayName, data.Rebirths), "Success")
+	end
 	return { Ok = true, Rebirths = data.Rebirths }
 end
 

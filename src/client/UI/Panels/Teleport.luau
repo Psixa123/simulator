@@ -85,7 +85,7 @@ function Teleport.Build()
 
 	-- Fixed destinations
 	local hubCard, hubInfo = row(list, 1, Zones.Hub.Icon, Zones.Hub.Color, Zones.Hub.Name)
-	hubInfo.Text = "Upgrades, rebirths, leaderboards and daily rewards"
+	hubInfo.Text = "Upgrades, Climate Shifts, leaderboards and daily rewards"
 	UI.Button({
 		Text = "GO",
 		Color = "Teal",

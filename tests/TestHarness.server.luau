@@ -17,6 +17,7 @@ local Registry = require(ServerScriptService:WaitForChild("Server"):WaitForChild
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapLayout = require(Shared.Config.MapLayout)
 local Formulas = require(Shared.Formulas)
+local ClimateShift = require(Shared.ClimateShift)
 
 local function log(...)
 	print("[HARNESS-S]", ...)
@@ -114,6 +115,20 @@ function handlers.World(player)
 		Position = character:GetPivot().Position,
 		GatePrompts = #CollectionService:GetTagged("GatePrompt"),
 		Barriers = #CollectionService:GetTagged("ZoneBarrier"),
+	}
+end
+
+-- Climate Shift look worn by the tank and vacuum, and the look the player should be wearing
+function handlers.Gear(player)
+	local character = player.Character
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local tank = character and character:FindFirstChild("StormTank")
+	local vacuum = (character and character:FindFirstChild("StormVacuum")) or (backpack and backpack:FindFirstChild("StormVacuum"))
+	local _, expected = ClimateShift.Cosmetic(Registry.DataService.Get(player).Rebirths)
+	return {
+		Expected = expected,
+		Tank = tank and tank:GetAttribute("CosmeticTier"),
+		Vacuum = vacuum and vacuum:GetAttribute("CosmeticTier"),
 	}
 end
 

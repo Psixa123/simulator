@@ -1,6 +1,6 @@
 --!nonstrict
 -- Guides new players with a step-by-step objective and a glowing guide beam
--- (catch -> sell -> upgrade -> hatch -> unlock the next zone -> rebirth).
+-- (catch -> sell -> upgrade -> hatch -> unlock the next zone -> Climate Shift).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -89,7 +89,7 @@ local function compute(data)
 		return "🔓 Unlock " .. nextZone.Icon .. " " .. nextZone.Name .. "!", MapLayout.Gate(data.Zone + 1) + Vector3.new(-4, 0, 0), nil
 	end
 	if data.Volts >= Formulas.RebirthCost(data.Rebirths) then
-		return "🔄 Rebirth for a permanent Volts bonus!", nil, "Rebirth"
+		return "🌀 Climate Shift for a permanent Volts bonus!", nil, "Rebirth"
 	end
 	return "🏆 Collect every pet in the Pet Index!", nil, nil
 end

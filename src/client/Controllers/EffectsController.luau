@@ -531,15 +531,16 @@ function handlers.ZoneUnlocked(zoneId: number)
 	Registry.InterfaceController.BigText("ZONE UNLOCKED!", zone.Color, zone.Icon .. " " .. zone.Name, 2.8)
 end
 
-function handlers.Rebirth(rebirths: number)
+-- Climate Shift. `look` is the gear look this shift unlocked (GameConfig.Rebirth.Cosmetics entry)
+function handlers.Rebirth(rebirths: number, look)
 	Registry.SoundController.Play("Success", 0.8)
 	EffectsController.Confetti(120)
-	Registry.InterfaceController.BigText(
-		"🔄 REBIRTH " .. rebirths .. "!",
-		Color3.fromRGB(200, 150, 255),
-		"Permanent Volts bonus: " .. Format.Multiplier(Formulas.RebirthMultiplier(rebirths)),
-		3
-	)
+	local subtitle = "Permanent Volts bonus: " .. Format.Multiplier(Formulas.RebirthMultiplier(rebirths))
+	if type(look) == "table" and look.Name then
+		subtitle ..= "  •  🎨 " .. tostring(look.Icon or "") .. " " .. look.Name .. " look unlocked!"
+		Registry.InterfaceController.Notify("🎨 Your tank and vacuum now wear the " .. look.Name .. " look!", "Reward")
+	end
+	Registry.InterfaceController.BigText("🌀 CLIMATE SHIFT " .. rebirths .. "!", Color3.fromRGB(200, 150, 255), subtitle, 3)
 end
 
 function handlers.RareSpawn(typeId: string, position: Vector3)

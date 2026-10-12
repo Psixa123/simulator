@@ -94,7 +94,7 @@ GameConfig.Upgrades = {
 GameConfig.UpgradeOrder = { "Power", "Tank", "Range", "Speed" }
 
 ---------------------------------------------------------------------------
--- Rebirth
+-- Rebirth (players know it as "Climate Shift")
 ---------------------------------------------------------------------------
 GameConfig.Rebirth = {
 	BaseCost = 1e7,
@@ -102,6 +102,93 @@ GameConfig.Rebirth = {
 	VoltsBonus = 0.5, -- +50% Volts for every rebirth
 	Resets = { "Volts", "Power", "Tank" },
 	Keeps = { "Pets", "Zones", "Range", "Speed", "Gamepasses" },
+
+	-- Gear looks for the Storm Tank and Storm Vacuum. The best look your Climate Shifts unlock is
+	-- worn automatically (see Shared/ClimateShift and CharacterGear.DressPlayer).
+	-- Tank / Vacuum = shell colour, Glow = neon rings, tank fill and nozzle light,
+	-- Trim (optional) = the dark metal parts, Trail (optional, Color3 or ColorSequence) = a streak
+	-- behind the tank while you run.
+	DefaultCosmetic = {
+		Name = "Storm Standard",
+		Icon = "⚙️",
+		Tank = Color3.fromRGB(160, 170, 192),
+		Vacuum = Color3.fromRGB(160, 170, 192),
+		Glow = Color3.fromRGB(70, 200, 255),
+	},
+	-- Ordered by Shifts (number of Climate Shifts needed)
+	Cosmetics = {
+		{
+			Shifts = 1,
+			Name = "Spring Shower",
+			Icon = "🌱",
+			Tank = Color3.fromRGB(120, 214, 160),
+			Vacuum = Color3.fromRGB(140, 226, 176),
+			Glow = Color3.fromRGB(110, 255, 170),
+		},
+		{
+			Shifts = 2,
+			Name = "Thunderstruck",
+			Icon = "⚡",
+			Tank = Color3.fromRGB(96, 84, 176),
+			Vacuum = Color3.fromRGB(112, 98, 196),
+			Glow = Color3.fromRGB(255, 226, 72),
+		},
+		{
+			Shifts = 3,
+			Name = "Desert Mirage",
+			Icon = "🏜️",
+			Tank = Color3.fromRGB(226, 186, 116),
+			Vacuum = Color3.fromRGB(238, 200, 132),
+			Trim = Color3.fromRGB(120, 84, 52),
+			Glow = Color3.fromRGB(64, 228, 214),
+		},
+		{
+			Shifts = 5,
+			Name = "Polar Vortex",
+			Icon = "❄️",
+			Tank = Color3.fromRGB(214, 236, 255),
+			Vacuum = Color3.fromRGB(226, 242, 255),
+			Trim = Color3.fromRGB(70, 104, 150),
+			Glow = Color3.fromRGB(120, 196, 255),
+			Trail = Color3.fromRGB(190, 230, 255),
+		},
+		{
+			Shifts = 8,
+			Name = "Molten Core",
+			Icon = "🌋",
+			Tank = Color3.fromRGB(72, 56, 56),
+			Vacuum = Color3.fromRGB(86, 64, 60),
+			Trim = Color3.fromRGB(36, 28, 28),
+			Glow = Color3.fromRGB(255, 112, 40),
+			Trail = Color3.fromRGB(255, 150, 60),
+		},
+		{
+			Shifts = 12,
+			Name = "Aurora Borealis",
+			Icon = "🌌",
+			Tank = Color3.fromRGB(70, 52, 140),
+			Vacuum = Color3.fromRGB(84, 62, 160),
+			Trim = Color3.fromRGB(36, 30, 80),
+			Glow = Color3.fromRGB(110, 255, 200),
+			Trail = ColorSequence.new(Color3.fromRGB(110, 255, 200), Color3.fromRGB(255, 120, 240)),
+		},
+		{
+			Shifts = 20,
+			Name = "Rainbow Tempest",
+			Icon = "🌈",
+			Tank = Color3.fromRGB(255, 206, 72),
+			Vacuum = Color3.fromRGB(255, 218, 96),
+			Trim = Color3.fromRGB(130, 86, 24),
+			Glow = Color3.fromRGB(255, 250, 220),
+			Trail = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 110)),
+				ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 200, 70)),
+				ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 240, 130)),
+				ColorSequenceKeypoint.new(0.75, Color3.fromRGB(90, 180, 255)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 120, 255)),
+			}),
+		},
+	},
 }
 
 ---------------------------------------------------------------------------

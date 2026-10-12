@@ -91,7 +91,7 @@ local MENU = {
 	{ Key = "Shop", Icon = "🛒", Text = "Shop", Color = "Orange" },
 	{ Key = "Pets", Icon = "🐾", Text = "Pets", Color = "Pink" },
 	{ Key = "Upgrades", Icon = "⬆️", Text = "Upgrades", Color = "Blue" },
-	{ Key = "Rebirth", Icon = "🔄", Text = "Rebirth", Color = "Purple" },
+	{ Key = "Rebirth", Icon = "🌀", Text = "Shift", Color = "Purple" }, -- Climate Shift
 	{ Key = "Rewards", Icon = "🎁", Text = "Rewards", Color = "Green" },
 	{ Key = "Teleport", Icon = "🗺️", Text = "Teleport", Color = "Teal" },
 	{ Key = "Settings", Icon = "⚙️", Text = "Settings", Color = "Gray" },

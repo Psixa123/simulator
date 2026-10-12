@@ -1,6 +1,12 @@
 --!nonstrict
 -- Builds the gear every storm catcher carries: the Storm Vacuum tool, the Storm Tank
--- backpack (its glowing fill shows how full your tank is) and the overhead name tag.
+-- backpack (its glowing fill shows how full your tank is) and the overhead name tag,
+-- and paints the tank and vacuum in the look the player's Climate Shifts unlock.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local ClimateShift = require(Shared.ClimateShift)
 
 local CharacterGear = {}
 
@@ -167,12 +173,131 @@ function CharacterGear.SetTankFill(tank: Model, fraction: number)
 	fill.Size = Vector3.new(height, 1.05, 1.05)
 	weld.C0 = CFrame.new(0, -TANK_INNER_HEIGHT / 2 + height / 2, TANK_OFFSET_Z) * VERTICAL
 	fill.Transparency = if fraction <= 0.001 then 1 else 0
-	fill.Color = if fraction >= 0.999 then FULL else ACCENT
+	fill.Color = if fraction >= 0.999 then FULL else (tank:GetAttribute("GlowColor") or ACCENT)
 	fill:SetAttribute("Fraction", fraction)
 end
 
 ---------------------------------------------------------------------------
--- Overhead tag (VIP crown + rebirth count)
+-- Climate Shift looks (GameConfig.Rebirth.Cosmetics)
+---------------------------------------------------------------------------
+-- Part name -> which colour of the look it takes
+local VACUUM_SLOTS = {
+	Handle = "Trim",
+	BackCap = "Trim",
+	Nozzle = "Trim",
+	Body = "Vacuum",
+	Ring = "Glow",
+	NozzleGlow = "Glow",
+	CanisterCore = "Glow",
+}
+local TANK_SLOTS = {
+	Plate = "Trim",
+	CapTop = "Tank",
+	CapBottom = "Tank",
+	Band = "Glow",
+}
+
+local function lookColors(look)
+	return {
+		Tank = look.Tank or LIGHT_METAL,
+		Vacuum = look.Vacuum or look.Tank or LIGHT_METAL,
+		Glow = look.Glow or ACCENT,
+		Trim = look.Trim or METAL,
+	}
+end
+
+-- Streak behind the tank while running (only looks with a Trail colour have one)
+local function setTrail(tank: Model, color)
+	local plate = tank.PrimaryPart
+	if not plate then
+		return
+	end
+	local trail = plate:FindFirstChild("LookTrail")
+	if not color then
+		for _, name in { "LookTrail", "TrailTop", "TrailBottom" } do
+			local child = plate:FindFirstChild(name)
+			if child then
+				child:Destroy()
+			end
+		end
+		return
+	end
+	if not trail then
+		local top = Instance.new("Attachment")
+		top.Name = "TrailTop"
+		top.Position = Vector3.new(0, 0.9, TANK_OFFSET_Z)
+		top.Parent = plate
+		local bottom = Instance.new("Attachment")
+		bottom.Name = "TrailBottom"
+		bottom.Position = Vector3.new(0, -0.9, TANK_OFFSET_Z)
+		bottom.Parent = plate
+
+		trail = Instance.new("Trail")
+		trail.Name = "LookTrail"
+		trail.Attachment0 = top
+		trail.Attachment1 = bottom
+		trail.Lifetime = 0.35
+		trail.MinLength = 0.05
+		trail.FaceCamera = true
+		trail.LightEmission = 0.7
+		trail.Transparency = NumberSequence.new(0.3, 1)
+		trail.WidthScale = NumberSequence.new(1, 0.3)
+		trail.Parent = plate
+	end
+	trail.Color = if typeof(color) == "ColorSequence" then color else ColorSequence.new(color)
+end
+
+-- Paints a Storm Tank or Storm Vacuum in the best look `shifts` Climate Shifts unlock.
+-- Cheap to call again and again: gear that already wears that look is skipped.
+function CharacterGear.ApplyCosmetic(gear: Instance, shifts: number)
+	local look, tier = ClimateShift.Cosmetic(shifts)
+	if gear:GetAttribute("CosmeticTier") == tier then
+		return
+	end
+	local colors = lookColors(look)
+	local isVacuum = gear:IsA("Tool")
+	local slots = if isVacuum then VACUUM_SLOTS else TANK_SLOTS
+	for _, descendant in gear:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			local slot = slots[descendant.Name]
+			if slot then
+				descendant.Color = colors[slot]
+			end
+		elseif descendant:IsA("PointLight") then
+			descendant.Color = colors.Glow
+		end
+	end
+	gear:SetAttribute("CosmeticTier", tier)
+	gear:SetAttribute("GlowColor", colors.Glow)
+
+	if not isVacuum and gear:IsA("Model") then
+		local fill = gear:FindFirstChild("Fill")
+		if fill and fill:IsA("BasePart") then
+			fill.Color = if (fill:GetAttribute("Fraction") or 0) >= 0.999 then FULL else colors.Glow
+		end
+		setTrail(gear, look.Trail)
+	end
+end
+
+-- Dresses the player's current tank and vacuum (equipped or in the backpack) in their best look.
+-- `shifts` defaults to the player's "Rebirths" attribute (kept up to date by PlayerService).
+function CharacterGear.DressPlayer(player: Player, shifts: number?)
+	local count = shifts or player:GetAttribute("Rebirths") or 0
+	local character = player.Character
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local tank = character and character:FindFirstChild("StormTank")
+	local vacuum = (character and character:FindFirstChild("StormVacuum"))
+		or (backpack and backpack:FindFirstChild("StormVacuum"))
+	if tank then
+		CharacterGear.ApplyCosmetic(tank, count)
+	end
+	if vacuum then
+		CharacterGear.ApplyCosmetic(vacuum, count)
+	end
+end
+
+---------------------------------------------------------------------------
+-- Overhead tag (VIP crown + Climate Shift count)
 ---------------------------------------------------------------------------
 local function tagLabel(name: string, color: Color3, order: number, parent: Instance)
 	local label = Instance.new("TextLabel")
@@ -222,7 +347,8 @@ function CharacterGear.UpdateOverhead(gui: BillboardGui, isVip: boolean, rebirth
 	end
 	if rebirth then
 		rebirth.Visible = rebirths > 0
-		rebirth.Text = "🔄 Rebirth " .. rebirths
+		rebirth.Text = "🌀 Climate Shift " .. rebirths
+		rebirth.TextColor3 = ClimateShift.Cosmetic(rebirths).Glow
 	end
 	gui.Enabled = isVip or rebirths > 0
 end

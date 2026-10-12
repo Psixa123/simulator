@@ -1199,11 +1199,11 @@ local function rebirthShrine(parent: Instance, position: Vector3)
 
 	local anchor = part({ Name = "SignAnchor", Size = Vector3.one, CFrame = CFrame.new(position + Vector3.new(0, 15, 0)), Transparency = 1, CanCollide = false, CanQuery = false, Parent = shrine })
 	local gui = billboard(anchor, UDim2.fromOffset(260, 90), Vector3.new(0, 4, 0), 120)
-	textLabel(gui, { Text = "🔄 REBIRTH", TextColor3 = rgb(210, 170, 255), Size = UDim2.fromScale(1, 0.6) })
-	textLabel(gui, { Text = "Permanent Volts bonus", Font = Enum.Font.GothamBold, Size = UDim2.fromScale(1, 0.32), Position = UDim2.fromScale(0, 0.64), Stroke = 2 })
+	textLabel(gui, { Text = "🌀 CLIMATE SHIFT", TextColor3 = rgb(210, 170, 255), Size = UDim2.fromScale(1, 0.6) })
+	textLabel(gui, { Text = "Permanent Volts bonus + gear looks", Font = Enum.Font.GothamBold, Size = UDim2.fromScale(1, 0.32), Position = UDim2.fromScale(0, 0.64), Stroke = 2 })
 
 	local host = promptHost(shrine, position + Vector3.new(0, 3, 0))
-	local instance = prompt(host, "Rebirth", "Rebirth Shrine", 0, 16)
+	local instance = prompt(host, "Climate Shift", "Climate Shrine", 0, 16)
 	instance:SetAttribute("Panel", "Rebirth")
 end
 
@@ -1249,7 +1249,7 @@ local function buildHub(parent: Instance)
 	forecastBoard(hub, stations.Forecast, -Vector3.zAxis)
 
 	leaderboard(hub, MapLayout.Leaderboards.Volts, Vector3.zAxis, "Volts", "🏆 TOP STORM CATCHERS", rgb(255, 205, 60))
-	leaderboard(hub, MapLayout.Leaderboards.Rebirths, -Vector3.zAxis, "Rebirths", "🔄 MOST REBIRTHS", rgb(180, 120, 255))
+	leaderboard(hub, MapLayout.Leaderboards.Rebirths, -Vector3.zAxis, "Rebirths", "🌀 MOST CLIMATE SHIFTS", rgb(180, 120, 255))
 
 	for x = -206, -10, 28 do
 		if x < -164 or x > -60 then
