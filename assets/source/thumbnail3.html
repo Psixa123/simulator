@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
+  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
+  html, body { margin: 0; padding: 0; background: #0b3a5c; overflow: hidden; }
+  svg { display: block; }
+</style>
+<script src="art.js"></script>
+</head>
+<body>
+<script>
+  // Thumbnail 3: hatch Stormlings + golden/rainbow tiers + six biomes (1920x1080)
+  const W = 1920, H = 1080;
+  let c = "";
+  c += sky(W, H, ["#8fe9ff", "#2f8fd6", "#0b2f5c"], 0.5, 0.45);
+  c += rays(960, 560, 1900, 22, "#ffffff", 0.08);
+
+  c += `<g opacity="0.55">`;
+  for (const [x, y, s] of [[200, 160, 1.6], [620, 110, 1.9], [1320, 120, 1.9], [1740, 170, 1.6]]) {
+    c += cloud(x, y, s, "#c9ecff", "#a8daf5", null);
+  }
+  c += `</g>`;
+
+  // biome strip along the bottom
+  const biomes = [
+    { name: "MEADOWS", c1: "#9ff07a", c2: "#3fae3a" },
+    { name: "THUNDER", c1: "#b7a2ff", c2: "#5a44c8" },
+    { name: "DUNES", c1: "#ffd98a", c2: "#d9922e" },
+    { name: "FROSTPEAK", c1: "#e6f6ff", c2: "#79b9ef" },
+    { name: "VOLCANO", c1: "#ff9a6a", c2: "#c2361a" },
+    { name: "SKY", c1: "#ffb6f0", c2: "#8a52e0" },
+  ];
+  const cardW = 290, gap = 16, startX = (W - (cardW * 6 + gap * 5)) / 2;
+  biomes.forEach((b, i) => {
+    const g = lin([[0, b.c1], [1, b.c2]]);
+    const x = startX + i * (cardW + gap), y = 930;
+    c += `<defs>${g.def}</defs>`;
+    c += `<rect x="${x}" y="${y + 8}" width="${cardW}" height="110" rx="26" fill="#0d1030" opacity="0.8"/>`;
+    c += `<rect x="${x}" y="${y}" width="${cardW}" height="110" rx="26" fill="${g.url}" stroke="#0d1030" stroke-width="8"/>`;
+    c += `<rect x="${x + 12}" y="${y + 10}" width="${cardW - 24}" height="26" rx="13" fill="#ffffff" opacity="0.3"/>`;
+    c += `<text x="${x + cardW / 2}" y="${y + 72}" font-family="Luckiest Guy" font-size="40" text-anchor="middle" fill="#ffffff" stroke="#0d1030" stroke-width="7" paint-order="stroke" letter-spacing="1">${b.name}</text>`;
+  });
+
+  // eggs cluster (left)
+  c += `<g filter="url(#softGlow)" opacity="0.55"><circle cx="400" cy="650" r="260" fill="#ffffff"/></g>`;
+  c += egg(250, 700, 1.35, "#96e66e", "#fff08c", -14);
+  c += egg(560, 700, 1.35, "#b7a2ff", "#ffe36b", 12);
+  c += egg(400, 600, 1.7, "#7ec8ff", "#e0f4ff", 0);
+
+  // pets: normal -> golden -> rainbow (right)
+  c += pet(1060, 760, 1.35, { body: "bean", color: "#ffe14a", accent: "#fff9d0", features: ["bunny", "bolt"] });
+  c += pet(1360, 700, 1.55, { body: "bean", color: "#ffc61a", accent: "#fff2a0", features: ["bunny", "crown"] });
+  const rb = lin([[0, "#ff6b6b"], [0.2, "#ffb347"], [0.4, "#fff46b"], [0.6, "#6bff95"], [0.8, "#6bc8ff"], [1, "#c56bff"]], 0, 0, 1, 1);
+  c += `<defs>${rb.def}</defs>`;
+  c += `<g filter="url(#softGlow)" opacity="0.6"><circle cx="1690" cy="640" r="150" fill="#ffffff"/></g>`;
+  c += pet(1690, 650, 1.8, { body: "bean", color: "#ffd0f0", fill: rb.url, accent: "#ffffff", features: ["bunny", "halo"] });
+
+  // arrows between tiers
+  const arrow = (x, y) =>
+    `<g transform="translate(${x},${y})"><polygon points="-34,-26 10,-26 10,-48 50,0 10,48 10,26 -34,26" fill="#ffffff" stroke="#0d1030" stroke-width="9" stroke-linejoin="round"/></g>`;
+  c += arrow(1205, 735);
+  c += arrow(1525, 690);
+  c += ribbon(1060, 870, 200, 62, "NORMAL", { size: 34, c1: "#9fb0c8", c2: "#5f6f8a" });
+  c += ribbon(1360, 870, 200, 62, "GOLDEN", { size: 34, c1: "#ffd84a", c2: "#f09a1a" });
+  c += ribbon(1690, 870, 220, 62, "RAINBOW", { size: 34, c1: "#ff7ac0", c2: "#8a52e0" });
+
+  for (const [x, y, r] of [[160, 440, 24], [700, 480, 20], [880, 620, 18], [1540, 470, 26], [1840, 470, 20], [1210, 560, 16], [1830, 800, 18]]) {
+    c += sparkle(x, y, r, "#ffffff", 0.95);
+  }
+
+  // title
+  c += title(W / 2, 230, "HATCH STORMLINGS!", 172, { stroke: 38 });
+  c += ribbon(W / 2, 330, 700, 92, "6 BIOMES TO EXPLORE", { size: 54, c1: "#ff7ac0", c2: "#c93a8f", spacing: 2, rot: -1.5 });
+
+  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${baseDefs()}${c}</svg>`;
+</script>
+</body>
+</html>

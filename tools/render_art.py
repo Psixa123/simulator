@@ -5,6 +5,7 @@ Usage:  python tools/render_art.py            (render everything)
 Sources live in assets/source (plain HTML + SVG), output goes to assets/.
 """
 
+import glob
 import os
 import pathlib
 import subprocess
@@ -15,13 +16,21 @@ SOURCE = ROOT / "assets" / "source"
 OUT = ROOT / "assets"
 
 BROWSERS = [
+    os.environ.get("CHROME_PATH", ""),
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    # Playwright's headless shell renders the exact window size on Linux
+    *glob.glob("/opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell"),
+    "/opt/pw-browsers/chromium",
 ]
 
-PASSES = ["VIP", "DoubleVolts", "DoubleEnergy", "AutoCatch", "RemoteSell", "MegaTank", "LuckyHatcher", "TripleHatch", "AutoHatch", "PetSlots"]
+PASSES = ["VIP", "DoubleVolts", "DoubleEnergy", "AutoCatch", "RemoteSell", "MegaTank", "LuckyHatcher", "TripleHatch", "AutoHatch", "PetSlots", "StormRadar"]
 PRODUCTS = ["VoltsSmall", "VoltsMedium", "VoltsLarge", "VoltsHuge", "EnergyBoost", "LuckBoost", "SummonMegaStorm"]
 
 # (output path, page, query string, width, height)
@@ -38,7 +47,7 @@ JOBS += [(f"products/{name}.png", "badge.html", f"?id={name}", 512, 512) for nam
 
 def find_browser():
     for path in BROWSERS:
-        if os.path.exists(path):
+        if path and os.path.exists(path):
             return path
     raise SystemExit("Could not find Chrome or Edge to render the artwork.")
 
@@ -53,6 +62,7 @@ def render(browser, output, page, query, width, height):
     command = [
         browser,
         "--headless=new",
+        "--no-sandbox",
         "--disable-gpu",
         "--hide-scrollbars",
         "--force-device-scale-factor=1",

@@ -213,13 +213,15 @@ function petFace(o = {}) {
     <path d="M-9,14 Q0,24 9,14" fill="none" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/>`;
 }
 
-// o: { body: "round"|"cloud"|"drop"|"bean", color, accent, features: [...], eye }
+// o: { body: "round"|"cloud"|"drop"|"bean", color, accent, features: [...], eye, fill }
+// fill: optional paint (e.g. a gradient url) for the body instead of the shaded `color`
 function pet(x, y, s = 1, o = {}) {
   const color = o.color || "#ffffff";
   const accent = o.accent || "#ffd23c";
   const f = new Set(o.features || []);
   const g = rad([[0, "#ffffff", 0.9], [0.3, color], [1, color]], 0.34, 0.26, 0.95);
   const top = o.body === "drop" ? -100 : o.body === "cloud" ? -72 : o.body === "bean" ? -74 : -64;
+  const bodyFill = o.fill || g.url;
   let back = "", front = "";
   const S = `stroke="${INK}" stroke-width="7" stroke-linejoin="round"`;
 
@@ -251,13 +253,16 @@ function pet(x, y, s = 1, o = {}) {
       puffs.map(([cx, cy, r]) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`).join("") +
       `<circle cx="-14" cy="-22" r="34" fill="#ffffff" opacity="0.35"/>`;
   } else if (o.body === "drop") {
-    body = `<path d="M0,-100 C30,-58 64,-28 64,8 A64,64 0 1 1 -64,8 C-64,-28 -30,-58 0,-100 Z" fill="${g.url}" ${S}/>`;
+    body = `<path d="M0,-100 C30,-58 64,-28 64,8 A64,64 0 1 1 -64,8 C-64,-28 -30,-58 0,-100 Z" fill="${bodyFill}" ${S}/>`;
   } else if (o.body === "bean") {
-    body = `<ellipse cx="0" cy="-4" rx="56" ry="70" fill="${g.url}" ${S}/>`;
+    body = `<ellipse cx="0" cy="-4" rx="56" ry="70" fill="${bodyFill}" ${S}/>`;
   } else {
-    body = `<circle cx="0" cy="0" r="64" fill="${g.url}" ${S}/>`;
+    body = `<circle cx="0" cy="0" r="64" fill="${bodyFill}" ${S}/>`;
   }
 
+  if (o.fill) {
+    front += `<ellipse cx="-20" cy="-36" rx="16" ry="24" fill="#ffffff" opacity="0.5" transform="rotate(20 -20 -36)"/>`;
+  }
   if (f.has("flame")) {
     front += `<path d="M0,${top - 44} C18,${top - 22} 24,${top - 6} 0,${top + 10} C-24,${top - 6} -18,${top - 22} 0,${top - 44} Z" fill="#ff8a1e" ${S}/><path d="M0,${top - 24} C8,${top - 12} 10,${top - 2} 0,${top + 4} C-10,${top - 2} -8,${top - 12} 0,${top - 24} Z" fill="#ffe14a"/>`;
   }

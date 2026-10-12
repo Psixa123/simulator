@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
+  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
+  html, body { margin: 0; padding: 0; background: #12062e; overflow: hidden; }
+  svg { display: block; }
+</style>
+<script src="art.js"></script>
+</head>
+<body>
+<script>
+  // Thumbnail 2: the server-wide Mega Storm event (1920x1080)
+  const W = 1920, H = 1080;
+  let c = "";
+  c += sky(W, H, ["#c08cff", "#5a1fc8", "#12062e"], 0.5, 0.42);
+  c += rays(960, 470, 1900, 24, "#ffffff", 0.07);
+
+  // storm ceiling
+  c += `<g opacity="0.65">`;
+  for (const [x, y, s] of [[180, 110, 2.4], [560, 70, 2.8], [960, 60, 3.2], [1380, 70, 2.8], [1760, 110, 2.4]]) {
+    c += cloud(x, y, s, "#7b4fe0", "#6238c8", null);
+  }
+  c += `</g>`;
+
+  // giant mega tornado
+  c += `<g filter="url(#softGlow)" opacity="0.55"><ellipse cx="960" cy="520" rx="420" ry="460" fill="#d6b0ff"/></g>`;
+  c += tornado(960, 130, 2.3, { bands: 11, step: 50, rTop: 210, rBot: 30, dark: "#5b2bd4", light: "#f8eeff", mid: "#b98cff", phase: 2.6 });
+
+  c += bolt(330, 250, 1.6, -16);
+  c += bolt(1560, 230, 1.7, 14);
+  c += bolt(1290, 560, 0.9, -6);
+  c += bolt(560, 560, 0.85, 10);
+
+  // ground
+  c += hills(W, 920, 30, "#3a2c8a", 0.5, 1.4);
+  c += hills(W, 960, 22, "#4f3ab0", 2.4, 2.1);
+  c += hills(W, 1010, 14, "#6a4fd0", 4.0, 3.0);
+
+  // storm chasers vacuuming from both sides
+  function chaser(x, y, s, arm, flip, jacket, tx, ty) {
+    let out = "";
+    const hand = characterHand(0, 0, s, arm);
+    const vacX = hand.x + 24 * s / 1.6, vacY = hand.y - 56 * s / 1.6, vacS = s * 0.82;
+    const a = (arm * Math.PI) / 180;
+    const tipX = vacX + Math.cos(a) * 150 * vacS, tipY = vacY + Math.sin(a) * 150 * vacS;
+    const sx = flip ? -1 : 1;
+    out += `<g transform="translate(${x},${y}) scale(${sx},1)">`;
+    out += beam(tipX, tipY, (tx - x) * sx, ty - y, 20 * s / 1.4, 90, "#7fe8ff");
+    out += character(0, 0, s, { armAngle: arm, jacket });
+    out += vacuum(vacX, vacY, vacS, arm);
+    out += `</g>`;
+    return out;
+  }
+  c += chaser(250, 1030, 1.45, -28, false, "#33b5f5", 840, 560);
+  c += chaser(1690, 1030, 1.45, -28, true, "#ff7a5c", 1080, 560);
+  c += chaser(540, 990, 0.95, -36, false, "#7be36d", 880, 640);
+  c += chaser(1390, 990, 0.95, -36, true, "#ffd23c", 1040, 640);
+
+  // health bar of the storm
+  const barW = 900, barX = (W - barW) / 2, barY = 905;
+  const fill = lin([[0, "#ff6bd5"], [1, "#a14bff"]]);
+  c += `<defs>${fill.def}</defs>`;
+  c += `<rect x="${barX - 8}" y="${barY - 8 + 8}" width="${barW + 16}" height="${72}" rx="30" fill="#0d1030" opacity="0.85"/>`;
+  c += `<rect x="${barX - 8}" y="${barY - 8}" width="${barW + 16}" height="72" rx="30" fill="#1d1450" stroke="#0d1030" stroke-width="8"/>`;
+  c += `<rect x="${barX + 4}" y="${barY + 4}" width="${barW * 0.38}" height="48" rx="22" fill="${fill.url}"/>`;
+  c += `<rect x="${barX + 14}" y="${barY + 10}" width="${barW * 0.38 - 20}" height="14" rx="7" fill="#ffffff" opacity="0.35"/>`;
+  c += `<text x="${W / 2}" y="${barY + 44}" font-family="Luckiest Guy" font-size="40" text-anchor="middle" fill="#ffffff" stroke="#0d1030" stroke-width="7" paint-order="stroke" letter-spacing="2">COSMIC MAELSTROM  38%</text>`;
+
+  for (const [x, y, r] of [[700, 380, 26], [1240, 330, 22], [820, 760, 20], [1120, 790, 24], [120, 520, 18], [1800, 520, 20], [420, 680, 16], [1500, 690, 18]]) {
+    c += sparkle(x, y, r, "#ffffff", 0.95);
+  }
+
+  // title
+  c += title(W / 2, 205, "MEGA STORMS!", 190, { stroke: 40 });
+  c += ribbon(W / 2, 300, 720, 92, "TEAM UP WITH THE SERVER", { size: 52, c1: "#58d5ff", c2: "#2b86e6", spacing: 2, rot: -1.5 });
+  c += ribbon(1740, 905, 300, 80, "TOP REWARDS", { size: 40, c1: "#ffd84a", c2: "#f09a1a", rot: 6, spacing: 2 });
+
+  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${baseDefs()}${c}</svg>`;
+</script>
+</body>
+</html>
