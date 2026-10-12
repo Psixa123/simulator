@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
+  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+  svg { display: block; }
+</style>
+<script src="art.js"></script>
+</head>
+<body>
+<script>
+  // Game icon (designed on a 1024 grid, rendered at ?size=512 by default)
+  const size = Number(new URLSearchParams(location.search).get("size") || 512);
+  let c = "";
+  c += sky(1024, 1024, ["#9a7bff", "#4330c0", "#150e55"], 0.56, 0.5);
+  c += rays(590, 520, 1100, 16, "#ffffff", 0.07);
+
+  // storm ceiling
+  c += `<g opacity="0.55">`;
+  c += cloud(150, 300, 1.5, "#6a5bd6", "#5548be", null);
+  c += cloud(905, 280, 1.7, "#6a5bd6", "#5548be", null);
+  c += cloud(540, 250, 2.1, "#7868e2", "#6152cc", null);
+  c += `</g>`;
+
+  c += bolt(190, 360, 1.25, 12);
+  c += bolt(900, 420, 1.0, -14);
+
+  c += tornado(600, 330, 1.2, { bands: 9, step: 44, phase: 2.4 });
+
+  // ground
+  c += hills(1024, 930, 26, "#3f9d3b", 0.6, 1.5);
+  c += hills(1024, 955, 18, "#6fd04f", 2.2, 2);
+
+  c += beam(430, 722, 640, 610, 30, 120);
+  c += vacuum(200, 852, 1.75, -30);
+  c += pet(815, 842, 1.5, { body: "cloud", color: "#ffffff", accent: "#bfe6ff" });
+
+  for (const [x, y, r] of [[330, 560, 26], [860, 640, 22], [470, 470, 16], [760, 420, 18], [120, 640, 18], [960, 760, 14], [300, 760, 14]]) {
+    c += sparkle(x, y, r, "#ffffff", 0.95);
+  }
+
+  c += title(512, 150, "STORM CATCHER", 122, { stroke: 26 });
+  c += ribbon(512, 224, 400, 70, "SIMULATOR", { rot: -2, size: 50, spacing: 5 });
+
+  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 1024 1024">${baseDefs()}${c}</svg>`;
+</script>
+</body>
+</html>

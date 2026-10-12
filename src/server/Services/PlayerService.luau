@@ -18,7 +18,7 @@ local PlayerService = {}
 
 local COLLISION_GROUP = "Players"
 local vacuumTemplate: Tool
-local tanks = {} -- [Player] = { Model = Model, Fraction = number }
+local tanks = {} -- [Player] = { Model = Model, Weld = Weld, Fraction = number }
 
 local function spawnCharacter(player: Player)
 	local ok = pcall(function()
@@ -92,23 +92,54 @@ local function giveVacuum(player: Player, character: Model)
 	end)
 end
 
-local function attachTank(player: Player, character: Model)
-	local deadline = os.clock() + 8
-	local attachment
-	repeat
-		local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
-		attachment = torso and torso:FindFirstChild("BodyBackAttachment")
-		if not attachment then
-			task.wait(0.25)
+local function ensureTank(player: Player, character: Model)
+	local entry = tanks[player]
+	if entry then
+		local weld = entry.Weld
+		local intact = entry.Model.Parent == character
+			and weld.Parent ~= nil
+			and weld.Part0 ~= nil
+			and weld.Part0.Parent == character
+		if intact then
+			return
 		end
-	until attachment or os.clock() > deadline or not character.Parent
-	if not attachment or not character.Parent or player.Character ~= character then
+		entry.Model:Destroy()
+		tanks[player] = nil
+	end
+	local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+	local attachment = torso and torso:FindFirstChild("BodyBackAttachment")
+	if not attachment then
 		return
 	end
 	local tank = CharacterGear.BuildTank()
-	CharacterGear.AttachTank(character, tank, attachment)
-	tanks[player] = { Model = tank, Fraction = -1 }
+	local weld = CharacterGear.AttachTank(character, tank, attachment)
+	tanks[player] = { Model = tank, Weld = weld, Fraction = -1 }
 	PlayerService.UpdateTank(player)
+end
+
+local function ensureOverhead(player: Player, character: Model)
+	local head = character:FindFirstChild("Head")
+	if head and not head:FindFirstChild("Overhead") then
+		local gui = CharacterGear.BuildOverhead()
+		gui.Adornee = head
+		gui.Parent = head
+		updateOverhead(player)
+	end
+end
+
+-- Roblox swaps body parts while the avatar's appearance loads (and whenever it changes), which
+-- drops anything welded to the old parts. Keep checking and re-attach the gear when needed.
+local function maintainGear(player: Player, character: Model)
+	local deadline = os.clock() + 6
+	while character.Parent and os.clock() < deadline and not player:HasAppearanceLoaded() do
+		task.wait(0.2)
+	end
+	while character.Parent and player.Character == character do
+		ensureTank(player, character)
+		ensureOverhead(player, character)
+		giveVacuum(player, character)
+		task.wait(2)
+	end
 end
 
 local function setupCharacter(player: Player, character: Model)
@@ -130,15 +161,7 @@ local function setupCharacter(player: Player, character: Model)
 	character.DescendantAdded:Connect(setCollisionGroup)
 
 	giveVacuum(player, character)
-	task.spawn(attachTank, player, character)
-
-	local head = character:WaitForChild("Head", 5)
-	if head then
-		local gui = CharacterGear.BuildOverhead()
-		gui.Adornee = head
-		gui.Parent = head
-		updateOverhead(player)
-	end
+	task.spawn(maintainGear, player, character)
 
 	humanoid.Died:Connect(function()
 		Registry.WeatherService.StopCatch(player)

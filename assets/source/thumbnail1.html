@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
+  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
+  html, body { margin: 0; padding: 0; background: #150e55; overflow: hidden; }
+  svg { display: block; }
+</style>
+<script src="art.js"></script>
+</head>
+<body>
+<script>
+  // Thumbnail 1: hero shot (1920x1080)
+  const W = 1920, H = 1080;
+  let c = "";
+  c += sky(W, H, ["#a084ff", "#4a35c8", "#150e55"], 0.68, 0.5);
+  c += rays(1330, 560, 1700, 20, "#ffffff", 0.08);
+
+  c += `<g opacity="0.5">`;
+  c += cloud(1050, 150, 2.2, "#7565e0", "#5f50c8", null);
+  c += cloud(1640, 120, 2.6, "#7565e0", "#5f50c8", null);
+  c += cloud(1880, 330, 1.8, "#6a5bd6", "#5548be", null);
+  c += `</g>`;
+
+  c += bolt(1740, 330, 1.5, -14);
+  c += bolt(1620, 700, 0.9, -8);
+
+  c += tornado(1340, 250, 1.72, { bands: 10, step: 46, phase: 2.2 });
+
+  // little clouds getting pulled in
+  c += cloud(1060, 640, 0.42, "#ffffff", "#cfe0ff");
+  c += cloud(1650, 560, 0.36, "#ffffff", "#cfe0ff");
+
+  // ground
+  c += hills(W, 930, 34, "#2f8a37", 0.4, 1.6);
+  c += hills(W, 965, 24, "#57c046", 2.0, 2.2);
+  c += hills(W, 1010, 16, "#7ddc57", 4.2, 3);
+
+  // hero
+  const heroX = 400, heroY = 1004, heroS = 1.68, arm = -20;
+  const hand = characterHand(heroX, heroY, heroS, arm);
+  const vacX = hand.x + 24, vacY = hand.y - 56, vacS = 1.4;
+  const a = (arm * Math.PI) / 180;
+  const tipX = vacX + Math.cos(a) * 150 * vacS, tipY = vacY + Math.sin(a) * 150 * vacS;
+  c += beam(tipX, tipY, 1310, 640, 32, 170);
+  c += character(heroX, heroY, heroS, { armAngle: arm });
+  c += vacuum(vacX, vacY, vacS, arm);
+
+  // pets
+  c += pet(150, 925, 1.15, { body: "cloud", color: "#ffffff", accent: "#bfe6ff" });
+  c += pet(760, 945, 1.1, { body: "bean", color: "#ffe14a", accent: "#fff9d0", features: ["bunny", "bolt"] });
+  c += pet(985, 815, 0.85, { body: "round", color: "#ffd23c", accent: "#ff9a28", features: ["rays"] });
+
+  for (const [x, y, r] of [[900, 520, 24], [1120, 430, 20], [1560, 480, 26], [1810, 620, 22], [1000, 880, 18], [1480, 900, 20], [1700, 880, 16], [80, 620, 18], [640, 640, 16]]) {
+    c += sparkle(x, y, r, "#ffffff", 0.95);
+  }
+
+  // title block
+  c += title(520, 215, "STORM", 220, { stroke: 44 });
+  c += title(520, 405, "CATCHER", 196, { stroke: 42 });
+  c += ribbon(500, 484, 560, 90, "SIMULATOR", { rot: -2, size: 66, spacing: 8, outline: 10 });
+
+  // feature tags
+  c += ribbon(1500, 1010, 360, 74, "CATCH STORMS", { size: 42, c1: "#58d5ff", c2: "#2b86e6", spacing: 2 });
+  c += ribbon(1125, 1010, 330, 74, "HATCH PETS", { size: 42, c1: "#ffd84a", c2: "#f09a1a", spacing: 2 });
+  c += ribbon(1795, 940, 220, 70, "6 ZONES", { size: 40, c1: "#7fe37a", c2: "#2fa84a", rot: -6, spacing: 2 });
+
+  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${baseDefs()}${c}</svg>`;
+</script>
+</body>
+</html>

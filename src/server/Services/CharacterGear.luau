@@ -142,7 +142,7 @@ function CharacterGear.BuildTank(): Model
 	return model
 end
 
-function CharacterGear.AttachTank(character: Model, tank: Model, attachment: Attachment)
+function CharacterGear.AttachTank(character: Model, tank: Model, attachment: Attachment): Weld
 	local torso = attachment.Parent :: BasePart
 	local plate = tank.PrimaryPart
 	local offset = attachment.CFrame * CFrame.new(0, 0, 0.2)
@@ -154,6 +154,7 @@ function CharacterGear.AttachTank(character: Model, tank: Model, attachment: Att
 	weld.C0 = offset
 	weld.Parent = plate
 	tank.Parent = character
+	return weld
 end
 
 function CharacterGear.SetTankFill(tank: Model, fraction: number)
