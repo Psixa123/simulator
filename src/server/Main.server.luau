@@ -14,6 +14,7 @@ local ORDER = {
 	"UpgradeService",
 	"ZoneService",
 	"PetService",
+	"PetMeshService",
 	"BoostService",
 	"RewardService",
 	"RebirthService",

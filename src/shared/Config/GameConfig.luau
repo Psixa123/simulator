@@ -213,6 +213,11 @@ GameConfig.Pets = {
 	},
 }
 
+-- Roblox asset id of the uploaded pet mesh pack (README: "Better pet models"). When the place has no
+-- ReplicatedStorage.PetMeshes, the server inserts this model there at startup; 0 = built-in pet models.
+-- tools/roblox/upload_pets.py fills it in.
+GameConfig.PetMeshAssetId = 0
+
 ---------------------------------------------------------------------------
 -- Gamepass effects & boosts
 ---------------------------------------------------------------------------

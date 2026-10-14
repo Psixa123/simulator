@@ -374,6 +374,14 @@ also a pack of smooth, cartoon-style 3D models of all 37 pets, with a copy you c
 it's imported, every pet in the pack uses its mesh model, including Golden and Rainbow versions,
 particles, wing flaps and tail wags. A pet that's missing from the pack (or broken) keeps its built-in look.
 
+There are two ways to get the pack into the game:
+
+- **Upload it with Open Cloud (no Studio).** `python tools/roblox/upload_pets.py` uploads the `.glb` as a
+  Model on your account and writes its id into `GameConfig.PetMeshAssetId`. When a server starts,
+  `PetMeshService` puts that model in `ReplicatedStorage.PetMeshes` by itself. It needs an Open Cloud API
+  key; setup, and `publish_place.py` to publish the game the same way, are in `tools/roblox/README.md`.
+- **Import it in Studio**, as below.
+
 ### Importing it in Roblox Studio
 
 1. Open your place in Studio.

@@ -1,4 +1,4 @@
-"""Runs the Luau mock tests for the pet mesh pack outside Roblox.
+"""Runs the Luau mock tests for the pet mesh pack (and the server's pack loader) outside Roblox.
 
 Bundles tests/mock/RobloxMock.luau, the game modules under test and the spec into one script and runs
 it with the `luau` command line (https://github.com/luau-lang/luau/releases). Set LUAU=path/to/luau if
@@ -19,8 +19,9 @@ MODULES = {
     "Pets": "src/shared/Config/Pets.luau",
     "PetModels": "src/shared/Models/PetModels.luau",
     "PetController": "src/client/Controllers/PetController.luau",
+    "PetMeshService": "src/server/Services/PetMeshService.luau",
 }
-SPECS = ["PetMeshes.spec.luau"]
+SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau"]
 
 
 def read(path):
