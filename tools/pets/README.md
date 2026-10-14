@@ -93,3 +93,21 @@ as the GLB/OBJ, with its preview colour, e.g. one group per `entry["name"]`. Roo
   until the pet fits. Currently every pet is 2.7k-4.0k triangles, about 130k for all 37.
 * At most **12 visible meshes per pet** (Root/Pivot markers not counted): static pieces with the same
   role are merged (both eyes are one `Eye` mesh, all shines one `Shine` mesh, ...).
+
+## SketchUp model (`assets/models/StormlingPets.skp`)
+
+The `.skp` is built from the same `pet_geometry.py` inside Trimble SketchUp's Python sandbox (the
+SketchUp MCP `build_model` tool), so it matches the Roblox pack exactly. That sandbox forbids imports and
+forgets everything between calls except `session_state`, so the library is prepared for it first:
+
+```powershell
+python tools/pets/make_sketchup_steps.py        # writes build/sketchup/chunk*.py, step_verify.py, step_build*.py
+```
+
+Run `chunk1.py` (with `clean: true`) … `chunk4.py`, then `step_verify.py` (it must print the checksum the
+script printed), then every `step_build*.py`. That creates one `Stormlings` group with a group per pet
+(named by pet id) and a sub-group per role mesh, using solid colours and smoothed edges. Finish with a
+style and camera, and save as `StormlingPets.skp`.
+
+The SketchUp file is for viewing and editing the designs. Roblox can't import `.skp`, so the game uses the
+`.glb`/`.obj` pack; if you change a design, change `pet_geometry.py` and rebuild both.
