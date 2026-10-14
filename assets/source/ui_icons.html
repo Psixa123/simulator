@@ -1,0 +1,228 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
+  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+  svg { display: block; }
+</style>
+<script src="art.js"></script>
+</head>
+<body>
+<script>
+  // In-game UI icons (transparent 256x256, drawn on a 512 grid). Keys match src/client/UI/Icons.luau.
+  //   ui_icons.html?id=Pets
+  const id = new URLSearchParams(location.search).get("id") || "Pets";
+  const SIZE = 256;
+  const S = (w = 14) => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+  const shine = (x, y, rx, ry, rot = -25, o = 0.55) =>
+    `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#ffffff" opacity="${o}" transform="rotate(${rot} ${x} ${y})"/>`;
+
+  function paw(color1, color2) {
+    const g = lin([[0, color1], [1, color2]]);
+    let out = `<defs>${g.def}</defs><g transform="translate(256,270)">`;
+    for (const [x, y, r] of [[-120, -70, 46], [-46, -150, 50], [46, -150, 50], [120, -70, 46]]) {
+      out += `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 1.18}" fill="${g.url}" ${S()}/>` + shine(x - 12, y - 18, 12, 18);
+    }
+    out += `<path d="M0,-40 C70,-40 132,40 120,96 C110,140 60,128 0,128 C-60,128 -110,140 -120,96 C-132,40 -70,-40 0,-40 Z" fill="${g.url}" ${S()}/>`;
+    return out + shine(-50, 10, 26, 40) + `</g>`;
+  }
+
+  function bag() {
+    const g = lin([[0, "#ffb35c"], [1, "#f06b1a"]]);
+    return `<defs>${g.def}</defs>
+      <path d="M180,190 C180,110 332,110 332,190" fill="none" stroke="${INK}" stroke-width="40" stroke-linecap="round"/>
+      <path d="M180,190 C180,110 332,110 332,190" fill="none" stroke="#ffe08a" stroke-width="18" stroke-linecap="round"/>
+      <path d="M110,190 L402,190 L430,440 Q432,462 410,462 L102,462 Q80,462 82,440 Z" fill="${g.url}" ${S()}/>
+      <rect x="110" y="190" width="292" height="44" fill="#ffd27a" ${S(10)}/>
+      ${coinFront(256, 340, 70)}
+      ${shine(150, 300, 18, 70, 8)}`;
+  }
+
+  function arrowUp() {
+    const g = lin([[0, "#8cf06e"], [1, "#2fb344"]]);
+    return `<defs>${g.def}</defs>
+      <path d="M256,50 L452,250 L340,250 L340,450 L172,450 L172,250 L60,250 Z" fill="${g.url}" ${S(16)}/>
+      ${shine(200, 230, 20, 90, 0)}${shine(170, 160, 16, 40, 45)}`;
+  }
+
+  function gift(box1, box2, rib) {
+    const g = lin([[0, box1], [1, box2]]);
+    return `<defs>${g.def}</defs>
+      <path d="M256,170 C180,60 110,110 150,170 Z" fill="${rib}" ${S(12)}/>
+      <path d="M256,170 C332,60 402,110 362,170 Z" fill="${rib}" ${S(12)}/>
+      <rect x="100" y="230" width="312" height="230" rx="18" fill="${g.url}" ${S()}/>
+      <rect x="80" y="170" width="352" height="80" rx="18" fill="${g.url}" ${S()}/>
+      <rect x="226" y="170" width="60" height="290" fill="${rib}" ${S(10)}/>
+      ${shine(140, 200, 30, 12, 0)}${shine(150, 330, 14, 60, 0, 0.4)}`;
+  }
+
+  function pin() {
+    const g = lin([[0, "#ff7a8a"], [1, "#e2364f"]]);
+    const m = lin([[0, "#9fe8ff"], [1, "#5cc2ff"]]);
+    return `<defs>${g.def}${m.def}</defs>
+      <path d="M70,330 L190,290 L320,340 L442,300 L442,450 L320,490 L190,440 L70,480 Z" fill="${m.url}" ${S(12)}/>
+      <path d="M190,290 L190,440 M320,340 L320,490" stroke="${INK}" stroke-width="8" opacity="0.5"/>
+      <path d="M256,420 C200,330 150,280 150,200 A106,106 0 1 1 362,200 C362,280 312,330 256,420 Z" fill="${g.url}" ${S()}/>
+      <circle cx="256" cy="200" r="44" fill="#ffffff" ${S(10)}/>
+      ${shine(200, 150, 16, 34, 30)}`;
+  }
+
+  function swirl(c1, c2) {
+    const g = lin([[0, c1], [1, c2]], 0, 0, 1, 1);
+    let d = "";
+    for (let i = 0; i <= 120; i++) {
+      const t = i / 120, a = t * Math.PI * 4.2, r = 30 + t * 180;
+      d += `${i ? "L" : "M"}${(256 + Math.cos(a) * r).toFixed(1)},${(256 + Math.sin(a) * r).toFixed(1)} `;
+    }
+    return `<defs>${g.def}</defs>
+      <circle cx="256" cy="256" r="216" fill="${g.url}" ${S()}/>
+      <path d="${d}" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" opacity="0.9"/>
+      ${shine(170, 150, 40, 22, -35)}`;
+  }
+
+  function gear() {
+    const g = lin([[0, "#dfe6fb"], [1, "#8e99bd"]]);
+    let teeth = "";
+    for (let i = 0; i < 8; i++) teeth += `<rect x="216" y="44" width="80" height="90" rx="16" fill="${g.url}" ${S()} transform="rotate(${i * 45} 256 256)"/>`;
+    return `<defs>${g.def}</defs>${teeth}
+      <circle cx="256" cy="256" r="160" fill="${g.url}" ${S()}/>
+      <circle cx="256" cy="256" r="62" fill="#5cc2ff" ${S()}/>
+      ${shine(190, 180, 40, 20, -35)}`;
+  }
+
+  function book() {
+    const g = lin([[0, "#c79bff"], [1, "#7a4bf0"]]);
+    return `<defs>${g.def}</defs>
+      <rect x="110" y="70" width="300" height="380" rx="26" fill="${g.url}" ${S()}/>
+      <rect x="110" y="70" width="56" height="380" rx="20" fill="#5a2fc0" ${S(10)}/>
+      <rect x="150" y="410" width="260" height="56" rx="12" fill="#ffffff" ${S(10)}/>
+      <path d="M290,150 L314,206 L374,210 L328,248 L344,306 L290,274 L236,306 L252,248 L206,210 L266,206 Z" fill="#ffd84a" ${S(10)}/>
+      ${shine(220, 120, 50, 14, 0)}`;
+  }
+
+  function orb(c1, c2, glyph) {
+    const g = rad([[0, "#ffffff"], [0.35, c1], [1, c2]], 0.38, 0.32, 0.75);
+    return `<defs>${g.def}</defs><circle cx="256" cy="256" r="200" fill="${g.url}" ${S(16)}/>${glyph}${shine(180, 160, 46, 26, -35)}`;
+  }
+
+  function target() {
+    let out = "";
+    const rings = [[200, "#ff5a6e"], [150, "#ffffff"], [100, "#ff5a6e"], [50, "#ffffff"]];
+    for (const [r, c] of rings) out += `<circle cx="256" cy="256" r="${r}" fill="${c}" ${S(12)}/>`;
+    out += `<circle cx="256" cy="256" r="18" fill="${INK}"/>`;
+    out += `<path d="M256,256 L430,90" stroke="${INK}" stroke-width="30" stroke-linecap="round"/><path d="M256,256 L430,90" stroke="#ffd84a" stroke-width="14" stroke-linecap="round"/>`;
+    out += `<path d="M430,90 L470,60 L462,110 L412,118 Z" fill="#5cc2ff" ${S(10)}/>`;
+    return out + shine(180, 150, 40, 18, -35, 0.45);
+  }
+
+  function boot() {
+    const g = lin([[0, "#5cc2ff"], [1, "#2c86f0"]]);
+    return `<defs>${g.def}</defs>
+      <path d="M150,90 L290,90 L300,300 L430,330 Q470,340 466,390 L462,420 L110,420 L120,300 Z" fill="${g.url}" ${S()}/>
+      <rect x="100" y="410" width="372" height="56" rx="24" fill="#ffffff" ${S()}/>
+      <path d="M300,300 L330,250 M340,312 L372,262" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+      <path d="M60,190 C120,170 140,220 130,250 C100,240 70,240 40,250 C60,230 40,210 60,190 Z" fill="#ffffff" ${S(10)}/>
+      <path d="M50,260 C110,250 130,290 120,320 C90,310 60,310 30,320 C50,300 30,280 50,260 Z" fill="#ffffff" ${S(10)}/>
+      ${shine(190, 170, 18, 60, 0)}`;
+  }
+
+  function calendar() {
+    return `<rect x="80" y="110" width="352" height="340" rx="30" fill="#ffffff" ${S()}/>
+      <path d="M80,190 L80,140 Q80,110 110,110 L402,110 Q432,110 432,140 L432,190 Z" fill="#ff5a6e" ${S()}/>
+      <rect x="150" y="60" width="34" height="90" rx="16" fill="#dfe6fb" ${S(10)}/>
+      <rect x="328" y="60" width="34" height="90" rx="16" fill="#dfe6fb" ${S(10)}/>
+      <text x="256" y="400" font-family="Fredoka One" font-size="200" text-anchor="middle" fill="#2b3467">7</text>`;
+  }
+
+  function ticket() {
+    const g = lin([[0, "#ffe36b"], [1, "#ffb21e"]]);
+    return `<defs>${g.def}</defs><g transform="rotate(-14 256 256)">
+      <path d="M60,150 L452,150 L452,220 A40,40 0 0 0 452,300 L452,370 L60,370 L60,300 A40,40 0 0 0 60,220 Z" fill="${g.url}" ${S()}/>
+      <path d="M150,170 L150,350" stroke="${INK}" stroke-width="8" stroke-dasharray="16 14"/>
+      <text x="300" y="300" font-family="Fredoka One" font-size="130" text-anchor="middle" fill="#2b3467">#</text></g>`;
+  }
+
+  function padlock() {
+    const g = lin([[0, "#ffe36b"], [1, "#f5a623"]]);
+    return `<defs>${g.def}</defs>
+      <path d="M160,240 L160,170 A96,96 0 0 1 352,170 L352,240" fill="none" stroke="${INK}" stroke-width="58"/>
+      <path d="M160,240 L160,170 A96,96 0 0 1 352,170 L352,240" fill="none" stroke="#c3cbe3" stroke-width="30"/>
+      <rect x="100" y="230" width="312" height="240" rx="40" fill="${g.url}" ${S()}/>
+      <circle cx="256" cy="330" r="30" fill="${INK}"/><rect x="242" y="340" width="28" height="70" rx="12" fill="${INK}"/>
+      ${shine(160, 290, 16, 50, 0)}`;
+  }
+
+  function check() {
+    const g = lin([[0, "#8cf06e"], [1, "#2fb344"]]);
+    return `<defs>${g.def}</defs><circle cx="256" cy="256" r="210" fill="${g.url}" ${S(16)}/>
+      <path d="M150,266 L226,342 L370,180" fill="none" stroke="${INK}" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M150,266 L226,342 L370,180" fill="none" stroke="#ffffff" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+      ${shine(170, 150, 46, 24, -35)}`;
+  }
+
+  function cross() {
+    const g = lin([[0, "#ff7a8a"], [1, "#e2364f"]]);
+    return `<defs>${g.def}</defs><rect x="56" y="56" width="400" height="400" rx="90" fill="${g.url}" ${S(16)}/>
+      <path d="M170,170 L342,342 M342,170 L170,342" stroke="${INK}" stroke-width="66" stroke-linecap="round"/>
+      <path d="M170,170 L342,342 M342,170 L170,342" stroke="#ffffff" stroke-width="38" stroke-linecap="round"/>
+      ${shine(150, 120, 50, 20, -20)}`;
+  }
+
+  function star() {
+    const g = lin([[0, "#fff36b"], [1, "#ffb21e"]]);
+    let d = "";
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 100 : 220;
+      d += `${i ? "L" : "M"}${(256 + Math.cos(a) * r).toFixed(1)},${(270 + Math.sin(a) * r).toFixed(1)} `;
+    }
+    return `<defs>${g.def}</defs><path d="${d}Z" fill="${g.url}" ${S(16)}/>${shine(210, 190, 24, 50, 30)}`;
+  }
+
+  function rainbowArc() {
+    const colors = ["#ff5a6e", "#ffb347", "#fff36b", "#6be05a", "#5cc2ff", "#b58cff"];
+    let out = `<path d="M40,360 A216,216 0 0 1 472,360" fill="none" stroke="${INK}" stroke-width="${colors.length * 26 + 20}"/>`;
+    colors.forEach((c, i) => {
+      const r = 216 - (i - (colors.length - 1) / 2) * 26;
+      out += `<path d="M${256 - r},360 A${r},${r} 0 0 1 ${256 + r},360" fill="none" stroke="${c}" stroke-width="27"/>`;
+    });
+    return out + cloud(90, 380, 0.75, "#ffffff", "#dfe8ff") + cloud(420, 380, 0.75, "#ffffff", "#dfe8ff");
+  }
+
+  const D = {
+    Pets: () => paw("#ff9ad5", "#e0479e"),
+    Eggs: () => egg(256, 270, 1.9, "#96e66e", "#fff08c", -8),
+    Shop: bag,
+    Upgrades: arrowUp,
+    Rewards: () => gift("#ff6b7a", "#e2364f", "#ffd84a"),
+    Gift: () => gift("#b58cff", "#7a4bf0", "#ff9ad5"),
+    Teleport: pin,
+    ClimateShift: () => swirl("#7fd6ff", "#7a4bf0"),
+    Settings: gear,
+    Index: book,
+    Volts: () => coinFront(256, 256, 200),
+    Energy: () => orb("#7fe4ff", "#2e9bff", bolt(232, 120, 1.4, 6, "#ffffff", "#d6f6ff")),
+    Power: () => vacuum(220, 300, 1.55, -30),
+    Range: target,
+    Speed: boot,
+    Tank: () => tank(256, 260, 0.95, 0.75),
+    Luck: () => clover(256, 230, 1.45, 10),
+    Daily: calendar,
+    Codes: ticket,
+    MegaStorm: () => tornado(256, 70, 1.05, { bands: 9, step: 46, dark: "#5b2bd4", light: "#f4e6ff", mid: "#b78cff", phase: 2 }),
+    Radar: () => radar(256, 256, 0.78),
+    Sell: () => coinStack(200, 400, 4, 120) + coinFront(340, 230, 100),
+    Close: cross,
+    Lock: padlock,
+    Check: check,
+    Star: star,
+    Rainbow: rainbowArc,
+  };
+
+  const content = (D[id] || D.Pets)();
+  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 512 512">${baseDefs()}<g filter="url(#drop)">${content}</g></svg>`;
+</script>
+</body>
+</html>

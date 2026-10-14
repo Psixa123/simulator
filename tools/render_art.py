@@ -33,6 +33,10 @@ BROWSERS = [
 PASSES = ["VIP", "DoubleVolts", "DoubleEnergy", "AutoCatch", "RemoteSell", "MegaTank", "LuckyHatcher", "TripleHatch", "AutoHatch", "PetSlots", "StormRadar"]
 PRODUCTS = ["VoltsSmall", "VoltsMedium", "VoltsLarge", "VoltsHuge", "EnergyBoost", "LuckBoost", "SummonMegaStorm"]
 
+UI_ICONS = ["Pets", "Eggs", "Shop", "Upgrades", "Rewards", "Teleport", "ClimateShift", "Settings", "Index", "Volts", "Energy",
+            "Power", "Range", "Speed", "Tank", "Luck", "Gift", "Daily", "Codes", "MegaStorm", "Radar", "Sell", "Close", "Lock",
+            "Check", "Star", "Rainbow"]
+
 # (output path, page, query string, width, height)
 JOBS = [
     ("icon.png", "icon.html", "?size=512", 512, 512),
@@ -43,6 +47,7 @@ JOBS = [
 ]
 JOBS += [(f"gamepasses/{name}.png", "badge.html", f"?id={name}", 512, 512) for name in PASSES]
 JOBS += [(f"products/{name}.png", "badge.html", f"?id={name}", 512, 512) for name in PRODUCTS]
+JOBS += [(f"ui/{name}.png", "ui_icons.html", f"?id={name}", 256, 256) for name in UI_ICONS]
 
 
 def find_browser():
