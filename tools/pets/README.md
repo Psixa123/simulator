@@ -94,11 +94,22 @@ as the GLB/OBJ, with its preview colour, e.g. one group per `entry["name"]`. Roo
 * At most **12 visible meshes per pet** (Root/Pivot markers not counted): static pieces with the same
   role are merged (both eyes are one `Eye` mesh, all shines one `Shine` mesh, ...).
 
-## SketchUp model (`assets/models/StormlingPets.skp`)
+## SketchUp model (`assets/models/StormlingPets.dae`)
 
-The `.skp` is built from the same `pet_geometry.py` inside Trimble SketchUp's Python sandbox (the
-SketchUp MCP `build_model` tool), so it matches the Roblox pack exactly. That sandbox forbids imports and
-forgets everything between calls except `session_state`, so the library is prepared for it first:
+`export_dae.py` writes every pet from `sketchup_layout()` into a COLLADA file that SketchUp opens
+directly (**File → Import…**, file type COLLADA `.dae`; inches, Z up). It has one `Stormlings` node with a
+node per pet (named by pet id) and one per role mesh, the preview colours as materials and smooth
+normals, so it matches the Roblox pack exactly. Save it as `.skp` from SketchUp if you want one.
+
+```powershell
+python tools/pets/export_dae.py                 # writes assets/models/StormlingPets.dae
+```
+
+### Building it inside the SketchUp MCP sandbox (optional)
+
+The same model can also be built inside Trimble SketchUp's Python sandbox (the SketchUp MCP
+`build_model` tool). That sandbox forbids imports and forgets everything between calls except
+`session_state`, so the library is prepared for it first:
 
 ```powershell
 python tools/pets/make_sketchup_steps.py        # writes build/sketchup/chunk*.py, step_verify.py, step_build*.py
@@ -106,8 +117,8 @@ python tools/pets/make_sketchup_steps.py        # writes build/sketchup/chunk*.p
 
 Run `chunk1.py` (with `clean: true`) … `chunk4.py`, then `step_verify.py` (it must print the checksum the
 script printed), then every `step_build*.py`. That creates one `Stormlings` group with a group per pet
-(named by pet id) and a sub-group per role mesh, using solid colours and smoothed edges. Finish with a
-style and camera, and save as `StormlingPets.skp`.
+(named by pet id) and a sub-group per role mesh, using solid colours and smoothed edges.
 
-The SketchUp file is for viewing and editing the designs. Roblox can't import `.skp`, so the game uses the
-`.glb`/`.obj` pack; if you change a design, change `pet_geometry.py` and rebuild both.
+The SketchUp model is for viewing and editing the designs. Roblox Studio can't import `.skp` or `.dae`,
+so the game uses the `.glb`/`.obj` pack; if you change a design, change `pet_geometry.py` and rebuild
+all of them.

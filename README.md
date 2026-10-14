@@ -362,13 +362,13 @@ or the sound is skipped.
 ## Better pet models (optional)
 
 Out of the box the Stormlings are built from simple parts (`src/shared/Models/PetModels.luau`). There is
-also a pack of smooth, cartoon-style 3D models of all 37 pets, designed in Trimble SketchUp:
+also a pack of smooth, cartoon-style 3D models of all 37 pets, with a copy you can open in Trimble SketchUp:
 
 | File | What it is |
 |------|------------|
 | `assets/models/StormlingPets.glb` | The pack to import into Roblox (recommended) |
 | `assets/models/StormlingPets.obj` + `.mtl` | The same pack as OBJ, if the `.glb` gives you trouble |
-| `assets/models/StormlingPets.skp` | The SketchUp source model |
+| `assets/models/StormlingPets.dae` | The same models for SketchUp (**File → Import…**, pick COLLADA `.dae`) |
 
 **Until you import the pack, the game uses the built-in models**, so nothing breaks either way. Once
 it's imported, every pet in the pack uses its mesh model, including Golden and Rainbow versions,
@@ -442,8 +442,9 @@ python tools/pets/build_pets.py --no-render   # export StormlingPets.glb/.obj on
 Without `--no-render` it also renders preview pictures of every pet into `build/pets/` (needs Node.js:
 run `npm install` inside `tools/pets` once, plus Chrome or Chromium). `--check` only validates the designs.
 
-The SketchUp model is generated from the same designs, so change a design and rebuild rather than
-editing the `.skp` (an export from SketchUp would have to keep every piece's name and the `Root` cube).
+The SketchUp file is generated from the same designs (`python tools/pets/export_dae.py`), so change a
+design and rebuild rather than editing it in SketchUp (an export from SketchUp would have to keep every
+piece's name and the `Root` cube).
 After a rebuild, delete the old `PetMeshes` and import again (and re-save `PetMeshes.rbxm` if you keep
 one).
 
