@@ -1,12 +1,18 @@
 --!nonstrict
--- Builds Stormling pet models out of primitives from the Look table in Config/Pets.
--- The model faces -Z (its "front") and is centered on an invisible Root part.
+-- Builds Stormling pet models from the Look table in Config/Pets: from the imported mesh pack
+-- (ReplicatedStorage.PetMeshes, see "Mesh pack" below) when it has a valid template for the pet,
+-- otherwise out of primitives. The model faces -Z (its "front") and is centered on an invisible Root part.
 --
 -- PetModels.Build(petId, tier, options) -> model, parts
 --   tier = "Normal" | "Golden" | "Rainbow" (a boolean still means golden)
---   parts = { { Part = BasePart, Offset = CFrame, Anim = string? } } (offsets relative to Root)
+--   parts = { { Part = BasePart, Offset = CFrame, Anim = string?, Pivot = CFrame? } } (relative to Root;
+--   Pivot is the hinge an animated mesh piece turns around)
 --   options.Effects = false skips particles/lights (used for viewports)
 -- Rainbow pets get a pastel hue per tinted part; PetController cycles those hues in the world.
+
+local ContentProvider = game:GetService("ContentProvider")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = script.Parent.Parent:WaitForChild("Config")
 local Pets = require(Config.Pets)
@@ -65,6 +71,19 @@ local function colorFor(ctx, color: Color3?, tint: string?): Color3
 	return color or ctx.Look.Color
 end
 
+-- Colour of a pet piece; tinted ("Body"/"Accent") pieces follow the tier and get a Tint attribute
+local function paint(ctx, part: BasePart, color: Color3?, tint: string?)
+	part.Color = colorFor(ctx, color, tint)
+	if ctx.Golden and tint then
+		part.Reflectance = 0.2
+	elseif ctx.Rainbow and tint then
+		part.Reflectance = 0.12
+	end
+	if tint then
+		part:SetAttribute("Tint", tint)
+	end
+end
+
 -- props: Name, Shape, Size (unit scale), CFrame (unit scale), Color, Tint ("Body"/"Accent"/nil),
 --        Material, Transparency, Mesh, Anim
 local function add(ctx, props)
@@ -87,16 +106,8 @@ local function add(ctx, props)
 	offset = offset.Rotation + offset.Position * ctx.Scale
 	part.CFrame = offset
 
-	part.Color = colorFor(ctx, props.Color, props.Tint)
 	part.Transparency = props.Transparency or 0
-	if ctx.Golden and props.Tint then
-		part.Reflectance = 0.2
-	elseif ctx.Rainbow and props.Tint then
-		part.Reflectance = 0.12
-	end
-	if props.Tint then
-		part:SetAttribute("Tint", props.Tint)
-	end
+	paint(ctx, part, props.Color, props.Tint)
 	if props.Mesh then
 		local mesh = Instance.new("SpecialMesh")
 		mesh.MeshType = props.Mesh
@@ -489,6 +500,364 @@ local function addEffects(ctx, look, root)
 	end
 end
 
+-------------------------------------------------------------------------------- Mesh pack
+-- An optional pack of imported meshes (README: "Better pet models") replaces the primitives above.
+-- It lives in ReplicatedStorage.PetMeshes, as a model per pet (PetMeshes > Puffling > Body, ...) or as
+-- parts named "<PetId>.<Role>" (any depth). Every piece is named by its role and coloured here:
+--   Body, Accent                           look.Color / look.Accent, recoloured by Golden/Rainbow tiers
+--   Eye, Shine, Blush, Mouth               the face
+--   Color_RRGGBB, Neon_RRGGBB, Ice_RRGGBB  a fixed colour in SmoothPlastic / Neon / Ice
+--   <Role>@<Anim>                          animated (WingL, WingR, Wag, SpinY, SpinZ), turning around
+--                                          its "Pivot@<Anim>" marker (a tiny cube on the hinge) if any
+--   Root                                   a 0.2 stud cube on the pet's centre: the origin and scale
+-- The pack is read once (again when it changes) and each pet's template is checked. A pet with a
+-- missing or broken template is built from primitives (with a warning in Studio), so a bad import
+-- never breaks the game.
+
+local MOUTH = Color3.fromRGB(52, 32, 46)
+local MESH_ROOT_SIZE = 0.2
+local MESH_MAX_DISTANCE = 8 -- studs from the centre at unit scale; further away means a broken scale
+local MESH_MAX_PIECES = 150
+
+local MESH_ROLES = {} -- lower-case name -> role
+for _, role in { "Body", "Accent", "Eye", "Shine", "Blush", "Mouth", "Root", "Pivot" } do
+	MESH_ROLES[string.lower(role)] = role
+end
+local MESH_FIXED = { color = Enum.Material.SmoothPlastic, neon = Enum.Material.Neon, ice = Enum.Material.Ice }
+local MESH_ANIMS = {} -- lower-case name -> PetController animation
+for _, anim in { "WingL", "WingR", "Wag", "SpinY", "SpinZ" } do
+	MESH_ANIMS[string.lower(anim)] = anim
+end
+local PET_IDS = {} -- lower-case id or name ("BreezeKing", "Breeze King") -> pet id
+for id, pet in Pets.Pets do
+	PET_IDS[string.lower(id)] = id
+	PET_IDS[string.lower(pet.Name)] = id
+end
+
+local pack = {
+	Source = nil, -- the PetMeshes instance the templates were read from
+	Dirty = true,
+	Templates = {}, -- [petId] = { Pieces = { { Part, Role, Color?, Material?, Anim?, Offset, Size, Pivot? } } }
+	Connections = {},
+}
+local reported = {}
+
+local function report(key: string, message: string, isWarning: boolean?)
+	if reported[key] or not RunService:IsStudio() then
+		return
+	end
+	reported[key] = true
+	if isWarning == false then
+		print("[PetModels] " .. message)
+	else
+		warn("[PetModels] " .. message)
+	end
+end
+
+-- "Accent@WingL" -> { Role = "Accent", Anim = "WingL" }, "Neon_FFE14A" -> { Role = "Fixed", Color, Material }.
+-- Tolerates importer suffixes ("Body.001", "Body_2") and a lost "@" ("Accent_WingL").
+local function parseRole(name: string)
+	local info, rest
+	local prefix, hex, after = string.match(name, "^(%a+)_(%x%x%x%x%x%x)(.*)$")
+	local material = prefix and MESH_FIXED[string.lower(prefix)]
+	if material then
+		info = { Role = "Fixed", Name = prefix .. "_" .. string.upper(hex), Color = Color3.fromHex(hex), Material = material }
+		rest = after
+	else
+		local word, tail = string.match(name, "^(%a+)(.*)$")
+		local role = word and MESH_ROLES[string.lower(word)]
+		if not role then
+			return nil
+		end
+		info = { Role = role, Name = role }
+		rest = tail
+	end
+	local anim = string.match(rest, "@(%a+)") or string.match(rest, "^[_%-%s]+(%a+)")
+	info.Anim = anim and MESH_ANIMS[string.lower(anim)]
+	return info
+end
+
+-- The pet a pack part belongs to and its role name ("<PetId>.<Role>", or a part inside a "<PetId>" model).
+-- "<PetId>_<Role>" is accepted too, in case an importer replaces the dot.
+local function locate(part: Instance, source: Instance): (string?, string)
+	local prefix, rest = string.match(part.Name, "^(.-)[%._](.+)$")
+	local petId = prefix and PET_IDS[string.lower(prefix)]
+	if petId then
+		return petId, rest
+	end
+	local name = part.Name
+	local node = part.Parent
+	while node and node ~= source do
+		petId = PET_IDS[string.lower(node.Name)]
+		if petId then
+			return petId, name
+		end
+		if not parseRole(name) then
+			name = node.Name -- e.g. a "Body" model around a part the importer named after its mesh
+		end
+		node = node.Parent
+	end
+	return nil, name
+end
+
+local function finite(v: Vector3): boolean
+	return v.X == v.X and v.Y == v.Y and v.Z == v.Z and math.abs(v.X) + math.abs(v.Y) + math.abs(v.Z) < math.huge
+end
+
+-- Checks one pet's pack parts and turns them into a template: cleaned-up copies of the meshes
+-- with their offsets and sizes at unit scale around the Root cube. Returns nil, reason if broken.
+local function prepare(petId: string, list)
+	local root
+	local pieces, pivots = {}, {}
+	for _, entry in list do
+		local info = parseRole(entry.Name)
+		if not info then
+			report(petId .. "/" .. entry.Name, `PetMeshes: ignoring "{entry.Name}" in {petId} (unknown role)`)
+		elseif info.Role == "Root" then
+			if root then
+				return nil, "has more than one Root cube"
+			end
+			root = entry.Part
+		elseif info.Role == "Pivot" then
+			if info.Anim then
+				pivots[info.Anim] = entry.Part
+			end
+		else
+			info.Part = entry.Part
+			table.insert(pieces, info)
+		end
+	end
+	if not root then
+		return nil, "has no Root cube"
+	end
+	local rootSize = root.Size.X
+	if not (rootSize > 1e-4 and rootSize < 1e4) then
+		return nil, "has a Root cube with a broken size"
+	end
+	if #pieces == 0 or #pieces > MESH_MAX_PIECES then
+		return nil, `has {#pieces} meshes`
+	end
+	local factor = MESH_ROOT_SIZE / rootSize
+	local origin = root.CFrame
+
+	-- The face must be on the front (-Z). A pack that faces +Z (another exporter or importer "World
+	-- Forward" convention) is turned around; any other orientation is rejected.
+	local hasBody = false
+	local eyes, eyeCount = Vector3.zero, 0
+	for _, piece in pieces do
+		hasBody = hasBody or piece.Role == "Body"
+		if piece.Role == "Eye" then
+			eyes += origin:PointToObjectSpace(piece.Part.Position) * factor
+			eyeCount += 1
+		end
+	end
+	if not hasBody then
+		return nil, "has no Body mesh"
+	end
+	if eyeCount > 0 then
+		eyes /= eyeCount
+		if eyes.Z > 0 then
+			origin *= CFrame.Angles(0, math.pi, 0)
+			eyes = Vector3.new(-eyes.X, eyes.Y, -eyes.Z)
+			report("flipped", "PetMeshes faces +Z; turning the pets around to face -Z", false)
+		end
+		if not (-eyes.Z > 0.25 and -eyes.Z > math.abs(eyes.Y)) then
+			return nil, "has its eyes off the front (-Z) of the pet (check the importer's World Up / World Forward)"
+		end
+	end
+
+	local template = { Pieces = {} }
+	for _, piece in pieces do
+		local part = piece.Part
+		local relative = origin:ToObjectSpace(part.CFrame)
+		local position = relative.Position * factor
+		local size = part.Size * factor
+		if not (finite(position) and finite(size)) or position.Magnitude > MESH_MAX_DISTANCE or size.Magnitude > MESH_MAX_DISTANCE * 2 then
+			return nil, `has a "{piece.Name}" mesh far from its Root cube (is the Root cube scaled like the rest?)`
+		end
+
+		local anim = piece.Anim
+		local pivotPart = anim and pivots[anim]
+		local pivot = if pivotPart then origin:PointToObjectSpace(pivotPart.Position) * factor else nil
+		if pivot and not (finite(pivot) and pivot.Magnitude <= MESH_MAX_DISTANCE) then
+			pivot = nil
+		end
+		-- Wings flap mirrored, so trust the side a wing is on over its name (mirrored/turned packs)
+		local side = (pivot or position).X
+		if anim == "WingL" and side > 0.05 then
+			anim = "WingR"
+		elseif anim == "WingR" and side < -0.05 then
+			anim = "WingL"
+		end
+
+		local copy = part:Clone()
+		if not copy then
+			return nil, `has a "{piece.Name}" mesh that can't be copied (Archivable is off)`
+		end
+		copy.Name = piece.Name
+		copy:ClearAllChildren() -- SurfaceAppearances etc. would hide the role colours
+		copy.Anchored = true
+		copy.CanCollide = false
+		copy.CanQuery = false
+		copy.CanTouch = false
+		copy.CastShadow = false
+		copy.Reflectance = 0
+		copy.MaterialVariant = ""
+		if copy:IsA("MeshPart") then
+			-- A texture would hide the role colour. Thin pieces (wings, inner ears) should show both
+			-- faces; scripts may not be allowed to set that, then the importer's "Double Sided" counts.
+			local thin = math.min(size.X, size.Y, size.Z) < math.max(size.X, size.Y, size.Z) * 0.15
+			pcall(function()
+				if copy.TextureID ~= "" then
+					copy.TextureID = ""
+				end
+				if thin or anim == "WingL" or anim == "WingR" then
+					copy.DoubleSided = true
+				end
+			end)
+		end
+
+		table.insert(template.Pieces, {
+			Part = copy,
+			Role = piece.Role,
+			Color = piece.Color,
+			Material = piece.Material,
+			Anim = anim,
+			Offset = relative.Rotation + position,
+			Size = size,
+			Pivot = pivot,
+		})
+	end
+	return template
+end
+
+-- Reads every pet's template from the pack
+local function loadPack(source: Instance)
+	local lists = {}
+	for _, descendant in source:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			local petId, name = locate(descendant, source)
+			if petId then
+				lists[petId] = lists[petId] or {}
+				table.insert(lists[petId], { Part = descendant, Name = name })
+			end
+		end
+	end
+
+	local templates, fallback = {}, {}
+	local count, total = 0, 0
+	for petId in Pets.Pets do
+		total += 1
+		local list = lists[petId]
+		local ok, template, reason = false, nil, nil
+		if list then
+			ok, template, reason = pcall(prepare, petId, list)
+			if not ok then
+				reason = "can't be read (" .. tostring(template) .. ")"
+				template = nil
+			end
+		end
+		if template then
+			templates[petId] = template
+			count += 1
+		else
+			table.insert(fallback, petId)
+			if reason then
+				report(petId .. "/" .. reason, `PetMeshes: {petId} {reason}; using its built-in model`)
+			end
+		end
+	end
+	pack.Templates = templates
+
+	table.sort(fallback)
+	if count == 0 then
+		report(
+			"empty",
+			"ReplicatedStorage.PetMeshes has no pet meshes this game can use (expected PetMeshes > <PetId> > <Role> "
+				.. "or parts named <PetId>.<Role>); every pet uses its built-in model"
+		)
+	elseif #fallback > 0 then
+		report(`count{count}`, `PetMeshes: mesh models for {count}/{total} pets; built-in models for {table.concat(fallback, ", ")}`, false)
+	else
+		report(`count{count}`, `PetMeshes: mesh models for all {total} pets`, false)
+	end
+
+	-- Download the meshes now so pets don't pop in on their first hatch or equip
+	if count > 0 and RunService:IsClient() then
+		task.spawn(function()
+			pcall(ContentProvider.PreloadAsync, ContentProvider, { source })
+		end)
+	end
+end
+
+-- The usable templates of the current pack ({} without one). Cached until the pack changes.
+local function currentTemplates()
+	local source = ReplicatedStorage:FindFirstChild("PetMeshes")
+	if source ~= pack.Source then
+		for _, connection in pack.Connections do
+			connection:Disconnect()
+		end
+		pack.Source = source
+		pack.Connections = {}
+		pack.Templates = {}
+		pack.Dirty = true
+		if source then
+			local function changed()
+				pack.Dirty = true
+			end
+			pack.Connections = { source.DescendantAdded:Connect(changed), source.DescendantRemoving:Connect(changed) }
+		end
+	end
+	if source and pack.Dirty then
+		pack.Dirty = false
+		loadPack(source)
+	end
+	return pack.Templates
+end
+
+local function addMeshes(ctx, look, template)
+	local eyeColor = look.EyeColor or EYE
+	local eyeMaterial = if look.EyeColor then Enum.Material.Neon else Enum.Material.SmoothPlastic
+	local tintMaterial = if look.Body == "Crystal" then Enum.Material.Ice else ctx.Material
+	for _, piece in template.Pieces do
+		local role = piece.Role
+		local color, tint, material, transparency = piece.Color, nil, piece.Material, 0
+		if role == "Body" or role == "Accent" then
+			color = if role == "Body" then look.Color else look.Accent
+			tint, material = role, tintMaterial
+		elseif role == "Eye" then
+			color, material = eyeColor, eyeMaterial
+		elseif role == "Shine" then
+			color, material = WHITE, Enum.Material.Neon
+		elseif role == "Blush" then
+			color, material, transparency = BLUSH, Enum.Material.SmoothPlastic, 0.35
+		elseif role == "Mouth" then
+			color, material = MOUTH, Enum.Material.SmoothPlastic
+		end
+
+		local part = piece.Part:Clone()
+		part.Material = material or Enum.Material.SmoothPlastic
+		part.Transparency = transparency
+		paint(ctx, part, color, tint)
+		part.Size = piece.Size * ctx.Scale -- a MeshPart stretches its mesh to its Size
+		local offset = piece.Offset.Rotation + piece.Offset.Position * ctx.Scale
+		part.CFrame = offset
+		part.Parent = ctx.Model
+		table.insert(ctx.Parts, {
+			Part = part,
+			Offset = offset,
+			Anim = piece.Anim,
+			Pivot = if piece.Pivot then CFrame.new(piece.Pivot * ctx.Scale) else nil,
+		})
+	end
+end
+
+-- Whether the pet is built from the imported mesh pack
+function PetModels.HasMeshes(petId: string): boolean
+	local ok, templates = pcall(currentTemplates)
+	return ok and templates[petId] ~= nil
+end
+
 -- tier: "Normal" | "Golden" | "Rainbow" (a boolean still means golden)
 function PetModels.Scale(petId: string, tier): number
 	local rarity = Pets.RarityOf(petId)
@@ -535,12 +904,32 @@ function PetModels.Build(petId: string, tier, options)
 		Parts = {},
 	}
 
-	body(ctx, look, look.Color)
-	face(ctx, look, info)
-	for _, feature in look.Features do
-		local builder = Features[feature]
-		if builder then
-			builder(ctx, look, info)
+	-- The imported mesh pack when it has this pet, else primitives (also if building the meshes fails)
+	local ok, templates = pcall(currentTemplates)
+	local template = ok and templates[def.Id]
+	local meshes = false
+	if template then
+		local built, problem = pcall(addMeshes, ctx, look, template)
+		if built then
+			meshes = true
+		else
+			for _, item in ctx.Parts do
+				item.Part:Destroy()
+			end
+			table.clear(ctx.Parts)
+			ctx.HueIndex = 0
+			templates[def.Id] = nil
+			report(def.Id .. "/build", `PetMeshes: {def.Id} can't be built ({problem}); using its built-in model`)
+		end
+	end
+	if not meshes then
+		body(ctx, look, look.Color)
+		face(ctx, look, info)
+		for _, feature in look.Features do
+			local builder = Features[feature]
+			if builder then
+				builder(ctx, look, info)
+			end
 		end
 	end
 
@@ -551,6 +940,7 @@ function PetModels.Build(petId: string, tier, options)
 	-- Rainbow = some tinted parts cycle their hue in the world (rainbow tier or Rainbow effect)
 	model:SetAttribute("PetId", petId)
 	model:SetAttribute("Tier", tierName)
+	model:SetAttribute("MeshPack", meshes)
 	model:SetAttribute("Golden", ctx.Golden)
 	model:SetAttribute("Rainbow", ctx.Rainbow or (look.Effect == "Rainbow" and not ctx.Golden))
 	return model, ctx.Parts

@@ -20,11 +20,12 @@ have never used Rojo before.
 6. [Publishing the game](#publishing-the-game)
 7. [Gamepasses and developer products](#gamepasses-and-developer-products)
 8. [Sounds and music](#sounds-and-music)
-9. [Running the smoke test](#running-the-smoke-test)
-10. [Artwork and audio tools](#artwork-and-audio-tools)
-11. [Project structure](#project-structure)
-12. [Tweaking the balance](#tweaking-the-balance)
-13. [Troubleshooting](#troubleshooting)
+9. [Better pet models (optional)](#better-pet-models-optional)
+10. [Running the smoke test](#running-the-smoke-test)
+11. [Artwork and audio tools](#artwork-and-audio-tools)
+12. [Project structure](#project-structure)
+13. [Tweaking the balance](#tweaking-the-balance)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -358,6 +359,99 @@ or the sound is skipped.
 
 ---
 
+## Better pet models (optional)
+
+Out of the box the Stormlings are built from simple parts (`src/shared/Models/PetModels.luau`). There is
+also a pack of smooth, cartoon-style 3D models of all 37 pets, designed in Trimble SketchUp:
+
+| File | What it is |
+|------|------------|
+| `assets/models/StormlingPets.glb` | The pack to import into Roblox (recommended) |
+| `assets/models/StormlingPets.obj` + `.mtl` | The same pack as OBJ, if the `.glb` gives you trouble |
+| `assets/models/StormlingPets.skp` | The SketchUp source model |
+
+**Until you import the pack, the game uses the built-in models**, so nothing breaks either way. Once
+it's imported, every pet in the pack uses its mesh model, including Golden and Rainbow versions,
+particles, wing flaps and tail wags. A pet that's missing from the pack (or broken) keeps its built-in look.
+
+### Importing it in Roblox Studio
+
+1. Open your place in Studio.
+2. **File → Import 3D** and pick `assets/models/StormlingPets.glb`.
+3. In the import window:
+   - **Keep the names** as they are. The game finds every pet and piece by name (a `Puffling` model with
+     `Body`, `Eye`, `Accent@WingL`, … inside).
+   - Turn **Merge Meshes off**, so each piece stays its own MeshPart.
+   - Leave the scale unit, **World Up** and **World Forward** at their defaults. The game rescales and
+     centres each pet using the tiny `Root` cube inside it, so whatever size Studio imports at is fine.
+   - Click **Import**.
+4. In the Explorer, drag the imported model into **ReplicatedStorage** and rename it to exactly
+   **`PetMeshes`**. Both layouts work: a model per pet (`PetMeshes › Puffling › Body`) or loose parts named
+   `Puffling.Body` (how the `.obj` pack names them).
+5. Press **Play**. The Output shows `[PetModels] PetMeshes: mesh models for all 37 pets`, or which pets
+   use their built-in model and why.
+6. Save or publish the place.
+
+**Rojo leaves it alone.** In `default.project.json`, `ReplicatedStorage` has no `$path`, so Rojo's
+`$ignoreUnknownInstances` defaults to true for it. `rojo serve` only manages the children listed there
+(`Shared`, `Remotes`, …) and never deletes ones it doesn't know about, like your `PetMeshes`.
+
+**`rojo build` starts from the files**, though, so a freshly built place won't have the pack. To keep it
+with the code, right-click `PetMeshes` → **Save to File…** and save it as `assets/models/PetMeshes.rbxm`.
+Both project files have an optional entry for that file: once it exists, `rojo build` (and `rojo serve`)
+put it in `ReplicatedStorage.PetMeshes` for you. While it doesn't exist, Rojo skips it.
+
+To go back to the built-in models, delete or rename `ReplicatedStorage.PetMeshes`.
+
+### If something looks wrong
+
+The Output only shows these warnings in Studio. Live servers quietly use the built-in models.
+
+| Warning or symptom | Fix |
+|--------------------|-----|
+| `has no Root cube`, `has no Body mesh` | Pieces were renamed or merged on import. Re-import with the names kept and Merge Meshes off. |
+| `… far from its Root cube` | Some pieces were scaled or moved on their own. Re-import instead of resizing parts by hand. |
+| `has its eyes off the front` | The import's World Up / World Forward were changed. Re-import with the defaults. (A pack that faces backwards is turned around automatically.) |
+| `no pet meshes this game can use` | `PetMeshes` doesn't contain models named after the pet ids in `Pets.luau`, or parts named `<PetId>.<Role>`. |
+| A thin piece (wing, ear) looks see-through from behind | Select that MeshPart and turn on **DoubleSided** in Properties. |
+
+### How the pack is put together
+
+Every piece is named after its role, and the game colours it. That's how one mesh serves the Normal,
+Golden and Rainbow versions of a pet:
+
+| Piece name | Coloured as |
+|------------|-------------|
+| `Body`, `Accent` | The pet's `Color` / `Accent` from `Pets.luau` (gold or rainbow for Golden/Rainbow pets) |
+| `Eye`, `Shine`, `Blush`, `Mouth` | The face (`EyeColor` makes the eyes glow) |
+| `Color_RRGGBB`, `Neon_RRGGBB`, `Ice_RRGGBB` | A fixed colour in plastic, glowing neon or ice, e.g. `Color_FFD23C` for a gold crown |
+| `<piece>@WingL`, `@WingR`, `@Wag`, `@SpinY`, `@SpinZ` | Animated. It turns around the `Pivot@<animation>` cube (the hinge). |
+| `Root` | A 0.2-stud cube on the pet's centre, which sets the size and origin. It's never shown. |
+
+Pets face -Z with Y up, in studs, about 2 studs wide before the rarity scale.
+
+### Re-generating the pack
+
+The pets are designed in Python (`tools/pets`). To rebuild `StormlingPets.glb` and `.obj` after changing
+a design, run:
+
+```powershell
+python tools/pets/build_pets.py --no-render   # export StormlingPets.glb/.obj only
+```
+
+Without `--no-render` it also renders preview pictures of every pet into `build/pets/` (needs Node.js:
+run `npm install` inside `tools/pets` once, plus Chrome or Chromium). `--check` only validates the designs.
+
+The SketchUp model is generated from the same designs, so change a design and rebuild rather than
+editing the `.skp` (an export from SketchUp would have to keep every piece's name and the `Root` cube).
+After a rebuild, delete the old `PetMeshes` and import again (and re-save `PetMeshes.rbxm` if you keep
+one).
+
+For code changes: `python tests/mock/run_mock_tests.py` checks the mesh-pack code outside Roblox
+(it needs the [`luau`](https://github.com/luau-lang/luau/releases) command-line tool).
+
+---
+
 ## Running the smoke test
 
 `test.project.json` is the same game plus a test harness (`tests/TestHarness.server.luau` and
@@ -452,7 +546,7 @@ simulator/
 │       ├── Main.client.luau   Loads every controller, builds the panels
 │       ├── Controllers/   HUD, effects, vacuum input, pets, zones, sounds, Mega Storm, …
 │       └── UI/            UI kit (UI.luau, Theme.luau), Panels/ and Overlays/
-├── tests/                 Smoke test (only in test.project.json)
+├── tests/                 Smoke test (only in test.project.json), mock/: pet mesh pack tests
 ├── assets/                Icon, thumbnails, pass/product icons, audio + their sources
 └── tools/                 render_art.py, generate_audio.py
 ```

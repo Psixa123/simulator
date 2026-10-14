@@ -268,6 +268,16 @@ step("eggs and pets", function()
 	task.wait(1.2)
 	local petFolder = Workspace:FindFirstChild("ClientPets")
 	check("pets rendered", petFolder and #petFolder:GetChildren() >= 1, petFolder and #petFolder:GetChildren())
+	if petFolder and ReplicatedStorage:FindFirstChild("PetMeshes") then
+		-- With the imported mesh pack (README: "Better pet models") every pet should be built from it
+		local meshPets = 0
+		for _, model in petFolder:GetChildren() do
+			if model:GetAttribute("MeshPack") == true then
+				meshPets += 1
+			end
+		end
+		check("pets use the mesh pack", meshPets == #petFolder:GetChildren(), meshPets)
+	end
 	shot("pets_following")
 	Interface.OpenPanel("Pets", "Inventory")
 	task.wait(1)

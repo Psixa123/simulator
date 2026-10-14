@@ -1,0 +1,2704 @@
+# Stormling pet materials (preview colours; the game recolours by role)
+newmtl Puffling.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Puffling.Body
+Kd 0.9804 0.9882 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Puffling.Accent
+Kd 0.7059 0.8431 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Puffling.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Puffling.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Puffling.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Puffling.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Droplet.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Droplet.Body
+Kd 0.3529 0.6667 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Droplet.Accent
+Kd 0.7451 0.9020 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Droplet.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Droplet.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Droplet.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Droplet.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunny.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Sunny.Body
+Kd 1.0000 0.8431 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunny.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunny.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Sunny.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Sunny.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunny.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunny.Accent@SpinZ
+Kd 1.0000 0.5882 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Prism.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Prism.Body
+Kd 1.0000 0.7255 0.8824
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Prism.Accent
+Kd 0.5098 0.8627 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Prism.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Prism.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Prism.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Prism.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Prism.Neon_82DCFF@SpinY
+Kd 0.5098 0.8627 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 0.5098 0.8627 1.0000
+newmtl BreezeKing.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl BreezeKing.Body
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl BreezeKing.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl BreezeKing.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl BreezeKing.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl BreezeKing.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl BreezeKing.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl BreezeKing.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl BreezeKing.Accent@WingL
+Kd 1.0000 0.8039 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl BreezeKing.Accent@WingR
+Kd 1.0000 0.8039 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl BreezeKing.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl BreezeKing.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Static.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Static.Body
+Kd 0.5882 0.6078 0.6745
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Static.Accent
+Kd 1.0000 0.9020 0.3137
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Static.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Static.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Static.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Static.Color_4B4F5E
+Kd 0.2941 0.3098 0.3686
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Static.Neon_FFE650
+Kd 1.0000 0.9020 0.3137
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.9020 0.3137
+newmtl Zappy.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Zappy.Body
+Kd 1.0000 0.8824 0.2745
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Zappy.Accent
+Kd 1.0000 1.0000 0.8235
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Zappy.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Zappy.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Zappy.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Zappy.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Zappy.Neon_FFAA1E
+Kd 1.0000 0.6667 0.1176
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.6667 0.1176
+newmtl VoltBat.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl VoltBat.Body
+Kd 0.3608 0.2431 0.5569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Accent
+Kd 1.0000 0.8627 0.2745
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl VoltBat.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl VoltBat.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Color_FFFFFF
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Accent@WingL
+Kd 1.0000 0.8627 0.2745
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Accent@WingR
+Kd 1.0000 0.8627 0.2745
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Body@WingL
+Kd 0.3608 0.2431 0.5569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Body@WingR
+Kd 0.3608 0.2431 0.5569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltBat.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl VoltBat.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl ThunderPup.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl ThunderPup.Body
+Kd 0.3216 0.4784 0.8039
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl ThunderPup.Accent
+Kd 1.0000 0.9020 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl ThunderPup.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl ThunderPup.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl ThunderPup.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl ThunderPup.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl ThunderPup.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl ThunderPup.Color_FFA0B9
+Kd 1.0000 0.6275 0.7255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl ThunderPup.Neon_FFE14A
+Kd 1.0000 0.8824 0.2902
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.8824 0.2902
+newmtl ThunderPup.Accent@Wag
+Kd 1.0000 0.9020 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl ThunderPup.Body@Wag
+Kd 0.3216 0.4784 0.8039
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl ThunderPup.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl StormLord.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl StormLord.Body
+Kd 0.2431 0.2431 0.3451
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl StormLord.Accent
+Kd 1.0000 0.8824 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl StormLord.Eye
+Kd 1.0000 0.9216 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.9216 0.3529
+newmtl StormLord.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl StormLord.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl StormLord.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl StormLord.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl StormLord.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl Sandy.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Sandy.Body
+Kd 0.9098 0.7922 0.5569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sandy.Accent
+Kd 0.7843 0.6275 0.3922
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sandy.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sandy.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Sandy.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Sandy.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CactusCub.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl CactusCub.Body
+Kd 0.3608 0.6745 0.3216
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CactusCub.Accent
+Kd 1.0000 0.4706 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CactusCub.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CactusCub.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl CactusCub.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl CactusCub.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CactusCub.Color_FFE150
+Kd 1.0000 0.8824 0.3137
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CactusCub.Color_FFF5D2
+Kd 1.0000 0.9608 0.8235
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl DustBunny.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl DustBunny.Body
+Kd 0.8431 0.7294 0.5333
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl DustBunny.Accent
+Kd 1.0000 0.9412 0.8314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl DustBunny.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl DustBunny.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl DustBunny.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl DustBunny.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl DustBunny.Color_FFA0B9
+Kd 1.0000 0.6275 0.7255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl DustBunny.Accent@Wag
+Kd 1.0000 0.9412 0.8314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl DustBunny.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Scarab.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Scarab.Body
+Kd 0.1569 0.6667 0.6275
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Scarab.Accent
+Kd 1.0000 0.7843 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Scarab.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Scarab.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Scarab.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Scarab.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Scarab.Accent@WingL
+Kd 1.0000 0.7843 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Scarab.Accent@WingR
+Kd 1.0000 0.7843 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Scarab.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Scarab.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl MirageDjinn.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl MirageDjinn.Body
+Kd 0.3137 0.8706 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MirageDjinn.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MirageDjinn.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl MirageDjinn.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl MirageDjinn.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MirageDjinn.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MirageDjinn.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl MirageDjinn.Neon_FFCD3C@SpinY
+Kd 1.0000 0.8039 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.8039 0.2353
+newmtl Snowball.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Snowball.Body
+Kd 0.9608 0.9804 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Snowball.Accent
+Kd 0.5882 0.7843 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Snowball.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Snowball.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Snowball.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Snowball.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Snowball.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Icicle.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Icicle.Body
+Kd 0.6667 0.8824 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Icicle.Accent
+Kd 0.9020 0.9804 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Icicle.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Icicle.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Icicle.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Frostbite.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Frostbite.Body
+Kd 0.1647 0.1804 0.2431
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Frostbite.Accent
+Kd 1.0000 0.5882 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Frostbite.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Frostbite.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Frostbite.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Frostbite.Color_F5F5FA
+Kd 0.9608 0.9608 0.9804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Frostbite.Color_FFFFFF
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraFox.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl AuroraFox.Body
+Kd 0.9412 0.9608 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraFox.Accent
+Kd 0.4314 1.0000 0.7451
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraFox.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraFox.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl AuroraFox.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl AuroraFox.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraFox.Color_FFA0B9
+Kd 1.0000 0.6275 0.7255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraFox.Accent@Wag
+Kd 0.4314 1.0000 0.7451
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraFox.Body@Wag
+Kd 0.9412 0.9608 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraFox.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl YetiKing.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl YetiKing.Body
+Kd 0.9216 0.9412 0.9804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl YetiKing.Accent
+Kd 0.4706 0.7451 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl YetiKing.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl YetiKing.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl YetiKing.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl YetiKing.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl YetiKing.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl YetiKing.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl YetiKing.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl Ember.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Ember.Body
+Kd 1.0000 0.4706 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Ember.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Ember.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Ember.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Ember.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Ember.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Ember.Neon_FF8C28
+Kd 1.0000 0.5490 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.5490 0.1569
+newmtl Ember.Neon_FFE15A
+Kd 1.0000 0.8824 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.8824 0.3529
+newmtl Coal.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Coal.Body
+Kd 0.2039 0.1804 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Coal.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Coal.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Coal.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Coal.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Coal.Color_FFFFFF
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Coal.Neon_FF6E1E
+Kd 1.0000 0.4314 0.1176
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.4314 0.1176
+newmtl LavaPup.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl LavaPup.Body
+Kd 0.9020 0.3137 0.1176
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl LavaPup.Accent
+Kd 1.0000 0.7843 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl LavaPup.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl LavaPup.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl LavaPup.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl LavaPup.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl LavaPup.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl LavaPup.Color_FFA0B9
+Kd 1.0000 0.6275 0.7255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl LavaPup.Accent@Wag
+Kd 1.0000 0.7843 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl LavaPup.Body@Wag
+Kd 0.9020 0.3137 0.1176
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl LavaPup.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl PhoenixChick.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl PhoenixChick.Body
+Kd 1.0000 0.3529 0.1961
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PhoenixChick.Accent
+Kd 1.0000 0.8235 0.2745
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PhoenixChick.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PhoenixChick.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl PhoenixChick.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl PhoenixChick.Color_FFA03C
+Kd 1.0000 0.6275 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PhoenixChick.Neon_FF8C28
+Kd 1.0000 0.5490 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.5490 0.1569
+newmtl PhoenixChick.Neon_FFE15A
+Kd 1.0000 0.8824 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.8824 0.3529
+newmtl PhoenixChick.Accent@WingL
+Kd 1.0000 0.8235 0.2745
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PhoenixChick.Accent@WingR
+Kd 1.0000 0.8235 0.2745
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PhoenixChick.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl PhoenixChick.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl InfernoDrake.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl InfernoDrake.Body
+Kd 0.5882 0.1255 0.1255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Accent
+Kd 1.0000 0.5882 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Eye
+Kd 1.0000 0.7843 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.7843 0.2353
+newmtl InfernoDrake.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl InfernoDrake.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl InfernoDrake.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Accent@Wag
+Kd 1.0000 0.5882 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Accent@WingL
+Kd 1.0000 0.5882 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Accent@WingR
+Kd 1.0000 0.5882 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Body@Wag
+Kd 0.5882 0.1255 0.1255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Body@WingL
+Kd 0.5882 0.1255 0.1255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Body@WingR
+Kd 0.5882 0.1255 0.1255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl InfernoDrake.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl InfernoDrake.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl InfernoDrake.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Stardust.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Stardust.Body
+Kd 0.5882 0.4706 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Stardust.Accent
+Kd 1.0000 0.9412 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Stardust.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Stardust.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Stardust.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Stardust.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Comet.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Comet.Body
+Kd 0.3529 0.5882 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Comet.Accent
+Kd 0.7843 0.9412 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Comet.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Comet.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Comet.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Comet.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Nebula.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Nebula.Body
+Kd 0.8627 0.4706 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Nebula.Accent
+Kd 0.4706 0.7843 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Nebula.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Nebula.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Nebula.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Nebula.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Nebula.Neon_78C8FF@SpinY
+Kd 0.4706 0.7843 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 0.4706 0.7843 1.0000
+newmtl Moonbeam.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Moonbeam.Body
+Kd 0.8314 0.8471 0.9412
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Moonbeam.Accent
+Kd 1.0000 0.9804 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Moonbeam.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Moonbeam.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Moonbeam.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Moonbeam.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Moonbeam.Neon_FFFAC8@SpinY
+Kd 1.0000 0.9804 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.9804 0.7843
+newmtl GalaxyGuardian.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl GalaxyGuardian.Body
+Kd 0.1490 0.0863 0.2902
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl GalaxyGuardian.Eye
+Kd 0.4706 0.9020 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 0.4706 0.9020 1.0000
+newmtl GalaxyGuardian.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl GalaxyGuardian.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl GalaxyGuardian.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl GalaxyGuardian.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl GalaxyGuardian.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl GalaxyGuardian.Neon_FFFFFF
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl GalaxyGuardian.Accent@WingL
+Kd 1.0000 0.4706 0.9412
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl GalaxyGuardian.Accent@WingR
+Kd 1.0000 0.4706 0.9412
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl GalaxyGuardian.Neon_FF78F0@SpinY
+Kd 1.0000 0.4706 0.9412
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.4706 0.9412
+newmtl GalaxyGuardian.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl GalaxyGuardian.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Sunbeam.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl Sunbeam.Body
+Kd 1.0000 0.9216 0.4706
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunbeam.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunbeam.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl Sunbeam.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl Sunbeam.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunbeam.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunbeam.Accent@SpinZ
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl Sunbeam.Neon_FFFFFF@SpinY
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl TempestTitan.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl TempestTitan.Body
+Kd 0.8235 0.9216 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestTitan.Accent
+Kd 0.4706 0.7843 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestTitan.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestTitan.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl TempestTitan.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl TempestTitan.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestTitan.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestTitan.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestTitan.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl TempestTitan.Accent@WingL
+Kd 0.4706 0.7843 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestTitan.Accent@WingR
+Kd 0.4706 0.7843 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestTitan.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl TempestTitan.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl VoltWyrm.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl VoltWyrm.Body
+Kd 0.3608 0.2824 0.6353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltWyrm.Accent
+Kd 1.0000 0.9020 0.3137
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltWyrm.Eye
+Kd 1.0000 0.9412 0.4706
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.9412 0.4706
+newmtl VoltWyrm.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl VoltWyrm.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl VoltWyrm.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltWyrm.Color_FFFFFF
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltWyrm.Neon_FFE14A
+Kd 1.0000 0.8824 0.2902
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.8824 0.2902
+newmtl VoltWyrm.Accent@WingL
+Kd 1.0000 0.9020 0.3137
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltWyrm.Accent@WingR
+Kd 1.0000 0.9020 0.3137
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltWyrm.Body@WingL
+Kd 0.3608 0.2824 0.6353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltWyrm.Body@WingR
+Kd 0.3608 0.2824 0.6353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl VoltWyrm.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl VoltWyrm.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl FrostColossus.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl FrostColossus.Body
+Kd 0.7451 0.9020 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl FrostColossus.Accent
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl FrostColossus.Eye
+Kd 0.3529 0.7843 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 0.3529 0.7843 1.0000
+newmtl FrostColossus.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl FrostColossus.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl FrostColossus.Color_FF7896
+Kd 1.0000 0.4706 0.5882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl FrostColossus.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl FrostColossus.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl CycloneDrake.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl CycloneDrake.Body
+Kd 1.0000 0.4314 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Accent
+Kd 1.0000 0.8627 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Eye
+Kd 1.0000 0.9608 0.6275
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.9608 0.6275
+newmtl CycloneDrake.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl CycloneDrake.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl CycloneDrake.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Accent@Wag
+Kd 1.0000 0.8627 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Accent@WingL
+Kd 1.0000 0.8627 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Accent@WingR
+Kd 1.0000 0.8627 0.3529
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Body@Wag
+Kd 1.0000 0.4314 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Body@WingL
+Kd 1.0000 0.4314 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Body@WingR
+Kd 1.0000 0.4314 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl CycloneDrake.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl CycloneDrake.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl CycloneDrake.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl MaelstromSpirit.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl MaelstromSpirit.Body
+Kd 0.4784 0.2431 0.8706
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MaelstromSpirit.Eye
+Kd 1.0000 0.7843 0.9804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.7843 0.9804
+newmtl MaelstromSpirit.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl MaelstromSpirit.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl MaelstromSpirit.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MaelstromSpirit.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MaelstromSpirit.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl MaelstromSpirit.Accent@WingL
+Kd 1.0000 0.5882 0.9412
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MaelstromSpirit.Accent@WingR
+Kd 1.0000 0.5882 0.9412
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl MaelstromSpirit.Neon_FF96F0@SpinY
+Kd 1.0000 0.5882 0.9412
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.5882 0.9412
+newmtl MaelstromSpirit.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl MaelstromSpirit.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl RainbowRoc.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl RainbowRoc.Body
+Kd 1.0000 0.9725 0.9882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl RainbowRoc.Accent
+Kd 1.0000 0.4706 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl RainbowRoc.Eye
+Kd 0.4706 0.8627 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 0.4706 0.8627 1.0000
+newmtl RainbowRoc.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl RainbowRoc.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl RainbowRoc.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl RainbowRoc.Neon_FF3C6E
+Kd 1.0000 0.2353 0.4314
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 0.2353 0.4314
+newmtl RainbowRoc.Accent@Wag
+Kd 1.0000 0.4706 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl RainbowRoc.Accent@WingL
+Kd 1.0000 0.4706 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl RainbowRoc.Accent@WingR
+Kd 1.0000 0.4706 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl RainbowRoc.Body@Wag
+Kd 1.0000 0.9725 0.9882
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl RainbowRoc.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl RainbowRoc.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl RainbowRoc.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2

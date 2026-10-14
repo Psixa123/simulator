@@ -1,0 +1,10 @@
+{
+  "name": "stormling-pet-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "three.js for the Stormling pet preview renders (tools/pets/build_pets.py)",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "three": "0.169.0"
+  }
+}

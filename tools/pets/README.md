@@ -1,0 +1,95 @@
+# Stormling pet meshes
+
+The 37 pets ("Stormlings") as polished cartoon meshes: smooth chibi bodies, big glossy eyes with
+highlights, blush, little mouths, layered wings, curled tails, inner ears, toe beans, crowns, halos...
+Every pet keeps its look from `src/shared/Config/Pets.luau` (body type, features, colours, effect).
+
+| File | What it is |
+| --- | --- |
+| `pet_geometry.py` | **Sandbox-safe** pure-Python geometry library + all 37 pet designs. |
+| `build_pets.py` | Exports the Roblox mesh pack and renders previews (normal Python). |
+| `viewer.html` | three.js preview page used for the renders (works in any browser too). |
+| `../../assets/models/StormlingPets.glb` | Mesh pack: `PetMeshes -> <PetId> -> <Role>` nodes. |
+| `../../assets/models/StormlingPets.obj/.mtl` | Same pack as a flat list of `<PetId>.<Role>` objects. |
+| `../../build/pets/` | Preview renders (`<PetId>.png`, `sheet.png`, ...); not committed. |
+
+## Regenerating
+
+```sh
+cd tools/pets && npm install && cd ../..      # once: three.js 0.169.0 for the previews
+python tools/pets/build_pets.py               # validate + export the pack + hero renders + sheet.png
+python tools/pets/build_pets.py --check       # validate only
+python tools/pets/build_pets.py --no-render   # export only (no browser needed)
+python tools/pets/build_pets.py --views --tiers --anim 0.1   # front/side/back/top, Golden/Rainbow, posed
+python tools/pets/build_pets.py --pets Puffling,VoltBat       # render a few pets only
+```
+
+Needs Python 3.9+ with numpy and Pillow. Renders use headless Chrome/Chromium (`CHROME_PATH`, a
+Playwright headless shell, or a system Chrome) with three.js. The exporter writes glTF/OBJ itself
+(no trimesh/pygltflib), and the GLB passes the Khronos glTF validator with no errors or warnings.
+
+`--check` (and every build) verifies:
+
+* `pet_geometry.py` is sandbox-safe: an AST scan (no imports, no dunders, no eval/exec/open/type/setattr,
+  no classes, only allowed builtins) **and** a real run with only those builtins available,
+* the pet table matches `Pets.luau` (ids, names, rarities, body, colours, eye colour, features, effect),
+* every pet follows the contract below (role names, Root/Pivot markers, budgets, outward winding,
+  spinning parts centred on their spin axis).
+
+## Editing the designs
+
+Everything lives in `pet_geometry.py`:
+
+* `PETS` mirrors `Pets.luau` (the build fails if they disagree, so update both).
+* `DESIGN[petId]` picks feature styles and signature details: `ears` (cat/fox/bat/pup),
+  `bunny` (upright/flop), `horns` (devil/dragon/ox/ram/ice/beetle), `wings` (feather/bat/insect),
+  `tail` (pup/lava/fox/puff/dragon/bird), `mouth` (smile/cat/fang/open/None), `drop`, `cloud`, and details
+  such as `feet`, `cheek_tufts`, `underpuffs`, `belly_accent`, `star_mark`, `moon_mark`, `ripples`...
+* Body shapes are star-shaped surfaces `S(direction) -> point` (`egg_surface`, `cloud_surface` = smooth
+  union of puffs, `drop_surface`, `cube_surface`, `gem_surface`). Faces and markings are "decals":
+  thin domes projected onto the body surface (`body_patch` + `decal`).
+* Primitives: `quad_sphere`, `uv_sphere`, `ellipsoid`, `lathe`, `tube` / `sweep` (rotation-minimising
+  frames, elliptical sections, tapered radii), `capsule`, `cone`, `torus`, `torus_arc`, `rounded_box`,
+  `leaf`, `extrude` (bevelled 2D shapes: `star_poly`, `bolt_poly`, `heart_poly`, `crescent_poly`), and
+  transform helpers `xf_*`, `transform_mesh`, `mirror_x`.
+
+### Sandbox rules (the file is pasted into the Trimble SketchUp MCP sandbox)
+
+No `import` lines (`math` is pre-loaded), no `eval`/`exec`/`open`/`type()`/`setattr`, no dunder
+attributes, no classes, and only these builtins: `range len min max abs int float str list dict tuple
+enumerate isinstance sorted sum`. `build_pets.py --check` enforces this.
+
+In SketchUp: paste the file, then use `sketchup_layout()` - it returns every mesh already converted
+to SketchUp axes (Z up, the pet's front facing -Y, inches; 1 stud = 12 in by default) on the same grid
+as the GLB/OBJ, with its preview colour, e.g. one group per `entry["name"]`. Root/Pivot markers have
+`visible = False`.
+
+## Mesh pack contract
+
+* **Units/axes:** Roblox studs, Y up, the pet's front faces -Z, origin = pet centre (same origin as the
+  procedural model's Root part). Body "radius" is about 1 stud at unit scale; `PetModels.Scale` still
+  applies the rarity/tier scale. In the files the pets sit on a grid (8 columns, 6 studs apart), so
+  always measure from each pet's `Root`.
+* **Roles** (mesh names; the game colours by role, so file material colours only matter for previews):
+  * `Body` -> `look.Color`, tintable (`Tint = "Body"`); `Accent` -> `look.Accent`, tintable (`Tint = "Accent"`)
+  * `Eye` -> `look.EyeColor` (Neon) or near-black; `Shine` -> white Neon highlights;
+    `Blush` -> pink, ~0.35 transparency; `Mouth` -> dark ink
+  * fixed colours: `Color_RRGGBB` (SmoothPlastic), `Neon_RRGGBB` (Neon), `Ice_RRGGBB` (Ice)
+  * animated pieces end in `@WingL`, `@WingR`, `@Wag`, `@SpinY` or `@SpinZ` (the PetController
+    animations). Hinged ones (`WingL`, `WingR`, `Wag`) have a `Pivot@<Anim>` marker: a 0.1-stud cube
+    centred on the hinge. `SpinY`/`SpinZ` pieces spin around the pet origin and are centred on that axis.
+  * `Root`: a 0.2-stud cube centred on the origin - the scale and origin reference
+    (`factor = 0.2 / Root.Size.X`, origin = Root position). `Root` and `Pivot@*` are invisible in game.
+* **GLB:** node hierarchy `PetMeshes -> <PetId> -> <Role>` (each role node has `extras` with the role,
+  preview rgb, material, transparency and tint). **OBJ:** flat objects named `<PetId>.<Role>`.
+  In Roblox the imported pack lives in `ReplicatedStorage.PetMeshes` as either a Model per pet or flat
+  `<PetId>.<Role>` MeshParts; the game accepts both.
+* **Topology:** triangles wound counter-clockwise seen from outside; shared vertices are smooth-shaded,
+  duplicated vertices give hard edges (crystals, gems, markers). Smooth vertex normals are exported.
+
+## Budgets
+
+* At most **4,000 triangles per pet** (`TRI_BUDGET`): `build_pet` lowers the tessellation level
+  until the pet fits. Currently every pet is 2.7k-4.0k triangles, about 130k for all 37.
+* At most **12 visible meshes per pet** (Root/Pivot markers not counted): static pieces with the same
+  role are merged (both eyes are one `Eye` mesh, all shines one `Shine` mesh, ...).

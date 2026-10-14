@@ -1,0 +1,210 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Stormling Viewer</title>
+<!--
+  Preview renderer for the Stormling mesh pack (used by build_pets.py through headless Chrome,
+  also works in a normal browser when the repo root is served over http).
+  Query: ?pet=Puffling&view=hero|front|side|back|top|three4&tier=Normal|Golden|Rainbow&size=512
+         &outline=0|1&t=<seconds>  (t poses the animated parts like PetController does)
+         &bg=0|1  (1 = sky gradient instead of a transparent background)
+-->
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+  body.sky { background: linear-gradient(#8fd6ff, #3b9cf2); }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "./node_modules/three/build/three.module.js",
+    "three/addons/": "./node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
+
+const params = new URLSearchParams(location.search);
+const petId = params.get('pet') || 'Puffling';
+const view = params.get('view') || 'hero';
+const tier = params.get('tier') || 'Normal';
+const size = Number(params.get('size') || 512);
+const glbUrl = params.get('glb') || '../../assets/models/StormlingPets.glb';
+const useOutline = params.get('outline') !== '0';
+const animTime = params.has('t') ? Number(params.get('t')) : null;
+if (params.get('bg') === '1') document.body.classList.add('sky');
+
+// Game colours for tiers (PetModels.luau)
+const GOLD = [255, 202, 58];
+const GOLD_ACCENT = [255, 160, 35];
+const NO_OUTLINE = new Set(['Shine', 'Blush', 'Mouth', 'Eye']);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(size, size);
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xeef6ff, 0xa898c0, 1.55));
+const key = new THREE.DirectionalLight(0xfff4e6, 2.3);
+key.position.set(-2.5, 4.5, -4);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xd8e6ff, 0.7);
+fill.position.set(4, 1.5, -2.5);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffffff, 1.6);
+rim.position.set(1.5, 3, 5);
+scene.add(rim);
+
+function srgb(rgb) {
+  return new THREE.Color().setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, THREE.SRGBColorSpace);
+}
+
+function hsv(h, s, v) {
+  const i = Math.floor(h * 6);
+  const f = h * 6 - i;
+  const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+  const rgb = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][i % 6];
+  return rgb.map((c) => c * 255);
+}
+
+function baseRole(role) {
+  const at = role.indexOf('@');
+  return at < 0 ? role : role.slice(0, at);
+}
+
+function animOf(role) {
+  const at = role.indexOf('@');
+  return at < 0 ? null : role.slice(at + 1);
+}
+
+function makeMaterial(info, role, index) {
+  const base = baseRole(role);
+  let rgb = info.rgb;
+  let metal = 0.0;
+  if (info.tint && tier === 'Golden') {
+    rgb = info.tint === 'Body' ? GOLD : GOLD_ACCENT;
+    metal = 0.35;
+  } else if (info.tint && tier === 'Rainbow') {
+    // PetModels: Color3.fromHSV(index * 0.11 (+0.5 for accents), 0.42 | 0.62, 1)
+    const hue = (index * 0.11 + (info.tint === 'Accent' ? 0.5 : 0)) % 1;
+    rgb = hsv(hue, info.tint === 'Accent' ? 0.62 : 0.42, 1);
+    metal = 0.15;
+  }
+  let mat;
+  if (info.material === 'Neon' || base === 'Shine') {
+    mat = new THREE.MeshBasicMaterial({ color: srgb(rgb) });
+    mat.color.multiplyScalar(1.08);
+  } else {
+    mat = new THREE.MeshPhysicalMaterial({
+      color: srgb(rgb),
+      roughness: base === 'Eye' ? 0.18 : (info.material === 'Ice' ? 0.12 : 0.5),
+      metalness: metal,
+      clearcoat: base === 'Eye' ? 1.0 : 0.3,
+      clearcoatRoughness: base === 'Eye' ? 0.05 : 0.35,
+      transmission: info.material === 'Ice' ? 0.25 : 0,
+    });
+  }
+  if (info.transparency > 0) {
+    mat.transparent = true;
+    mat.opacity = 1 - info.transparency;
+    mat.depthWrite = false;
+  }
+  mat.userData.outlineParameters = {
+    thickness: 0.0042,
+    color: [0.11, 0.1, 0.2],
+    alpha: 1,
+    visible: useOutline && !NO_OUTLINE.has(base) && info.transparency === 0,
+  };
+  return mat;
+}
+
+// PetController animations (pivot = Pivot@<Anim> marker centre, spins around the pet origin)
+function pose(obj, anim, pivot, t) {
+  const group = new THREE.Group();
+  const parent = obj.parent;
+  parent.add(group);
+  if (pivot) {
+    group.position.copy(pivot);
+    obj.position.sub(pivot);
+  }
+  group.add(obj);
+  if (anim === 'WingL') group.rotation.z = Math.sin(t * 14) * 0.45;
+  else if (anim === 'WingR') group.rotation.z = -Math.sin(t * 14) * 0.45;
+  else if (anim === 'Wag') group.rotation.y = Math.sin(t * 9) * 0.35;
+  else if (anim === 'SpinY') group.rotation.y = t * 2;
+  else if (anim === 'SpinZ') group.rotation.z = t * 1.5;
+}
+
+const VIEWS = {
+  hero: [-0.38, 0.24, -1],
+  three4: [0.55, 0.32, -1],
+  front: [0, 0.06, -1],
+  side: [-1, 0.06, 0],
+  back: [0.35, 0.35, 1],
+  top: [0, 1, -0.35],
+};
+
+new GLTFLoader().load(glbUrl, (gltf) => {
+  const source = gltf.scene.getObjectByName(petId);
+  if (!source) {
+    document.title = 'error: no pet ' + petId;
+    return;
+  }
+  const pet = source.clone(true);
+  pet.position.set(0, 0, 0);
+  scene.add(pet);
+  const pivots = {};
+  const meshes = [];
+  let tintIndex = 0;
+  pet.traverse((o) => {
+    if (!o.isMesh) return;
+    const info = o.userData;
+    const role = info.role || o.name;
+    if (!info.visible) {
+      if (role.startsWith('Pivot@')) {
+        o.geometry.computeBoundingBox();
+        pivots[role.slice(6)] = o.geometry.boundingBox.getCenter(new THREE.Vector3());
+      }
+      o.visible = false;
+      return;
+    }
+    if (info.tint) tintIndex += 1;
+    o.material = makeMaterial(info, role, tintIndex);
+    o.renderOrder = info.transparency > 0 ? 2 : 0;
+    meshes.push([o, role]);
+  });
+  if (animTime !== null) {
+    for (const [o, role] of meshes) {
+      const anim = animOf(role);
+      if (anim) pose(o, anim, pivots[anim] || null, animTime);
+    }
+  }
+  pet.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  for (const [o] of meshes) box.expandByObject(o);
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const fov = 30;
+  const camera = new THREE.PerspectiveCamera(fov, 1, 0.05, 200);
+  const dir = new THREE.Vector3(...(VIEWS[view] || VIEWS.hero)).normalize();
+  const dist = sphere.radius / Math.sin(THREE.MathUtils.degToRad(fov / 2)) * 1.04;
+  camera.position.copy(sphere.center).addScaledVector(dir, dist);
+  camera.lookAt(sphere.center);
+  const effect = new OutlineEffect(renderer, { defaultThickness: 0.0042, defaultColor: [0.11, 0.1, 0.2] });
+  if (useOutline) effect.render(scene, camera);
+  else renderer.render(scene, camera);
+  document.title = 'done';
+}, undefined, (err) => {
+  document.title = 'error: ' + err;
+});
+</script>
+</body>
+</html>

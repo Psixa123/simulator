@@ -63,6 +63,11 @@
       },
       "MegaStormState": {
         "$className": "Configuration"
+      },
+      "PetMeshes": {
+        "$path": {
+          "optional": "assets/models/PetMeshes.rbxm"
+        }
       }
     },
     "ServerScriptService": {

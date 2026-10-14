@@ -155,22 +155,35 @@ local function watch(owner: Player)
 	rebuild(owner)
 end
 
-local function animationOffset(item, time: number): CFrame
-	local anim = item.Anim
-	local offset = item.Offset
+local function animationRotation(anim: string?, time: number): CFrame?
 	if anim == "WingL" then
-		return offset * CFrame.Angles(0, 0, math.sin(time * 14) * 0.45)
+		return CFrame.Angles(0, 0, math.sin(time * 14) * 0.45)
 	elseif anim == "WingR" then
-		return offset * CFrame.Angles(0, 0, -math.sin(time * 14) * 0.45)
+		return CFrame.Angles(0, 0, -math.sin(time * 14) * 0.45)
 	elseif anim == "SpinY" then
-		return CFrame.Angles(0, time * 2, 0) * offset
+		return CFrame.Angles(0, time * 2, 0)
 	elseif anim == "SpinZ" then
-		return CFrame.Angles(0, 0, time * 1.5) * offset
+		return CFrame.Angles(0, 0, time * 1.5)
 	elseif anim == "Wag" then
-		return offset * CFrame.Angles(0, math.sin(time * 9) * 0.35, 0)
+		return CFrame.Angles(0, math.sin(time * 9) * 0.35, 0)
 	end
-	return offset
+	return nil
 end
+
+-- Where a pet part sits (relative to the pet's root) at this time
+local function animationOffset(item, time: number): CFrame
+	local rotation = animationRotation(item.Anim, time)
+	if not rotation then
+		return item.Offset
+	elseif item.Pivot then
+		-- Mesh pieces turn around their hinge, along the pet's axes
+		return item.Pivot * rotation * item.Pivot:Inverse() * item.Offset
+	elseif item.Anim == "SpinY" or item.Anim == "SpinZ" then
+		return rotation * item.Offset -- around the pet's centre
+	end
+	return item.Offset * rotation -- primitives turn around their own centre
+end
+PetController.AnimationOffset = animationOffset -- (for tests)
 
 -- The "Target" attachment of the cell (or Mega Storm) a PetTarget id points at
 local function findTarget(targetId: number): Attachment?
