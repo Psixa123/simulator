@@ -7,7 +7,7 @@ already contains `math`, exactly like the sandbox does, then:
 
   1. checks the pet table against src/shared/Config/Pets.luau and every pet against the mesh pack
      contract (role names, Root/Pivot markers, triangle and mesh budgets, winding),
-  2. writes assets/models/StormlingPets.glb   (PetMeshes -> <PetId> -> <Role> nodes, smooth normals,
+  2. writes assets/models/StormlingPets.glb   (PetMeshes -> <PetId> -> "<PetId>.<Role>" nodes, smooth normals,
                                                 preview material colours; pets laid out on a grid)
             assets/models/StormlingPets.obj/.mtl (flat "<PetId>.<Role>" objects, same grid layout),
   3. renders previews with three.js in headless Chromium (tools/pets/viewer.html):
@@ -311,13 +311,15 @@ def write_glb(path, geo, pack):
             if alpha < 1.0:
                 material["alphaMode"] = "BLEND"
             materials.append(material)
-            meshes.append({"name": role, "primitives": [{"attributes": {"POSITION": len(accessors) - 3,
+            # Every piece is named "<PetId>.<Role>" (node and mesh alike), so the game can tell which pet it
+            # belongs to whatever an importer does with the names and the per-pet nodes
+            meshes.append({"name": f"{pet_id}.{role}", "primitives": [{"attributes": {"POSITION": len(accessors) - 3,
                                                                         "NORMAL": len(accessors) - 2},
                                                          "indices": len(accessors) - 1,
                                                          "material": len(materials) - 1}]})
             extras = {"pet": pet_id, "role": role, "rgb": list(info["rgb"]), "material": info["material"],
                       "transparency": info["transparency"], "tint": info["tint"], "visible": info["visible"]}
-            nodes.append({"name": role, "mesh": len(meshes) - 1, "extras": extras})
+            nodes.append({"name": f"{pet_id}.{role}", "mesh": len(meshes) - 1, "extras": extras})
             pet_node["children"].append(len(nodes) - 1)
 
     gltf = {

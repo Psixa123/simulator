@@ -9,7 +9,7 @@ Every pet keeps its look from `src/shared/Config/Pets.luau` (body type, features
 | `pet_geometry.py` | **Sandbox-safe** pure-Python geometry library + all 37 pet designs. |
 | `build_pets.py` | Exports the Roblox mesh pack and renders previews (normal Python). |
 | `viewer.html` | three.js preview page used for the renders (works in any browser too). |
-| `../../assets/models/StormlingPets.glb` | Mesh pack: `PetMeshes -> <PetId> -> <Role>` nodes. |
+| `../../assets/models/StormlingPets.glb` | Mesh pack: `PetMeshes -> <PetId> -> <PetId>.<Role>` nodes. |
 | `../../assets/models/StormlingPets.obj/.mtl` | Same pack as a flat list of `<PetId>.<Role>` objects. |
 | `../../build/pets/` | Preview renders (`<PetId>.png`, `sheet.png`, ...); not committed. |
 
@@ -80,10 +80,12 @@ as the GLB/OBJ, with its preview colour, e.g. one group per `entry["name"]`. Roo
     centred on the hinge. `SpinY`/`SpinZ` pieces spin around the pet origin and are centred on that axis.
   * `Root`: a 0.2-stud cube centred on the origin - the scale and origin reference
     (`factor = 0.2 / Root.Size.X`, origin = Root position). `Root` and `Pivot@*` are invisible in game.
-* **GLB:** node hierarchy `PetMeshes -> <PetId> -> <Role>` (each role node has `extras` with the role,
-  preview rgb, material, transparency and tint). **OBJ:** flat objects named `<PetId>.<Role>`.
-  In Roblox the imported pack lives in `ReplicatedStorage.PetMeshes` as either a Model per pet or flat
-  `<PetId>.<Role>` MeshParts; the game accepts both.
+* **GLB:** node hierarchy `PetMeshes -> <PetId> -> <PetId>.<Role>`; each piece's node and mesh are both named
+  `<PetId>.<Role>` (so an importer that flattens the per-pet nodes or names parts after meshes still gives
+  usable names), and its node has `extras` with the role, preview rgb, material, transparency and tint.
+  **OBJ:** flat objects named `<PetId>.<Role>`. In Roblox the pack lives in `ReplicatedStorage.PetMeshes`
+  (imported in Studio, or uploaded with `tools/roblox/upload_pets.py` and inserted by `PetMeshService`);
+  pieces may be named `<PetId>.<Role>` at any depth, or `<Role>` inside a model named after the pet.
 * **Topology:** triangles wound counter-clockwise seen from outside; shared vertices are smooth-shaded,
   duplicated vertices give hard edges (crystals, gems, markers). Smooth vertex normals are exported.
 

@@ -388,14 +388,15 @@ There are two ways to get the pack into the game:
 2. **File → Import 3D** and pick `assets/models/StormlingPets.glb`.
 3. In the import window:
    - **Keep the names** as they are. The game finds every pet and piece by name (a `Puffling` model with
-     `Body`, `Eye`, `Accent@WingL`, … inside).
+     `Puffling.Body`, `Puffling.Eye`, `Puffling.Accent@WingL`, … inside).
    - Turn **Merge Meshes off**, so each piece stays its own MeshPart.
    - Leave the scale unit, **World Up** and **World Forward** at their defaults. The game rescales and
      centres each pet using the tiny `Root` cube inside it, so whatever size Studio imports at is fine.
    - Click **Import**.
 4. In the Explorer, drag the imported model into **ReplicatedStorage** and rename it to exactly
-   **`PetMeshes`**. Both layouts work: a model per pet (`PetMeshes › Puffling › Body`) or loose parts named
-   `Puffling.Body` (how the `.obj` pack names them).
+   **`PetMeshes`**. Any layout works, as long as each piece is named `<PetId>.<Role>` or sits in a model named
+   after its pet: `PetMeshes › Puffling › Puffling.Body`, loose `Puffling.Body` parts (how the `.obj` pack
+   comes in), or `PetMeshes › Puffling › Body`.
 5. Press **Play**. The Output shows `[PetModels] PetMeshes: mesh models for all 37 pets`, or which pets
    use their built-in model and why.
 6. Save or publish the place.

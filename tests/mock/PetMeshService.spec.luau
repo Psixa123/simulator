@@ -41,29 +41,41 @@ local PetModels = require(ModelsFolder.PetModels)
 local PetMeshService = require(Services.PetMeshService)
 
 ------------------------------------------------------------------------ a fake uploaded model
--- What LoadAsset hands back: a "Model" wrapping the asset, the pets a few levels down
+-- What LoadAsset hands back: a "Model" wrapping the uploaded package (with its PackageLink), the pets a
+-- few levels down. Pieces are named "<PetId>.<Role>" like StormlingPets.glb; layout says what the
+-- importer did with the per-pet nodes:
+--   "nested" PetMeshes > Puffling > Puffling.Body     "flat" Puffling.Body straight under the package
+--   "roles"  PetMeshes > Puffling > Body (older packs and Studio imports that keep only the role)
+local layout = "nested"
 local function uploadedModel()
 	local wrapper = Instance.new("Model")
 	wrapper.Name = "Model"
 	local asset = Instance.new("Model")
 	asset.Name = "StormlingPets"
 	asset.Parent = wrapper
-	local inner = Instance.new("Model")
-	inner.Name = "PetMeshes"
-	inner.Parent = asset
-	local pet = Instance.new("Model")
-	pet.Name = "Puffling"
-	pet.Parent = inner
+	Instance.new("PackageLink").Parent = asset
+	local holder = asset
+	if layout ~= "flat" then
+		local inner = Instance.new("Model")
+		inner.Name = "PetMeshes"
+		inner.Parent = asset
+		holder = Instance.new("Model")
+		holder.Name = "Puffling"
+		holder.Parent = inner
+	end
 	for _, spec in {
-		{ "Root", "Part", Vector3.new(0, 0, 0), Vector3.new(0.2, 0.2, 0.2) },
+		{ "Root", "MeshPart", Vector3.new(0, 0, 0), Vector3.new(0.2, 0.2, 0.2) },
 		{ "Body", "MeshPart", Vector3.new(0, 0.05, 0), Vector3.new(2.6, 2.2, 2.2) },
 		{ "Eye", "MeshPart", Vector3.new(0, 0.15, -0.95), Vector3.new(1, 0.45, 0.2) },
+		{ "Accent@WingL", "MeshPart", Vector3.new(-1.3, 0.3, 0.3), Vector3.new(0.1, 0.9, 1.2) },
+		{ "Pivot@WingL", "MeshPart", Vector3.new(-1, 0.3, 0.3), Vector3.new(0.1, 0.1, 0.1) },
 	} do
 		local part = Instance.new(spec[2])
-		part.Name = spec[1]
-		part.CFrame = CFrame.new(spec[3])
+		part.Name = if layout == "roles" then spec[1] else "Puffling." .. spec[1]
+		-- the cloud importer leaves parts unanchored; the flat layout keeps world positions (grid offset)
+		part.CFrame = CFrame.new(spec[3] + (if layout == "flat" then Vector3.new(-21, 0, 0) else Vector3.zero))
 		part.Size = spec[4]
-		part.Parent = pet
+		part.Parent = holder
 	end
 	return wrapper
 end
@@ -142,13 +154,26 @@ check("pack is a folder", pack and pack:IsA("Folder"))
 check("wrapper unwrapped", pack and pack:FindFirstChild("StormlingPets") ~= nil and pack:FindFirstChild("Model") == nil)
 check("no warnings", #Mock.Warnings == 0, Mock.Warnings[1])
 
--- PetModels picks the inserted pack up (pets several levels down)
-Mock.IsClient = true
-check("PetModels uses the inserted pack", PetModels.HasMeshes("Puffling"))
-local model = PetModels.Build("Puffling", "Normal")
-check("built from meshes", model:GetAttribute("MeshPack") == true)
-check("other pets keep built-in models", PetModels.Build("Ember"):GetAttribute("MeshPack") == false)
-Mock.IsClient = false
+-- PetModels picks the inserted pack up, whichever way the importer laid the pieces out
+for _, which in { "nested", "flat", "roles" } do
+	reset(123)
+	layout = which
+	PetMeshService.Start()
+	Mock.IsClient = true
+	check(which .. ": PetModels uses the inserted pack", PetModels.HasMeshes("Puffling"))
+	local model, parts = PetModels.Build("Puffling", "Normal")
+	check(which .. ": built from meshes", model:GetAttribute("MeshPack") == true)
+	local wing
+	for _, item in parts do
+		if item.Anim == "WingL" then
+			wing = item
+		end
+	end
+	check(which .. ": wing hinge found", wing ~= nil and wing.Pivot ~= nil)
+	check(which .. ": other pets keep built-in models", PetModels.Build("Ember"):GetAttribute("MeshPack") == false)
+	Mock.IsClient = false
+end
+layout = "nested"
 
 -- A numeric string id works too
 reset("456")
