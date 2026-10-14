@@ -39,17 +39,12 @@ local function frame(camera: Camera, model: Model, zoom: number?)
 	camera.CFrame = CFrame.lookAt(center + Vector3.new(0, radius * 0.35, -distance), center)
 end
 
--- Shows a pet. tier = "Normal" | "Golden" | "Rainbow" (or a golden boolean).
--- Returns { Frame, Model, SetRotation(angle), Destroy() }
-function Viewport.Pet(petId: string, tier, props)
-	props = props or {}
-	local viewport, camera = newViewport(props)
-	local model = PetModels.Build(petId, tier, { Effects = false })
-	model:PivotTo(CFrame.Angles(0, math.rad(props.Angle or 20), 0))
-	model.Parent = viewport
-	frame(camera, model, props.Zoom)
+local livePets = {} -- [ViewportFrame] = view, for every pet viewport that hasn't been destroyed
 
-	if props.Silhouette then
+local function buildPet(view)
+	local model = PetModels.Build(view.PetId, view.Tier, { Effects = false })
+	model:PivotTo(CFrame.Angles(0, view.Angle, 0))
+	if view.Silhouette then
 		for _, descendant in model:GetDescendants() do
 			if descendant:IsA("BasePart") then
 				descendant.Color = Color3.fromRGB(20, 22, 40)
@@ -57,16 +52,50 @@ function Viewport.Pet(petId: string, tier, props)
 				descendant.Reflectance = 0
 			end
 		end
+	end
+	model.Parent = view.Frame
+	return model
+end
+
+-- When the mesh pack arrives (or goes) after pets were shown, rebuild them in place
+PetModels.OnPackChanged(function()
+	for _, view in livePets do
+		local old = view.Model
+		view.Model = buildPet(view)
+		old:Destroy()
+	end
+end)
+
+-- Shows a pet. tier = "Normal" | "Golden" | "Rainbow" (or a golden boolean).
+-- Returns { Frame, Model, SetRotation(angle), Destroy() }
+function Viewport.Pet(petId: string, tier, props)
+	props = props or {}
+	local viewport, camera = newViewport(props)
+	local view = {
+		Frame = viewport,
+		PetId = petId,
+		Tier = tier,
+		Angle = math.rad(props.Angle or 20),
+		Silhouette = props.Silhouette == true,
+	}
+	view.Model = buildPet(view)
+	frame(camera, view.Model, props.Zoom) -- keeps this framing if the model is rebuilt with the pack
+	if view.Silhouette then
 		viewport.Ambient = Color3.fromRGB(40, 40, 60)
 	end
+
+	livePets[viewport] = view
+	viewport.Destroying:Connect(function()
+		livePets[viewport] = nil
+	end)
 
 	if props.Parent then
 		viewport.Parent = props.Parent
 	end
 
-	local view = { Frame = viewport, Model = model }
 	function view.SetRotation(angle: number)
-		model:PivotTo(CFrame.Angles(0, angle, 0))
+		view.Angle = angle
+		view.Model:PivotTo(CFrame.Angles(0, angle, 0))
 	end
 	function view.Destroy()
 		viewport:Destroy()

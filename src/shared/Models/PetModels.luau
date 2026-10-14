@@ -815,6 +815,44 @@ local function currentTemplates()
 	return pack.Templates
 end
 
+-- Calls callback() (once things settle) whenever ReplicatedStorage.PetMeshes appears or goes away, e.g.
+-- when the server's PetMeshService inserts an uploaded pack after the first pets were built, so code
+-- holding built pets can rebuild them. Returns a function that stops the callbacks.
+local PACK_SETTLE = 1 -- seconds for a new pack to finish replicating
+local packListeners = {}
+local packWatched = false
+local packChanges = 0
+
+function PetModels.OnPackChanged(callback: () -> ()): () -> ()
+	table.insert(packListeners, callback)
+	if not packWatched then
+		packWatched = true
+		local function changed(child: Instance)
+			if child.Name ~= "PetMeshes" then
+				return
+			end
+			packChanges += 1
+			local change = packChanges
+			task.delay(PACK_SETTLE, function()
+				if change ~= packChanges then
+					return -- a later change will notify
+				end
+				for _, listener in table.clone(packListeners) do
+					task.spawn(listener)
+				end
+			end)
+		end
+		ReplicatedStorage.ChildAdded:Connect(changed)
+		ReplicatedStorage.ChildRemoved:Connect(changed)
+	end
+	return function()
+		local index = table.find(packListeners, callback)
+		if index then
+			table.remove(packListeners, index)
+		end
+	end
+end
+
 local function addMeshes(ctx, look, template)
 	local eyeColor = look.EyeColor or EYE
 	local eyeMaterial = if look.EyeColor then Enum.Material.Neon else Enum.Material.SmoothPlastic

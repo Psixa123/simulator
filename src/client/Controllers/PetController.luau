@@ -18,7 +18,6 @@ local Registry = require(script.Parent.Parent.Registry)
 local PetController = {}
 
 local MAX_DISTANCE = 220
-local PACK_SETTLE = 1 -- seconds to let a newly arrived mesh pack replicate before rebuilding pets
 local MEGA_TARGET = -1
 local CATCH_REACH = 100 -- targets further than this from the owner are ignored (stale attribute)
 local TARGET_GRACE = 0.5 -- keep circling a popped cell's spot while the server picks the next one
@@ -33,7 +32,7 @@ local BEAM_COLORS = {
 local localPlayer = Players.LocalPlayer
 local folder: Folder
 local owners = {} -- [Player] = { Signature, Pets = { { Model, Parts, CFrame, RainbowParts, Beam } }, Center }
-local packVersion = 0 -- bumped when ReplicatedStorage.PetMeshes appears or goes, so the pets get rebuilt
+local packVersion = 0 -- bumped when the mesh pack changes, so the pets get rebuilt
 
 local function parse(signature: string)
 	local entries = {}
@@ -320,14 +319,10 @@ function PetController.Start()
 	Registry.DataController.Observe("Settings", rebuildAll)
 
 	-- The server may insert the mesh pack after the first pets were built (PetMeshService)
-	local function packChanged(child: Instance)
-		if child.Name == "PetMeshes" then
-			packVersion += 1
-			task.delay(PACK_SETTLE, rebuildAll)
-		end
-	end
-	ReplicatedStorage.ChildAdded:Connect(packChanged)
-	ReplicatedStorage.ChildRemoved:Connect(packChanged)
+	PetModels.OnPackChanged(function()
+		packVersion += 1
+		rebuildAll()
+	end)
 
 	RunService.RenderStepped:Connect(step)
 end

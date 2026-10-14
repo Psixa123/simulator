@@ -208,6 +208,40 @@ check("race: one pack", packCount() == 1, packCount())
 local winner = ReplicatedStorage:FindFirstChild("PetMeshes")
 check("race: the other pack kept", winner and winner:FindFirstChild("StormlingPets") == nil)
 
+-- Code holding built pets hears when the pack arrives or goes (PetModels.OnPackChanged)
+reset(0)
+local notified = 0
+local stop = PetModels.OnPackChanged(function()
+	notified += 1
+end)
+Mock.Folder("SomethingElse", ReplicatedStorage)
+check("pack change: other children ignored", notified == 0, notified)
+reset(123)
+PetMeshService.Start()
+check("pack change: inserted pack notifies", notified == 1, notified)
+ReplicatedStorage:FindFirstChild("PetMeshes"):Destroy()
+check("pack change: removed pack notifies", notified == 2, notified)
+
+-- Changes close together notify once, after the last one settles
+local pending = {}
+local realDelay = task.delay
+task.delay = function(_, fn)
+	table.insert(pending, fn)
+end
+reset(123)
+PetMeshService.Start()
+ReplicatedStorage:FindFirstChild("PetMeshes"):Destroy()
+PetMeshService.Start()
+for _, fn in pending do
+	fn()
+end
+task.delay = realDelay
+check("pack change: burst notifies once", notified == 3, notified)
+stop()
+reset(123)
+PetMeshService.Start()
+check("pack change: stopped listener not called", notified == 3, notified)
+
 Mock.RealPrint(string.format("PetMeshService mock test: %d passed, %d failed", passes, failures))
 if failures > 0 then
 	error("mock test failed")

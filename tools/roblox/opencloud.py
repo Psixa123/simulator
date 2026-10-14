@@ -4,6 +4,7 @@ The API key comes from the ROBLOX_API_KEY environment variable (Creator Dashboar
 API Keys). Never put it in a file in this repository.
 """
 
+import http.client
 import json
 import os
 import pathlib
@@ -60,8 +61,6 @@ def request(method, url, *, body=None, json_body=None, content_type=None, auth=T
         try:
             with urllib.request.urlopen(req, timeout=180) as response:
                 raw = response.read()
-                # Some endpoints answer JSON as text/plain (place publishing), so don't trust Content-Type
-                return json.loads(raw) if raw.strip() else {}
         except urllib.error.HTTPError as error:
             raw = error.read().decode(errors="replace")
             if not last and (error.code == 429 or (method == "GET" and error.code in RETRY_STATUS)):
@@ -69,11 +68,18 @@ def request(method, url, *, body=None, json_body=None, content_type=None, auth=T
                 time.sleep(float(wait) if wait.replace(".", "", 1).isdigit() else 2**attempt)
                 continue
             raise ApiError(error.code, describe(raw)) from None
-        except urllib.error.URLError as error:
+        except (urllib.error.URLError, http.client.HTTPException, OSError) as error:
+            # Connection refused/reset/dropped, timeouts, truncated responses
             if not last and method == "GET":
                 time.sleep(2**attempt)
                 continue
-            raise ApiError(0, f"can't reach {url} ({error.reason})") from None
+            reason = getattr(error, "reason", None) or error
+            raise ApiError(0, f"no answer from {url.split('?')[0]} ({reason})") from None
+        # Some endpoints answer JSON as text/plain (place publishing), so don't trust Content-Type
+        try:
+            return json.loads(raw) if raw.strip() else {}
+        except ValueError:
+            raise ApiError(0, f"unexpected answer from {url.split('?')[0]}: {raw[:200]!r}") from None
     raise ApiError(0, "no response")
 
 

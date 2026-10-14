@@ -40,20 +40,24 @@ PROCESS_SECONDS = 900
 APPROVAL_SECONDS = 600
 
 
+def read_config():
+    return GAME_CONFIG.read_bytes().decode("utf-8")  # bytes keep the file's line endings on Windows
+
+
 def configured_asset_id():
-    match = CONFIG_LINE.search(GAME_CONFIG.read_text(encoding="utf-8"))
+    match = CONFIG_LINE.search(read_config())
     if not match:
         sys.exit(f"can't find 'GameConfig.PetMeshAssetId = <number>' in {GAME_CONFIG}")
     return int(match.group(2))
 
 
 def write_asset_id(asset_id):
-    text = GAME_CONFIG.read_text(encoding="utf-8")
+    text = read_config()
     new_text, count = CONFIG_LINE.subn(lambda m: m.group(1) + str(asset_id), text, count=1)
     if count != 1:
         sys.exit(f"can't find 'GameConfig.PetMeshAssetId = <number>' in {GAME_CONFIG}")
     if new_text != text:
-        GAME_CONFIG.write_text(new_text, encoding="utf-8")
+        GAME_CONFIG.write_bytes(new_text.encode("utf-8"))
 
 
 def numeric(name, value):
@@ -142,7 +146,9 @@ def wait_for(operation):
 def moderation(asset):
     """'Approved', 'Reviewing', 'Rejected' or 'Unknown' (the API spells them MODERATION_STATE_APPROVED etc.)."""
     state = str((asset.get("moderationResult") or {}).get("moderationState") or "")
-    state = state.upper().removeprefix("MODERATION_STATE_")
+    state = state.upper()
+    if state.startswith("MODERATION_STATE_"):
+        state = state[len("MODERATION_STATE_") :]
     return {"APPROVED": "Approved", "REVIEWING": "Reviewing", "REJECTED": "Rejected"}.get(state, "Unknown")
 
 
@@ -172,6 +178,7 @@ def main():
     if args.update and not update_id:
         sys.exit("GameConfig.PetMeshAssetId is 0, so there's nothing to update; run without --update")
 
+    asset_id = 0
     try:
         operation = upload(path, update_id, args.dry_run)
         if operation is None:
@@ -181,9 +188,15 @@ def main():
         if not asset_id:
             sys.exit(f"Roblox didn't return an asset id: {json.dumps(asset)}")
         state = moderation(asset)
-        if not args.no_wait:
+        if not args.no_wait and state != "Approved":
+            print(f"Model {asset_id} uploaded; waiting for Roblox to approve it...")
             state = wait_for_approval(asset_id, state)
     except opencloud.ApiError as error:
+        if asset_id:
+            sys.exit(
+                f"Model {asset_id} was uploaded, but checking on it failed ({error}). Set "
+                f"GameConfig.PetMeshAssetId = {asset_id} by hand, or run again (that uploads another copy)."
+            )
         hint = ""
         if error.status in (401, 403):
             hint = " Check ROBLOX_API_KEY and that the key has the assets API with Read and Write."

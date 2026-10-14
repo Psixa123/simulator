@@ -371,10 +371,16 @@ local function setParent(object, parent)
 		if index then
 			table.remove(old.__children, index)
 		end
+		if old.__signals.ChildRemoved then
+			old.__signals.ChildRemoved:Fire(object)
+		end
 	end
 	rawset(object, "__parent", parent)
 	if parent then
 		table.insert(parent.__children, object)
+		if parent.__signals.ChildAdded then
+			parent.__signals.ChildAdded:Fire(object)
+		end
 		fireAncestors(object, "DescendantAdded", object)
 		forEachDescendant(object, function(descendant)
 			fireAncestors(object, "DescendantAdded", descendant)
@@ -550,6 +556,9 @@ local task = {
 		fn(...)
 	end,
 	defer = function(fn, ...)
+		fn(...)
+	end,
+	delay = function(_, fn, ...) -- runs at once; tests that care can swap it out
 		fn(...)
 	end,
 	wait = function()
