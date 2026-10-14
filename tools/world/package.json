@@ -1,0 +1,10 @@
+{
+  "name": "storm-world-prop-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "three.js for the world prop preview renders (tools/world/build_world_pack.py)",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "three": "0.169.0"
+  }
+}
