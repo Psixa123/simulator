@@ -4,23 +4,26 @@
 <meta charset="utf-8">
 <title>Sky Lab UI Mockup</title>
 <!--
-  Storm Catcher Simulator - "Sky Lab" interface mockup (spec: docs/STYLE_GUIDE.md, section 2).
+  Storm Catcher Simulator - "Sky Lab" interface mockup. Spec: docs/STYLE_GUIDE.md, section 2.
 
   Two views, both 1280x720 at scale 1, so 1 px here = 1 offset px in Roblox on a 1280x720 screen:
-    ui_mockup.html?view=hud         the HUD over the world with the Upgrades window open -> docs/ui_mockup.png
-    ui_mockup.html?view=components  the component sheet                                   -> docs/ui_components.png
-  Render both with:  python docs/mockup/render.py
+    ui_mockup.html?view=hud         HUD over the world, Upgrades window open  -> docs/ui_mockup.png
+    ui_mockup.html?view=components  component sheet on Mist                   -> docs/ui_components.png
+  Render both with:  python3 docs/mockup/render.py
 
-  How the CSS maps to Roblox:
-    border: 3px solid Ink           -> UIStroke Thickness 3, Color Ink (ApplyStrokeMode Border)
-    -webkit-text-stroke: 4px X      -> UIStroke Thickness 2 on the TextLabel (CSS strokes are centred and
-                                       drawn behind the fill here, so only half of it shows)
-    linear-gradient(top, bottom)    -> UIGradient, Rotation 90
-    box-shadow: 0 Npx 0 Ink 25 %    -> a copy of the shape N px lower, Ink, BackgroundTransparency 0.75
-    candy lip                       -> the button frame is the lip colour; the face is a child frame that
-                                       stops 5 px above the bottom (2 px while pressed)
-  Fonts: Fredoka One = Enum.Font.FredokaOne. Gotham is not shipped with the repo, so body text falls back
-  to Inter here; in Roblox use GothamBold / GothamMedium.
+  How the CSS maps to Roblox
+    border: 3px solid Ink            UIStroke Thickness 3, Color Ink, ApplyStrokeMode Border
+    linear-gradient(top, bottom)     UIGradient, Rotation 90
+    -webkit-text-stroke: 4px X       UIStroke Thickness 2 on the TextLabel (CSS strokes are centred and
+    (paint-order: stroke fill)       painted behind the glyphs, so only half of the 4 px shows)
+    shadow (.wshadow, box-shadow)    a copy of the shape N px lower, Ink, BackgroundTransparency 0.75
+    candy lip                        the button frame is the lip colour (face x0.62); the face is a child
+                                     frame that stops 5 px above the bottom (2 px while pressed)
+    shine                            a white frame over the top 35 % of the face, BackgroundTransparency 0.75
+    round badges (.orb)              Ink circle -> ring circle inset 3 -> face circle inset 3 (UICorner 1,0)
+  Fonts: Fredoka One = Enum.Font.FredokaOne. Gotham is not shipped with the repo, so body text uses Inter
+  here as a stand-in; in Roblox use GothamBold / GothamMedium.
+  Icons are the PNGs in assets/ui (square slots: they will be swapped for the SketchUp-rendered icons).
 -->
 <style>
   @font-face { font-family: "Fredoka One"; src: url("../assets/source/fonts/FredokaOne-Regular.ttf"); }
@@ -31,10 +34,10 @@
     --cloud: #FFFFFF;
     --mist: #EAF3FF;
     --haze: #D5E5FB;
-    --haze-deep: #B7CBEA;
-    --shade: rgba(35, 48, 102, 0.25);   /* Ink at 75 % transparency */
+    --haze-deep: #B4C8EA;
+    --shade: rgba(35, 48, 102, 0.25);            /* Ink at 75 % transparency */
     --fr: "Fredoka One", "Arial Rounded MT Bold", sans-serif;
-    --body: "Gotham", "Montserrat", "Inter", sans-serif;
+    --body: "Gotham", "Inter", "Montserrat", sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1280px; height: 720px; overflow: hidden; }
@@ -43,455 +46,477 @@
   .screen { position: absolute; inset: 0; display: none; overflow: hidden; }
   .screen.on { display: block; }
   .abs { position: absolute; }
-  .body-b { font-family: var(--body); font-weight: 700; }
-  .body-m { font-family: var(--body); font-weight: 500; }
 
-  /* white text with a stroke: Ink over the world, the surface's dark shade on buttons */
+  /* white text with a stroke: Ink over the world, the surface's dark shade (x0.55) on coloured surfaces */
   .ws  { color: #fff; paint-order: stroke fill; -webkit-text-stroke: 4px var(--stroke, var(--ink)); }
-  .ws3 { color: #fff; paint-order: stroke fill; -webkit-text-stroke: 6px var(--stroke, var(--ink)); }
+  .ws6 { color: #fff; paint-order: stroke fill; -webkit-text-stroke: 6px var(--stroke, var(--ink)); }
 
-  /* ------------------------------------------------------------------ colour sets (top, bottom, lip = bottom x0.62, text stroke = bottom x0.55) */
-  .c-sky    { --top: #5CC8FF; --bot: #2F86F2; --lip: #1D5396; --stroke: #1A4A85; --tint: #DDF4FF; --tint2: #B5DDFD; }
-  .c-bolt   { --top: #FFE15A; --bot: #FFAA1F; --lip: #9E6913; --stroke: #8C5E11; --tint: #FFF8D6; --tint2: #FFE6A6; }
-  .c-rain   { --top: #54E0FF; --bot: #1E9BEF; --lip: #136094; --stroke: #105583; --tint: #DBF8FF; --tint2: #ADE6FB; }
-  .c-storm  { --top: #A98BFF; --bot: #6B4BE6; --lip: #422E8F; --stroke: #3B297F; --tint: #EFE9FF; --tint2: #D3C6FB; }
-  .c-leaf   { --top: #7BE36A; --bot: #33B24A; --lip: #206E2E; --stroke: #1C6229; --tint: #E6F9E1; --tint2: #BDEBC1; }
-  .c-coral  { --top: #FF7A85; --bot: #E43A58; --lip: #8D2437; --stroke: #7D2030; --tint: #FFE1E4; --tint2: #F9BCC6; }
-  .c-sunset { --top: #FFB15C; --bot: #F2702A; --lip: #96451A; --stroke: #853E17; --tint: #FFEEDB; --tint2: #FDD0AE; }
-  .c-off    { --top: #EEF4FD; --bot: #D5E5FB; --lip: #A4B6D8; --stroke: #8796BF; }
+  /* ---------------------------------------------------------------- colour sets
+     --top/--bot face gradient, --lip = bot x0.62, --stroke = bot x0.55, --tint/--tint2 = pale wells */
+  .c-sky    { --top: #5CC8FF; --bot: #2F86F2; --lip: #1D5396; --stroke: #1A4A85; --tint: #E3F5FF; --tint2: #BFE3FF; }
+  .c-bolt   { --top: #FFE15A; --bot: #FFAA1F; --lip: #9E6913; --stroke: #8C5E11; --tint: #FFF8D9; --tint2: #FFE7AC; }
+  .c-rain   { --top: #54E0FF; --bot: #1E9BEF; --lip: #136094; --stroke: #105583; --tint: #E0F9FF; --tint2: #B3E8FB; }
+  .c-storm  { --top: #A98BFF; --bot: #6B4BE6; --lip: #422E8F; --stroke: #3B297F; --tint: #F1ECFF; --tint2: #D9CCFD; }
+  .c-leaf   { --top: #7BE36A; --bot: #33B24A; --lip: #206E2E; --stroke: #1C6229; --tint: #E8FAE4; --tint2: #C2EDC4; }
+  .c-coral  { --top: #FF7A85; --bot: #E43A58; --lip: #8D2437; --stroke: #7D2030; --tint: #FFE4E7; --tint2: #FBC3CB; }
+  .c-sunset { --top: #FFB15C; --bot: #F2702A; --lip: #96451A; --stroke: #853E17; --tint: #FFF0DE; --tint2: #FDD3B2; }
+  .c-off    { --top: #E9EFF9; --bot: #C9D6EC; --lip: #8D9BBA; --stroke: #7684A8; }
 
-  /* ------------------------------------------------------------------ candy button */
-  .candy { position: relative; display: inline-block; vertical-align: top; width: var(--w, 120px); height: var(--h, 48px);
+  /* ---------------------------------------------------------------- candy button */
+  .candy { position: relative; display: inline-block; vertical-align: top; flex: none;
+           width: var(--w, 120px); height: var(--h, 48px);
            border: 3px solid var(--ink); border-radius: 14px; background: var(--lip); }
   .candy > .face { position: absolute; left: 0; right: 0; top: 0; bottom: 5px; border-radius: 11px;
                    background: linear-gradient(var(--top), var(--bot));
                    display: flex; align-items: center; justify-content: center; gap: 6px; }
-  .candy > .face::before { content: ""; position: absolute; left: 4px; right: 4px; top: 2px; height: 35%;
-                           border-radius: 999px 999px 10px 10px; background: rgba(255, 255, 255, 0.25); }
+  .candy > .face::before { content: ""; position: absolute; left: 4px; right: 4px; top: 3px; height: 35%;
+                           border-radius: 999px; background: rgba(255, 255, 255, 0.25); }
   .candy .lbl { position: relative; font-size: var(--fs, 22px); line-height: 1; padding-top: 2px; color: #fff; white-space: nowrap;
                 paint-order: stroke fill; -webkit-text-stroke: 4px var(--stroke); }
   .candy .ico { position: relative; width: var(--is, 28px); height: var(--is, 28px); }
   .candy.pill, .candy.pill > .face { border-radius: 999px; }
   .candy.pressed { height: calc(var(--h, 48px) - 3px); transform: translateY(3px); }
   .candy.pressed > .face { bottom: 2px; }
+  .candy.hover { transform: scale(1.04); }
   .candy.round { border-radius: 50%; overflow: hidden; }
   .candy.round > .face { top: -5px; bottom: 0; border-radius: 50%; }
-  .candy.round > .face::before { left: 18%; right: 18%; top: 9px; height: 30%; border-radius: 50%; }
+  .candy.round > .face::before { left: 20%; right: 20%; top: 9px; height: 30%; }
   .candy.c-off .lbl { color: #F7FAFF; }
+  .candy.sm { border-width: 2px; border-radius: 11px; }
+  .candy.sm > .face { bottom: 4px; border-radius: 9px; }
+  .candy.sm > .face::before { top: 2px; left: 3px; right: 3px; }
 
-  /* the ✕ glyph of the close button (an Ink-free white cross with the coral stroke) */
-  .xmark { position: relative; width: 22px; height: 22px; }
-
-  /* ------------------------------------------------------------------ capsule */
+  /* ---------------------------------------------------------------- capsule (currency) */
   .capsule { position: absolute; height: 44px; border: 3px solid var(--ink); border-radius: 22px;
              background: linear-gradient(var(--cloud), var(--mist)); box-shadow: 0 4px 0 var(--shade);
-             display: flex; align-items: center; padding-left: 44px; }
-  .capsule > .cico { position: absolute; left: -17px; top: 50%; width: 54px; height: 54px; margin-top: -27px; }
-  .capsule > .val { font-size: 26px; line-height: 1; padding-top: 2px; color: var(--ink); }
-  .capsule > .candy { position: absolute; right: 3px; top: 3px; --w: 32px; --h: 32px; border-width: 2px; border-radius: 11px; }
-  .capsule > .candy > .face { bottom: 4px; border-radius: 9px; }
-  .capsule > .candy .lbl { --fs: 24px; padding-top: 0; margin-top: -1px; }
+             display: flex; align-items: center; padding-left: 42px; }
+  .capsule > .cico { position: absolute; left: -18px; top: 50%; width: 54px; height: 54px; margin-top: -27px; }
+  .capsule > .val { font-size: 26px; line-height: 1; padding-top: 3px; color: var(--ink); }
+  .capsule > .candy { position: absolute; right: 3px; top: 3px; --w: 32px; --h: 32px; }
+  .capsule > .candy .lbl { --fs: 26px; padding-top: 0; margin-top: -2px; }
 
-  /* ------------------------------------------------------------------ storm jar */
+  /* ---------------------------------------------------------------- storm jar */
   .jar { position: absolute; height: 52px; }
   .jar > .track { position: absolute; inset: 0; border: 3px solid var(--ink); border-radius: 26px; background: var(--haze);
                   overflow: hidden; box-shadow: 0 4px 0 var(--shade); }
-  .jar .liquid { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 16px 16px 0;
+  .jar .liquid { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 20px 20px 0; overflow: hidden;
                  background: linear-gradient(#54E0FF, #1E9BEF); box-shadow: inset -3px 0 0 rgba(255, 255, 255, 0.55); }
-  .jar .liquid::before { content: ""; position: absolute; left: 34px; right: 14px; top: 6px; height: 7px; border-radius: 4px;
-                         background: rgba(255, 255, 255, 0.6); }
-  .jar .bub { position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.8); }
-  .jar .dot { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.75); }
-  .jar .glare { position: absolute; right: 22px; top: 6px; width: 30px; height: 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.85); }
-  .jar .glare2 { position: absolute; right: 58px; top: 6px; width: 8px; height: 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.85); }
-  .jar .amt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 2px 0 0 28px;
+  .jar .liquid::before { content: ""; position: absolute; left: 38px; right: 14px; top: 6px; height: 6px; border-radius: 3px;
+                         background: rgba(255, 255, 255, 0.65); }
+  .jar .liquid::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgba(19, 96, 148, 0.18); }
+  .jar .bub { position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.85); }
+  .jar .dot { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.8); }
+  .jar .glass { position: absolute; left: 14px; right: 14px; top: 5px; height: 7px; border-radius: 4px;
+                background: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0) 72%, rgba(255,255,255,.9) 72%, rgba(255,255,255,.9) 88%,
+                                            rgba(255,255,255,0) 88%, rgba(255,255,255,0) 91%, rgba(255,255,255,.9) 91%, rgba(255,255,255,.9) 94%, rgba(255,255,255,0) 94%); }
+  .jar .amt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 3px 0 0 30px;
               font-size: 24px; line-height: 1; color: var(--ink); }
-  .jar > .jico { position: absolute; left: -22px; top: 50%; width: 62px; height: 62px; margin-top: -32px; }
-  .jar.full > .track { box-shadow: 0 4px 0 var(--shade), 0 0 0 4px rgba(84, 224, 255, 0.5), 0 0 22px 8px rgba(84, 224, 255, 0.55); }
+  .jar > .jico { position: absolute; left: -24px; top: 50%; width: 64px; height: 64px; margin-top: -34px; }
+  .jar.full > .track { box-shadow: 0 4px 0 var(--shade), 0 0 0 4px rgba(84, 224, 255, 0.55), 0 0 26px 10px rgba(84, 224, 255, 0.55); }
 
-  /* ------------------------------------------------------------------ round weather badges (window badge, HUD buttons, timers) */
+  /* ---------------------------------------------------------------- round weather badge (window badge, HUD buttons, timers) */
   .orb { position: absolute; border-radius: 50%; background: var(--ink); padding: 3px; box-shadow: 0 4px 0 var(--shade); }
   .orb > .ring { width: 100%; height: 100%; border-radius: 50%; padding: var(--rw, 3px); background: linear-gradient(var(--top), var(--bot)); }
-  .orb > .ring > .face { width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(var(--cloud), var(--mist));
+  .orb > .ring > .face { width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(var(--cloud) 45%, var(--mist));
                          display: flex; align-items: center; justify-content: center; position: relative; }
   .orb > .ring > .face > img { width: var(--is, 44px); height: var(--is, 44px); }
   .hbtn { position: absolute; width: 68px; height: 68px; }
   .hbtn > .orb { inset: 0; }
-  .hbtn > .hl { position: absolute; left: 50%; top: 55px; transform: translateX(-50%); font-size: 17px; line-height: 1; white-space: nowrap; }
+  .hbtn > .hl { position: absolute; left: 50%; top: 54px; transform: translateX(-50%); font-size: 17px; line-height: 1; white-space: nowrap; }
+  .hbtn.hover { transform: scale(1.04); }
+  .hbtn > .hl, .timer > .tl { --stroke: var(--ink); }      /* over the world: white text, Ink stroke */
 
-  /* ------------------------------------------------------------------ badge */
-  .badge { position: absolute; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; border: 2px solid var(--ink);
+  /* ---------------------------------------------------------------- badge */
+  .badge { position: absolute; min-width: 26px; height: 26px; padding: 2px 7px 0; border-radius: 13px; border: 2px solid var(--ink);
            background: linear-gradient(#FF7A85, #E43A58); display: flex; align-items: center; justify-content: center;
-           font-size: 16px; line-height: 1; padding-top: 1px; color: #fff; paint-order: stroke fill; -webkit-text-stroke: 3px #7D2030; }
+           font-size: 16px; line-height: 1; color: #fff; paint-order: stroke fill; -webkit-text-stroke: 3px #7D2030; }
 
-  /* ------------------------------------------------------------------ toast */
+  /* ---------------------------------------------------------------- toast */
   .toast { position: absolute; height: 48px; border: 2px solid var(--ink); border-radius: 24px;
            background: linear-gradient(var(--cloud), var(--mist)); box-shadow: 0 4px 0 var(--shade);
-           display: flex; align-items: center; padding: 2px 22px 0 54px; font-size: 20px; line-height: 1; white-space: nowrap; }
-  .toast > .disk { position: absolute; left: 3px; top: 3px; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--ink);
+           display: flex; align-items: center; padding: 3px 22px 0 54px; font-size: 19px; line-height: 1; white-space: nowrap; }
+  .toast > .disk { position: absolute; left: 4px; top: 4px; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--ink);
                    background: linear-gradient(var(--top), var(--bot)); display: flex; align-items: center; justify-content: center; }
-  .toast > .disk > img { width: 30px; height: 30px; }
-  .toast em { font-style: normal; color: var(--accent, var(--ink)); }
+  .toast > .disk > img { width: 28px; height: 28px; }
+  .toast em { font-style: normal; color: var(--accent, var(--bot)); }
 
-  /* ------------------------------------------------------------------ tabs */
+  /* ---------------------------------------------------------------- tabs */
   .tabs { position: absolute; height: 48px; border-radius: 24px; background: var(--haze); padding: 4px; display: flex; gap: 4px; }
   .tabs > .tab { flex: 1 1 0; display: flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1;
-                 padding-top: 2px; color: var(--ink-soft); }
-  .tabs > .candy { flex: 1 1 0; --h: 40px; border-radius: 999px; }
-  .tabs > .candy > .face { border-radius: 999px; }
+                 padding-top: 3px; color: var(--ink-soft); }
+  .tabs > .candy { flex: 1 1 0; --h: 40px; }
   .tabs > .candy .lbl { --fs: 18px; }
 
-  /* ------------------------------------------------------------------ tile with rarity pedestal */
-  .tile { position: absolute; width: 116px; height: 144px; background: var(--cloud); border: 2px solid var(--haze); border-radius: 18px; }
-  .tile > .tname { position: absolute; left: 0; right: 0; top: 9px; text-align: center; font-size: 16px; line-height: 1; color: var(--ink); }
-  .tile > .ped { position: absolute; left: 9px; right: 9px; bottom: 9px; height: 34px; border-radius: 12px;
+  /* ---------------------------------------------------------------- tile with rarity pedestal */
+  .tile { position: absolute; width: 112px; height: 140px; background: var(--cloud); border: 2px solid var(--haze); border-radius: 18px; }
+  .tile > .tname { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font-size: 16px; line-height: 1; color: var(--ink); white-space: nowrap; }
+  .tile > .ped { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 38px; border-radius: 14px;
                  background: linear-gradient(var(--r1), var(--r2)); border: 2px solid var(--r3);
                  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; }
-  .tile > .ped::before { content: ""; position: absolute; left: 6px; right: 6px; top: 3px; height: 8px; border-radius: 6px; background: rgba(255,255,255,.45); }
+  .tile > .ped::before { content: ""; position: absolute; left: 8px; right: 8px; top: 3px; height: 11px; border-radius: 50%;
+                         background: rgba(255, 255, 255, 0.5); }
   .tile > .ped > span { position: relative; font-size: 13px; line-height: 1; color: #fff; paint-order: stroke fill; -webkit-text-stroke: 3px var(--r3); }
-  .tile > .art { position: absolute; left: 50%; top: 24px; width: 84px; height: 84px; margin-left: -42px; }
-  .tile.sel { border: 3px solid #2F86F2; transform: translateY(-4px); box-shadow: 0 4px 0 var(--shade); }
-  .r-common    { --r1: #DDE2EB; --r2: #C4CCDA; --r3: #6C7078; }
-  .r-uncommon  { --r1: #8FEA9B; --r2: #60DE70; --r3: #357A3E; }
-  .r-rare      { --r1: #86C4FF; --r2: #48A4FF; --r3: #285A8C; }
-  .r-epic      { --r1: #CF95FF; --r2: #B660FF; --r3: #64358C; }
-  .r-legendary { --r1: #FFD672; --r2: #FFC02A; --r3: #8C6A17; }
-  .r-exclusive { --r1: #FF8EBF; --r2: #FF549C; --r3: #8C2E56; }
+  .tile > .art { position: absolute; left: 50%; top: 27px; width: 80px; height: 80px; margin-left: -40px; }
+  .tile.sel { border: 3px solid #2F86F2; transform: translateY(-4px); box-shadow: 0 5px 0 var(--shade); }
+  .tile.sel > .tname { top: 9px; }
+  .tile .chk { position: absolute; left: -7px; top: -7px; width: 26px; height: 26px; }
+  .r-common    { --r1: #EEF1F6; --r2: #C4CCDA; --r3: #6C7078; }
+  .r-uncommon  { --r1: #A8F0B2; --r2: #60DE70; --r3: #357A3E; }
+  .r-rare      { --r1: #A6D4FF; --r2: #48A4FF; --r3: #285A8C; }
+  .r-epic      { --r1: #DCB3FF; --r2: #B660FF; --r3: #64358C; }
+  .r-legendary { --r1: #FFE39C; --r2: #FFC02A; --r3: #8C6A17; }
+  .r-exclusive { --r1: #FFA8CB; --r2: #FF549C; --r3: #8C2E56; }
 
-  /* ------------------------------------------------------------------ cloud window */
+  /* ---------------------------------------------------------------- cloud window */
   .window { position: absolute; }
   .window > .wshadow { position: absolute; inset: 6px 0 -6px 0; border-radius: 26px; background: var(--shade); }
+  .window > .puffs { position: absolute; top: 0; }
+  .window > .puffs > i { position: absolute; border-radius: 50%; border: 3px solid var(--ink); background: var(--cloud); }
+  .window > .puffs > b { position: absolute; border-radius: 50%; background: linear-gradient(var(--cloud) 55%, #F3F8FF); }
   .window > .wbody { position: absolute; inset: 0; border: 3px solid var(--ink); border-radius: 26px; overflow: hidden;
                      background: linear-gradient(var(--cloud), var(--mist)); }
   .window .band { position: absolute; left: 0; right: 0; top: 0; height: 60px; border-bottom: 3px solid var(--ink);
                   background: linear-gradient(#5CC8FF, #2F86F2); }
-  .window .band::before { content: ""; position: absolute; left: 10px; right: 10px; top: 4px; height: 18px; border-radius: 12px;
-                          background: rgba(255, 255, 255, 0.22); }
-  .window .wtitle { position: absolute; left: 92px; top: 0; height: 57px; display: flex; align-items: center; padding-top: 3px;
+  .window .band::before { content: ""; position: absolute; left: 12px; right: 12px; top: 5px; height: 16px; border-radius: 10px;
+                          background: rgba(255, 255, 255, 0.25); }
+  .window .wtitle { position: absolute; left: 82px; top: 0; height: 57px; display: flex; align-items: center; padding-top: 4px;
                     font-size: 32px; line-height: 1; }
-  .window .puffs { position: absolute; }
-  .window .puffs > i { position: absolute; border-radius: 50%; }
-  .window .puffs.line > i { background: var(--ink); }
-  .window .puffs.fill > i { background: linear-gradient(var(--cloud) 40%, var(--mist)); }
-  .window > .wbadge { left: -16px; top: -18px; width: 76px; height: 76px; --rw: 4px; --is: 50px; }
-  .window > .wclose { position: absolute; right: -14px; top: -16px; --w: 48px; --h: 48px; }
-  .window .content { position: absolute; left: 0; right: 0; top: 63px; bottom: 0; padding: 18px 20px 20px; }
+  .window > .wbadge { left: -18px; top: -18px; width: 76px; height: 76px; --rw: 4px; --is: 52px; }
+  .window > .wclose { position: absolute; right: -16px; top: -16px; --w: 48px; --h: 48px; box-shadow: 0 4px 0 var(--shade); }
+  .window .content { position: absolute; left: 0; right: 0; top: 60px; bottom: 0; padding: 18px 20px; }
+  .xmark { position: relative; width: 22px; height: 22px; margin-top: 4px; }
 
-  /* ------------------------------------------------------------------ upgrade card */
-  .ucard { position: relative; height: 72px; background: var(--cloud); border: 2px solid var(--haze); border-radius: 18px; margin-bottom: 10px; }
-  .ucard > .well { position: absolute; left: 8px; top: 6px; width: 56px; height: 56px; border-radius: 14px;
+  /* ---------------------------------------------------------------- upgrade card */
+  .ucard { position: relative; height: 70px; background: var(--cloud); border: 2px solid var(--haze); border-radius: 18px; }
+  .ucard + .ucard { margin-top: 10px; }
+  .ucard > .well { position: absolute; left: 6px; top: 6px; width: 54px; height: 54px; border-radius: 14px;
                    background: linear-gradient(var(--tint), var(--tint2)); display: flex; align-items: center; justify-content: center; }
   .ucard > .well > img { width: 46px; height: 46px; }
-  .ucard > .uname { position: absolute; left: 78px; top: 10px; font-size: 22px; line-height: 1; display: flex; align-items: center; gap: 8px; }
-  .ucard .lv { font-size: 14px; line-height: 1; height: 22px; padding: 4px 9px 0; border-radius: 11px; background: var(--haze); color: var(--ink); }
-  .pips { position: absolute; left: 78px; top: 41px; display: flex; gap: 4px; }
-  .pips > i { position: relative; width: 17px; height: 13px; border-radius: 5px; background: var(--haze); border: 2px solid var(--haze-deep); overflow: hidden; }
-  .pips > i.on { background: linear-gradient(#5CC8FF, #2F86F2); border-color: var(--ink); }
-  .pips > i.part { border-color: var(--ink); }
-  .pips > i.part > b { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#5CC8FF, #2F86F2); }
-  .ustat { position: absolute; left: 328px; top: 10px; width: 168px; height: 48px; border-radius: 14px; background: var(--mist);
+  .ucard > .uname { position: absolute; left: 74px; top: 9px; font-size: 22px; line-height: 1; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .ucard .lv { font-size: 14px; line-height: 1; height: 22px; padding: 5px 9px 0; border-radius: 11px; background: var(--haze); color: var(--ink); margin-top: -2px; }
+  .pips { position: absolute; left: 74px; top: 39px; display: flex; gap: 4px; }
+  .pips > i { position: relative; width: 20px; height: 14px; border-radius: 5px; background: var(--haze); overflow: hidden; }
+  .pips > i.on { background: linear-gradient(#5CC8FF, #2F86F2); box-shadow: inset 0 0 0 2px var(--ink); }
+  .pips > i.on::after { content: ""; position: absolute; left: 4px; right: 4px; top: 3px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.55); }
+  .ustat { position: absolute; left: 330px; top: 6px; width: 150px; height: 54px; border-radius: 14px; background: var(--mist);
            border: 2px solid var(--haze); }
-  .ustat > .cap { position: absolute; left: 0; right: 0; top: 5px; text-align: center; font-size: 10px; letter-spacing: .8px; line-height: 1;
-                  color: var(--ink-soft); text-transform: uppercase; }
-  .ustat > .vals { position: absolute; left: 0; right: 0; top: 19px; display: flex; align-items: center; justify-content: center; gap: 6px;
-                   font-size: 21px; line-height: 1; }
+  .ustat > .cap { position: absolute; left: 0; right: 0; top: 6px; text-align: center; font-family: var(--body); font-weight: 700;
+                  font-size: 10px; letter-spacing: .8px; line-height: 1; color: var(--ink-soft); text-transform: uppercase; }
+  .ustat > .vals { position: absolute; left: 0; right: 0; top: 21px; display: flex; align-items: center; justify-content: center; gap: 5px;
+                   font-size: 22px; line-height: 1; white-space: nowrap; }
   .ustat .old { color: var(--ink-soft); }
-  .ustat .unit { font-family: var(--body); font-weight: 700; font-size: 12px; color: var(--ink-soft); margin-left: -2px; padding-top: 3px; }
-  .ucard > .bmax { position: absolute; right: 158px; top: 9px; --w: 62px; --h: 50px; --fs: 17px; }
-  .ucard > .bbuy { position: absolute; right: 10px; top: 9px; --w: 140px; --h: 50px; --fs: 22px; --is: 30px; }
+  .ustat .new { color: #1F8F38; }
+  .ustat svg { margin-top: -2px; }
+  .ustat .unit { font-family: var(--body); font-weight: 700; font-size: 11px; color: var(--ink-soft); padding-top: 4px; margin-left: -2px; }
+  .ucard > .bmax { position: absolute; right: 152px; top: 8px; --w: 64px; --h: 50px; --fs: 18px; }
+  .ucard > .bbuy { position: absolute; right: 8px; top: 8px; --w: 136px; --h: 50px; --fs: 22px; --is: 28px; }
 
-  /* ------------------------------------------------------------------ timers (right side) */
-  .timer { position: absolute; width: 64px; height: 64px; }
+  /* ---------------------------------------------------------------- round timers (right side) */
+  .timer { position: absolute; width: 68px; height: 68px; }
   .timer > .orb { inset: 0; }
-  .timer > .orb > .ring { padding: 5px; background: conic-gradient(var(--bot) 0 var(--p), var(--haze) var(--p) 100%); }
-  .timer .tl { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); font-size: 18px; line-height: 1; white-space: nowrap; }
-  .timer .chip { position: absolute; right: -12px; top: -6px; height: 24px; padding: 3px 7px 0; border-radius: 12px; border: 2px solid var(--ink);
-                 background: linear-gradient(var(--top), var(--bot)); font-size: 15px; line-height: 1; color: #fff;
+  .timer > .orb > .ring { padding: 6px; background: conic-gradient(var(--bot) 0 var(--p), var(--haze) var(--p) 100%); }
+  .timer > .orb > .ring > .face { box-shadow: 0 0 0 2px var(--ink); }
+  .timer .tl { position: absolute; left: 50%; top: 54px; transform: translateX(-50%); font-size: 18px; line-height: 1; white-space: nowrap; }
+  .timer .chip { position: absolute; right: -12px; top: -8px; height: 26px; padding: 4px 8px 0; border-radius: 13px; border: 2px solid var(--ink);
+                 background: linear-gradient(var(--top), var(--bot)); font-size: 16px; line-height: 1; color: #fff;
                  paint-order: stroke fill; -webkit-text-stroke: 3px var(--stroke); }
 
-  /* ------------------------------------------------------------------ roblox core gui placeholders */
-  .core { position: absolute; top: 12px; height: 44px; border-radius: 22px; background: rgba(17, 18, 22, 0.55); display: flex; align-items: center; gap: 2px; padding: 0 4px; }
+  /* ---------------------------------------------------------------- Roblox core GUI placeholders */
+  .core { position: absolute; top: 12px; height: 44px; border-radius: 12px; background: rgba(17, 18, 22, 0.5); display: flex; align-items: center; gap: 2px; padding: 0 4px; }
   .core > b { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
 
-  /* ------------------------------------------------------------------ component sheet */
+  /* ---------------------------------------------------------------- component sheet */
   #components { background-color: var(--mist);
-                background-image: radial-gradient(circle, rgba(91, 106, 158, 0.16) 1.2px, transparent 1.6px);
-                background-size: 16px 16px; background-position: 0 0; }
-  .sec { position: absolute; font-size: 14px; letter-spacing: 1.4px; line-height: 1; color: var(--ink-soft); text-transform: uppercase; }
+                background-image: radial-gradient(circle, rgba(91, 106, 158, 0.18) 1.1px, transparent 1.5px);
+                background-size: 16px 16px; background-position: 8px 8px; }
+  .sec { position: absolute; font-family: var(--body); font-weight: 800; font-size: 11px; letter-spacing: 1.6px; line-height: 1;
+         color: var(--ink-soft); text-transform: uppercase; white-space: nowrap; }
+  .sec > span { font-weight: 500; letter-spacing: .2px; text-transform: none; font-size: 11px; color: #7F8DBA; margin-left: 8px; }
   .cap2 { position: absolute; font-family: var(--body); font-weight: 600; font-size: 11px; line-height: 1; color: var(--ink-soft); white-space: nowrap; }
-  .swatch { position: absolute; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ink); }
+  .swatch { position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); }
+  .num { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: #fff; font-family: var(--body);
+         font-weight: 800; font-size: 11px; line-height: 20px; text-align: center; box-shadow: 0 0 0 2px #fff; }
 </style>
 </head>
 <body>
 
-<!-- =================================================================================== HUD -->
+<!-- ================================================================================================ HUD -->
 <div id="hud" class="screen">
 
-  <!-- the world (stand-in for the 3D scene: Sunny Plains sky island) -->
+  <!-- The world: a stand-in for the 3D scene (Sunny Plains sky island, midday) -->
   <svg class="abs" style="left:0;top:0" width="1280" height="720" viewBox="0 0 1280 720">
     <defs>
-      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#3FAEFF"/>
-        <stop offset="0.38" stop-color="#7FCFFF"/>
-        <stop offset="0.62" stop-color="#C6EDFF"/>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="720" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#36A6FA"/>
+        <stop offset="0.36" stop-color="#7CCDFF"/>
+        <stop offset="0.62" stop-color="#C8EEFF"/>
       </linearGradient>
       <radialGradient id="sunglow" cx="0.5" cy="0.5" r="0.5">
-        <stop offset="0" stop-color="#FFFBE0" stop-opacity="0.95"/>
-        <stop offset="0.35" stop-color="#FFF6C8" stop-opacity="0.55"/>
-        <stop offset="1" stop-color="#FFF6C8" stop-opacity="0"/>
+        <stop offset="0" stop-color="#FFFBE6" stop-opacity="0.95"/>
+        <stop offset="0.3" stop-color="#FFF7D0" stop-opacity="0.5"/>
+        <stop offset="1" stop-color="#FFF7D0" stop-opacity="0"/>
       </radialGradient>
-      <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#8BEA5E"/>
-        <stop offset="1" stop-color="#5CD24B"/>
+      <linearGradient id="grass" x1="0" y1="460" x2="0" y2="720" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#9BEE6A"/>
+        <stop offset="1" stop-color="#5FD34C"/>
       </linearGradient>
       <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#A6F27A"/>
-        <stop offset="1" stop-color="#8BEA5E"/>
+        <stop offset="0" stop-color="#B8F58C"/>
+        <stop offset="1" stop-color="#9BEB6E"/>
       </linearGradient>
-      <linearGradient id="rock" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#E7B784"/>
-        <stop offset="1" stop-color="#C98C5C"/>
+      <linearGradient id="rockA" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#F2C893"/>
+        <stop offset="1" stop-color="#DDA36D"/>
       </linearGradient>
-      <!-- a puffy cloud, 200 x 90 -->
-      <symbol id="cloud" viewBox="0 0 200 92" overflow="visible">
-        <g fill="#CBE6FB">
-          <circle cx="52" cy="62" r="30"/><circle cx="94" cy="48" r="40"/><circle cx="140" cy="58" r="32"/>
-          <circle cx="172" cy="70" r="22"/><rect x="26" y="62" width="170" height="30" rx="15"/>
+      <linearGradient id="path" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#F1F2FF"/>
+        <stop offset="1" stop-color="#DDE2FB"/>
+      </linearGradient>
+
+      <!-- puffy sky cloud, 240 x 100, flat-ish bottom with a soft blue underside -->
+      <symbol id="cloud" viewBox="0 0 240 100" overflow="visible">
+        <g fill="#D3EBFF">
+          <circle cx="58" cy="66" r="32"/><circle cx="106" cy="50" r="44"/><circle cx="160" cy="60" r="36"/>
+          <circle cx="200" cy="74" r="24"/><rect x="28" y="66" width="196" height="32" rx="16"/>
         </g>
         <g fill="#FFFFFF">
-          <circle cx="52" cy="54" r="30"/><circle cx="94" cy="40" r="40"/><circle cx="140" cy="50" r="32"/>
-          <circle cx="172" cy="62" r="22"/><rect x="26" y="54" width="170" height="28" rx="14"/>
+          <circle cx="58" cy="60" r="30"/><circle cx="106" cy="44" r="42"/><circle cx="160" cy="54" r="34"/>
+          <circle cx="200" cy="68" r="22"/><rect x="30" y="60" width="192" height="28" rx="14"/>
         </g>
-        <ellipse cx="80" cy="22" rx="16" ry="7" fill="#FFFFFF" opacity="0.9"/>
+        <ellipse cx="92" cy="22" rx="18" ry="8" fill="#FFFFFF" opacity="0.9"/>
       </symbol>
-      <!-- a round cartoon tree, trunk base at (0,0) -->
-      <symbol id="treeLime" viewBox="-40 -100 80 100" overflow="visible">
-        <rect x="-6" y="-34" width="12" height="34" rx="5" fill="#A0703F" stroke="#7A5230" stroke-width="2"/>
-        <circle cx="0" cy="-62" r="34" fill="#9BE65A" stroke="#58A93A" stroke-width="3"/>
-        <circle cx="-10" cy="-74" r="11" fill="#C4F590"/>
+
+      <!-- round cartoon trees, trunk base at the symbol's (40, 100) -->
+      <symbol id="treeLime" viewBox="0 0 80 100" overflow="visible">
+        <ellipse cx="40" cy="99" rx="22" ry="5" fill="#2E9A3A" opacity="0.35"/>
+        <rect x="34" y="62" width="12" height="38" rx="6" fill="#B07A45"/>
+        <circle cx="40" cy="40" r="34" fill="#8EDB4E"/>
+        <circle cx="40" cy="46" r="28" fill="#7BCB41" opacity="0.5"/>
+        <circle cx="30" cy="28" r="13" fill="#C3F38A"/>
       </symbol>
-      <symbol id="treePink" viewBox="-40 -100 80 100" overflow="visible">
-        <rect x="-6" y="-34" width="12" height="34" rx="5" fill="#A0703F" stroke="#7A5230" stroke-width="2"/>
-        <circle cx="0" cy="-62" r="34" fill="#FF9FCF" stroke="#D9659F" stroke-width="3"/>
-        <circle cx="-10" cy="-74" r="11" fill="#FFD0E7"/>
+      <symbol id="treePink" viewBox="0 0 80 100" overflow="visible">
+        <ellipse cx="40" cy="99" rx="22" ry="5" fill="#2E9A3A" opacity="0.35"/>
+        <rect x="34" y="62" width="12" height="38" rx="6" fill="#B07A45"/>
+        <circle cx="40" cy="40" r="34" fill="#FF9CCB"/>
+        <circle cx="40" cy="46" r="28" fill="#F27DB6" opacity="0.45"/>
+        <circle cx="30" cy="28" r="13" fill="#FFD3E8"/>
       </symbol>
-      <symbol id="treeLilac" viewBox="-40 -100 80 100" overflow="visible">
-        <rect x="-6" y="-34" width="12" height="34" rx="5" fill="#A0703F" stroke="#7A5230" stroke-width="2"/>
-        <circle cx="0" cy="-62" r="34" fill="#C7A6FF" stroke="#8F6BDB" stroke-width="3"/>
-        <circle cx="-10" cy="-74" r="11" fill="#E4D6FF"/>
+      <symbol id="treeLilac" viewBox="0 0 80 100" overflow="visible">
+        <ellipse cx="40" cy="99" rx="22" ry="5" fill="#2E9A3A" opacity="0.35"/>
+        <rect x="34" y="62" width="12" height="38" rx="6" fill="#B07A45"/>
+        <circle cx="40" cy="40" r="34" fill="#C3A4FF"/>
+        <circle cx="40" cy="46" r="28" fill="#A985F2" opacity="0.45"/>
+        <circle cx="30" cy="28" r="13" fill="#E6DAFF"/>
       </symbol>
-      <!-- a catchable rain cloud -->
-      <symbol id="rainCloud" viewBox="-60 -50 120 100" overflow="visible">
-        <g stroke="#5B79B8" stroke-width="3" fill="#B9C9E8">
-          <circle cx="-22" cy="-6" r="20"/><circle cx="4" cy="-18" r="26"/><circle cx="28" cy="-4" r="19"/>
-        </g>
-        <g fill="#B9C9E8"><circle cx="-22" cy="-6" r="18.5"/><circle cx="4" cy="-18" r="24.5"/><circle cx="28" cy="-4" r="17.5"/>
-          <rect x="-40" y="-6" width="85" height="18" rx="9"/></g>
-        <rect x="-41.5" y="-8" width="88" height="21.5" rx="10.5" fill="none" stroke="#5B79B8" stroke-width="3" stroke-dasharray="0 22 70 200"/>
-        <circle cx="-4" cy="-28" r="8" fill="#DCE6F7"/>
-        <g fill="#54C3FF" stroke="#2C8BD9" stroke-width="2">
-          <path d="M-20 26 q4 7 0 10 q-4 -3 0 -10z"/><path d="M4 32 q4 7 0 10 q-4 -3 0 -10z"/><path d="M26 24 q4 7 0 10 q-4 -3 0 -10z"/>
-        </g>
+
+      <!-- catchable rain cloud (weather on a field), centred on (60, 50) -->
+      <symbol id="rainCloud" viewBox="0 0 120 110" overflow="visible">
+        <ellipse cx="60" cy="104" rx="38" ry="7" fill="#2E9A3A" opacity="0.3"/>
+        <g fill="#AFC3EA"><circle cx="36" cy="46" r="20"/><circle cx="62" cy="34" r="26"/><circle cx="88" cy="46" r="19"/><rect x="18" y="44" width="88" height="22" rx="11"/></g>
+        <g fill="#C9D8F5"><circle cx="36" cy="42" r="18"/><circle cx="62" cy="30" r="24"/><circle cx="88" cy="42" r="17"/><rect x="20" y="40" width="84" height="20" rx="10"/></g>
+        <circle cx="54" cy="20" r="8" fill="#E6EEFC"/>
+        <g fill="#5CC8FF"><path d="M38 70 q5 9 0 13 q-5 -4 0 -13z"/><path d="M60 78 q5 9 0 13 q-5 -4 0 -13z"/><path d="M82 70 q5 9 0 13 q-5 -4 0 -13z"/></g>
       </symbol>
-      <!-- a small floating island -->
-      <symbol id="islet" viewBox="-100 -30 200 160" overflow="visible">
-        <path d="M-92 0 C-80 40 -40 70 -14 118 C-6 130 6 130 12 116 C40 66 82 40 92 0 Z" fill="url(#rock)" stroke="#A86E45" stroke-width="3"/>
-        <path d="M-80 30 C-50 40 -20 36 0 42 C24 48 56 40 78 30" fill="none" stroke="#B57A4E" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
-        <path d="M-50 70 C-30 76 -6 72 12 78 C26 82 40 76 52 70" fill="none" stroke="#B57A4E" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
-        <ellipse cx="0" cy="0" rx="96" ry="20" fill="#5CC94A" stroke="#3E9E3A" stroke-width="3"/>
-        <ellipse cx="0" cy="-5" rx="92" ry="16" fill="#8BEA5E"/>
+      <!-- catchable thundercloud -->
+      <symbol id="thunderCloud" viewBox="0 0 120 110" overflow="visible">
+        <ellipse cx="60" cy="104" rx="38" ry="7" fill="#2E9A3A" opacity="0.3"/>
+        <g fill="#8C86D8"><circle cx="36" cy="46" r="20"/><circle cx="62" cy="34" r="26"/><circle cx="88" cy="46" r="19"/><rect x="18" y="44" width="88" height="22" rx="11"/></g>
+        <g fill="#A7A1EC"><circle cx="36" cy="42" r="18"/><circle cx="62" cy="30" r="24"/><circle cx="88" cy="42" r="17"/><rect x="20" y="40" width="84" height="20" rx="10"/></g>
+        <circle cx="54" cy="20" r="8" fill="#C8C3F7"/>
+        <path d="M64 58 L52 80 L62 80 L56 98 L76 72 L65 72 L72 58 Z" fill="#FFE15A" stroke="#F2A31F" stroke-width="2.5" stroke-linejoin="round"/>
+      </symbol>
+
+      <!-- small floating island, 200 wide, grass top centred on (100, 30) -->
+      <symbol id="islet" viewBox="0 0 200 170" overflow="visible">
+        <path d="M8 30 C 14 64, 48 92, 74 136 C 86 158, 112 158, 124 136 C 150 92, 186 64, 192 30 Z" fill="#D99E68"/>
+        <path d="M8 30 C 12 50, 30 64, 50 72 C 80 80, 120 80, 150 72 C 170 64, 188 50, 192 30 Z" fill="url(#rockA)"/>
+        <path d="M60 104 C 84 112, 116 112, 140 104" fill="none" stroke="#C88A57" stroke-width="6" stroke-linecap="round"/>
+        <ellipse cx="100" cy="34" rx="96" ry="22" fill="#4FBF42"/>
+        <ellipse cx="100" cy="28" rx="92" ry="18" fill="#94E862"/>
       </symbol>
     </defs>
 
     <rect width="1280" height="720" fill="url(#sky)"/>
-    <circle cx="1010" cy="96" r="190" fill="url(#sunglow)"/>
-    <circle cx="1010" cy="96" r="44" fill="#FFF6C4"/>
+    <circle cx="1060" cy="104" r="170" fill="url(#sunglow)"/>
+    <circle cx="1060" cy="104" r="40" fill="#FFF4B8"/>
+    <circle cx="1060" cy="104" r="30" fill="#FFFBE0"/>
 
-    <!-- sky clouds -->
-    <use href="#cloud" x="60" y="70" width="200" height="92"/>
-    <use href="#cloud" x="430" y="18" width="140" height="64" opacity="0.95"/>
-    <use href="#cloud" x="760" y="120" width="170" height="78" opacity="0.95"/>
-    <use href="#cloud" x="1110" y="210" width="190" height="88"/>
-    <use href="#cloud" x="-50" y="300" width="160" height="72" opacity="0.9"/>
+    <!-- sky clouds (kept clear of the HUD) -->
+    <use href="#cloud" x="34"  y="66"  width="230" height="96"/>
+    <use href="#cloud" x="286" y="112" width="140" height="58" opacity="0.92"/>
+    <use href="#cloud" x="878" y="20"  width="150" height="62" opacity="0.92"/>
+    <use href="#cloud" x="1030" y="236" width="150" height="62"/>
 
     <!-- distant floating islands -->
-    <g transform="translate(1150 380) scale(0.62)">
-      <use href="#islet" x="-100" y="-30" width="200" height="160"/>
-      <use href="#treeLime" x="-70" y="-108" width="80" height="100" transform="translate(-40 6)"/>
-      <use href="#treePink" x="-10" y="-112" width="80" height="100" transform="translate(-10 0) scale(0.8)"/>
-    </g>
-    <g transform="translate(140 286) scale(0.42)">
-      <use href="#islet" x="-100" y="-30" width="200" height="160"/>
-      <use href="#treeLilac" x="-40" y="-100" width="80" height="100"/>
-    </g>
+    <use href="#islet" x="1062" y="352" width="150" height="128"/>
+    <use href="#treePink"  x="1090" y="334" width="36" height="45"/>
+    <use href="#treeLime"  x="1120" y="328" width="42" height="52"/>
 
-    <!-- sea of clouds on the horizon -->
+    <!-- the sea of clouds at the horizon -->
+    <g fill="#E4F4FF">
+      <circle cx="0" cy="452" r="40"/><circle cx="76" cy="440" r="36"/><circle cx="150" cy="450" r="40"/><circle cx="232" cy="442" r="34"/>
+      <circle cx="310" cy="452" r="40"/><circle cx="392" cy="444" r="36"/><circle cx="476" cy="452" r="38"/><circle cx="560" cy="444" r="34"/>
+      <circle cx="640" cy="452" r="40"/><circle cx="722" cy="444" r="34"/><circle cx="806" cy="452" r="38"/><circle cx="890" cy="444" r="36"/>
+      <circle cx="972" cy="452" r="40"/><circle cx="1050" cy="442" r="34"/><circle cx="1128" cy="450" r="40"/><circle cx="1206" cy="440" r="36"/>
+      <circle cx="1284" cy="452" r="40"/>
+    </g>
     <g fill="#FFFFFF">
-      <circle cx="-10" cy="452" r="44"/><circle cx="70" cy="440" r="40"/><circle cx="150" cy="452" r="46"/><circle cx="240" cy="444" r="38"/>
-      <circle cx="320" cy="456" r="44"/><circle cx="410" cy="446" r="40"/><circle cx="500" cy="456" r="42"/><circle cx="590" cy="446" r="38"/>
-      <circle cx="680" cy="456" r="46"/><circle cx="770" cy="444" r="38"/><circle cx="860" cy="454" r="42"/><circle cx="950" cy="446" r="40"/>
-      <circle cx="1040" cy="456" r="44"/><circle cx="1130" cy="444" r="38"/><circle cx="1210" cy="454" r="44"/><circle cx="1290" cy="446" r="40"/>
-      <rect x="-20" y="452" width="1320" height="60"/>
-    </g>
-    <g fill="#E3F2FF">
-      <circle cx="30" cy="478" r="30"/><circle cx="200" cy="482" r="30"/><circle cx="380" cy="478" r="30"/><circle cx="560" cy="482" r="30"/>
-      <circle cx="740" cy="478" r="30"/><circle cx="920" cy="482" r="30"/><circle cx="1100" cy="478" r="30"/><circle cx="1260" cy="482" r="30"/>
+      <circle cx="30" cy="470" r="34"/><circle cx="112" cy="462" r="30"/><circle cx="192" cy="472" r="34"/><circle cx="272" cy="464" r="30"/>
+      <circle cx="352" cy="472" r="34"/><circle cx="432" cy="464" r="30"/><circle cx="512" cy="472" r="34"/><circle cx="592" cy="464" r="30"/>
+      <circle cx="672" cy="472" r="34"/><circle cx="752" cy="464" r="30"/><circle cx="832" cy="472" r="34"/><circle cx="912" cy="464" r="30"/>
+      <circle cx="992" cy="472" r="34"/><circle cx="1072" cy="464" r="30"/><circle cx="1152" cy="472" r="34"/><circle cx="1232" cy="464" r="30"/>
+      <rect x="-10" y="470" width="1300" height="250"/>
     </g>
 
-    <!-- the island: cliff bands under the edge, then the grass top -->
-    <path d="M-40 540 C 120 500, 380 486, 640 486 C 900 486, 1160 500, 1320 540 L 1320 720 L -40 720 Z" fill="#C98C5C"/>
-    <path d="M-40 520 C 120 482, 380 470, 640 470 C 900 470, 1160 482, 1320 520 L 1320 720 L -40 720 Z" fill="#E7B784"/>
-    <path d="M-40 506 C 120 468, 380 456, 640 456 C 900 456, 1160 468, 1320 506 L 1320 720 L -40 720 Z" fill="#46B843"/>
-    <!-- grass top, cut away at the bottom corners so the cliff and the cloud sea show there -->
-    <path d="M-40 496 C 120 458, 380 446, 640 446 C 900 446, 1160 458, 1320 496 L 1320 560 C 1240 620, 1200 676, 1186 720 L 94 720 C 80 676, 40 620, -40 566 Z" fill="url(#grass)"/>
-    <path d="M1320 560 C 1240 620, 1200 676, 1186 720 L 1206 720 C 1222 682, 1258 640, 1320 600 Z" fill="#46B843"/>
-    <path d="M1320 600 C 1258 640, 1222 682, 1206 720 L 1280 720 L 1320 690 Z" fill="#E7B784"/>
-    <path d="M1320 640 C 1280 664, 1262 690, 1252 720 L 1320 720 Z" fill="#C98C5C"/>
-    <path d="M-40 566 C 40 620, 80 676, 94 720 L 74 720 C 58 684, 24 646, -40 606 Z" fill="#46B843"/>
-    <path d="M-40 606 C 24 646, 58 684, 74 720 L 0 720 L -40 690 Z" fill="#E7B784"/>
-    <path d="M-40 646 C 0 670, 18 694, 26 720 L -40 720 Z" fill="#C98C5C"/>
-    <!-- cloud sea below the cliffs at the corners -->
+    <!-- the island: rock bands under the edge, a darker grass lip, then the grass top -->
+    <path d="M-40 560 C 40 610, 96 664, 118 740 L 1162 740 C 1184 664, 1240 610, 1320 560 L 1320 740 L -40 740 Z" fill="#FFFFFF"/>
+    <path d="M-40 500 C 220 470, 420 462, 640 462 C 860 462, 1060 470, 1320 500
+             L 1320 604 C 1260 640, 1214 686, 1200 740 L 80 740 C 66 686, 20 640, -40 604 Z" fill="#C98A58"/>
+    <path d="M-40 500 C 220 470, 420 462, 640 462 C 860 462, 1060 470, 1320 500
+             L 1320 586 C 1254 624, 1204 676, 1186 740 L 94 740 C 76 676, 26 624, -40 586 Z" fill="url(#rockA)"/>
+    <path d="M-40 500 C 220 470, 420 462, 640 462 C 860 462, 1060 470, 1320 500
+             L 1320 556 C 1246 600, 1188 660, 1168 740 L 112 740 C 92 660, 34 600, -40 556 Z" fill="#46B843"/>
+    <path d="M-40 496 C 220 466, 420 458, 640 458 C 860 458, 1060 466, 1320 496
+             L 1320 540 C 1242 586, 1180 650, 1158 740 L 122 740 C 100 650, 38 586, -40 540 Z" fill="url(#grass)"/>
+    <!-- chunky rock seams on the cliff faces -->
+    <g fill="none" stroke="#C98A58" stroke-width="6" stroke-linecap="round">
+      <path d="M2 600 C 24 614, 44 632, 58 650"/>
+      <path d="M1278 600 C 1256 614, 1236 632, 1222 650"/>
+    </g>
+    <!-- cloud sea wrapping the island corners -->
     <g fill="#FFFFFF">
-      <circle cx="-6" cy="712" r="30"/><circle cx="34" cy="728" r="22"/>
-      <circle cx="1270" cy="706" r="30"/><circle cx="1240" cy="728" r="20"/>
+      <circle cx="-8" cy="690" r="42"/><circle cx="46" cy="724" r="34"/>
+      <circle cx="1290" cy="690" r="42"/><circle cx="1236" cy="724" r="34"/>
     </g>
 
-    <!-- path of pavers to the horizon -->
-    <g fill="#E6E9FF" stroke="#BFC6EE" stroke-width="2">
-      <rect x="600" y="458" width="80" height="10" rx="5"/>
-      <rect x="590" y="476" width="100" height="13" rx="6"/>
-      <rect x="578" y="499" width="124" height="16" rx="8"/>
-      <rect x="564" y="527" width="152" height="20" rx="10"/>
-      <rect x="546" y="562" width="188" height="25" rx="12"/>
-      <rect x="524" y="605" width="232" height="31" rx="15"/>
-      <rect x="498" y="658" width="284" height="38" rx="18"/>
+    <!-- light paver path from the camera to the horizon -->
+    <path d="M614 458 L 666 458 L 750 740 L 530 740 Z" fill="url(#path)" stroke="#BCC5EC" stroke-width="3" stroke-linejoin="round"/>
+    <g stroke="#C9D0F2" stroke-width="2.5" stroke-linecap="round">
+      <line x1="610" y1="478" x2="670" y2="478"/><line x1="602" y1="504" x2="678" y2="504"/>
+      <line x1="592" y1="536" x2="688" y2="536"/><line x1="580" y1="576" x2="700" y2="576"/>
+      <line x1="565" y1="626" x2="715" y2="626"/><line x1="547" y1="686" x2="733" y2="686"/>
+      <line x1="640" y1="626" x2="640" y2="686"/><line x1="640" y1="536" x2="640" y2="576"/>
     </g>
 
-    <!-- weather field pads (lighter, raised, white dashed border) -->
-    <g>
-      <path d="M150 560 L 380 548 L 400 620 L 120 636 Z" fill="#46B843"/>
-      <path d="M150 552 L 380 540 L 400 612 L 120 628 Z" fill="url(#field)"/>
-      <path d="M160 559 L 372 548 L 389 605 L 133 620 Z" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="12 9" stroke-linejoin="round"/>
-      <path d="M900 548 L 1130 560 L 1160 636 L 880 620 Z" fill="#46B843"/>
-      <path d="M900 540 L 1130 552 L 1160 628 L 880 612 Z" fill="url(#field)"/>
-      <path d="M908 548 L 1122 559 L 1147 620 L 891 605 Z" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="12 9" stroke-linejoin="round"/>
-    </g>
+    <!-- weather fields: raised lighter pads with a white dashed border -->
+    <path d="M60 584 L 330 572 L 352 664 L 26 680 Z" fill="#46B843"/>
+    <path d="M60 576 L 330 564 L 352 656 L 26 672 Z" fill="url(#field)"/>
+    <path d="M72 584 L 320 573 L 339 647 L 42 662 Z" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="13 9" stroke-linejoin="round"/>
+    <path d="M960 562 L 1220 574 L 1254 660 L 944 648 Z" fill="#46B843"/>
+    <path d="M960 554 L 1220 566 L 1254 652 L 944 640 Z" fill="url(#field)"/>
+    <path d="M971 562 L 1210 573 L 1240 643 L 958 632 Z" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="13 9" stroke-linejoin="round"/>
+
+    <!-- trees along the island edge -->
+    <use href="#treeLilac" x="1194" y="428" width="64" height="80"/>
+    <use href="#treeLime"  x="1144" y="446" width="56" height="70"/>
+    <use href="#treePink"  x="1032" y="452" width="58" height="72"/>
+    <use href="#treeLime"  x="206"  y="442" width="58" height="72"/>
 
     <!-- flowers -->
     <g>
-      <circle cx="70" cy="532" r="5" fill="#FFFFFF"/><circle cx="70" cy="532" r="2.2" fill="#FFD23F"/>
-      <circle cx="96" cy="546" r="5" fill="#FF9FCF"/><circle cx="96" cy="546" r="2.2" fill="#FFF3A0"/>
-      <circle cx="440" cy="676" r="5" fill="#FFFFFF"/><circle cx="440" cy="676" r="2.2" fill="#FFD23F"/>
-      <circle cx="462" cy="690" r="5" fill="#FF9FCF"/><circle cx="462" cy="690" r="2.2" fill="#FFF3A0"/>
-      <circle cx="830" cy="684" r="5" fill="#FFFFFF"/><circle cx="830" cy="684" r="2.2" fill="#FFD23F"/>
-      <circle cx="852" cy="670" r="5" fill="#C7A6FF"/><circle cx="852" cy="670" r="2.2" fill="#FFF3A0"/>
-      <circle cx="1210" cy="540" r="5" fill="#FFFFFF"/><circle cx="1210" cy="540" r="2.2" fill="#FFD23F"/>
-      <circle cx="1234" cy="552" r="5" fill="#FF9FCF"/><circle cx="1234" cy="552" r="2.2" fill="#FFF3A0"/>
+      <circle cx="256" cy="542" r="5" fill="#FFFFFF"/><circle cx="256" cy="542" r="2.2" fill="#FFD23F"/>
+      <circle cx="278" cy="552" r="5" fill="#FF9FCF"/><circle cx="278" cy="552" r="2.2" fill="#FFF3A0"/>
+      <circle cx="1000" cy="532" r="5" fill="#FFFFFF"/><circle cx="1000" cy="532" r="2.2" fill="#FFD23F"/>
+      <circle cx="1022" cy="540" r="5" fill="#C7A6FF"/><circle cx="1022" cy="540" r="2.2" fill="#FFF3A0"/>
+      <circle cx="404" cy="700" r="5" fill="#FFFFFF"/><circle cx="404" cy="700" r="2.2" fill="#FFD23F"/>
+      <circle cx="880" cy="706" r="5" fill="#FF9FCF"/><circle cx="880" cy="706" r="2.2" fill="#FFF3A0"/>
+      <circle cx="1004" cy="690" r="5" fill="#FFFFFF"/><circle cx="1004" cy="690" r="2.2" fill="#FFD23F"/>
     </g>
 
-    <!-- trees along the island edge -->
-    <use href="#treePink"  x="214" y="400" width="80" height="100" transform="translate(-40 -100) scale(1)"/>
-    <use href="#treeLime"  x="10" y="420" width="80" height="100"/>
-    <use href="#treeLilac" x="1040" y="378" width="80" height="100"/>
-    <use href="#treeLime"  x="1182" y="402" width="80" height="100"/>
-    <use href="#treePink"  x="1110" y="428" width="64" height="80"/>
-
     <!-- catchable weather on the fields -->
-    <use href="#rainCloud" x="200" y="500" width="120" height="100"/>
-    <use href="#rainCloud" x="960" y="498" width="120" height="100"/>
+    <use href="#rainCloud"    x="120"  y="540" width="110" height="100"/>
+    <use href="#thunderCloud" x="1060" y="526" width="110" height="100"/>
   </svg>
 
-  <!-- Roblox core UI (not ours): keep the corners free -->
-  <div class="core" style="left:12px; width:124px;">
+  <!-- Roblox core UI (not ours): the top corners stay free -->
+  <div class="core" style="left:12px;">
     <b><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="4" width="16" height="3" rx="1.5" fill="#fff"/><rect x="3" y="9.5" width="16" height="3" rx="1.5" fill="#fff"/><rect x="3" y="15" width="16" height="3" rx="1.5" fill="#fff"/></svg></b>
     <b><svg width="22" height="22" viewBox="0 0 22 22"><path d="M3 5 a3 3 0 0 1 3-3 h10 a3 3 0 0 1 3 3 v7 a3 3 0 0 1-3 3 h-6 l-4 4 v-4 a3 3 0 0 1-3-3z" fill="#fff"/></svg></b>
+  </div>
+  <div class="core" style="right:12px;">
     <b><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="4" cy="11" r="2.2" fill="#fff"/><circle cx="11" cy="11" r="2.2" fill="#fff"/><circle cx="18" cy="11" r="2.2" fill="#fff"/></svg></b>
   </div>
-  <div class="core" style="right:12px; width:44px; padding:0 4px;">
-    <b><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="4" width="16" height="3" rx="1.5" fill="#fff"/><rect x="3" y="9.5" width="11" height="3" rx="1.5" fill="#fff"/><rect x="3" y="15" width="14" height="3" rx="1.5" fill="#fff"/></svg></b>
-  </div>
 
-  <!-- top centre: currency capsules -->
-  <div class="capsule" style="left:452px; top:64px; width:212px;">
+  <!-- TOP CENTRE: currency capsules (group centred on x 640) -->
+  <div class="capsule" style="left:462px; top:68px; width:208px;">
     <img class="cico" src="../assets/ui/Volts.png" alt="">
     <span class="val">12.4M</span>
-    <div class="candy c-leaf"><div class="face"><span class="lbl">+</span></div></div>
+    <div class="candy sm c-leaf"><div class="face"><span class="lbl">+</span></div></div>
   </div>
-  <div class="capsule" style="left:700px; top:64px; width:128px;">
+  <div class="capsule" style="left:712px; top:68px; width:122px;">
     <img class="cico" src="../assets/ui/ClimateShift.png" alt="">
     <span class="val">3</span>
   </div>
 
-  <!-- toast -->
-  <div class="toast c-leaf" style="left:470px; top:124px; width:340px; --accent:#1C6229;">
-    <div class="disk"><img src="../assets/ui/Check.png" alt=""></div>
-    <span>Vacuum Power is now <em>Lv 24!</em></span>
+  <!-- toast (slides down under the capsules) -->
+  <div class="toast c-bolt" style="left:640px; top:128px; transform:translateX(-50%);">
+    <div class="disk"><img src="../assets/ui/Power.png" alt=""></div>
+    <span>Vacuum Power is now <em style="color:#1F8F38">Lv 24!</em></span>
   </div>
 
-  <!-- left: menu buttons (two columns) -->
-  <div class="hbtn c-sky" style="left:24px; top:184px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Pets.png" alt=""></div></div></div><span class="hl ws">Pets</span><span class="badge" style="right:-6px; top:-6px;">!</span></div>
-  <div class="hbtn c-sky" style="left:116px; top:184px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Eggs.png" alt=""></div></div></div><span class="hl ws">Eggs</span></div>
-  <div class="hbtn c-sky" style="left:24px; top:288px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Shop.png" alt=""></div></div></div><span class="hl ws">Shop</span></div>
-  <div class="hbtn c-bolt" style="left:116px; top:288px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Upgrades.png" alt=""></div></div></div><span class="hl ws">Upgrades</span></div>
-  <div class="hbtn c-sky" style="left:24px; top:392px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Rewards.png" alt=""></div></div></div><span class="hl ws">Rewards</span><span class="badge" style="right:-6px; top:-6px;">2</span></div>
-  <div class="hbtn c-sky" style="left:116px; top:392px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Teleport.png" alt=""></div></div></div><span class="hl ws">Teleport</span></div>
-  <div class="hbtn c-sky" style="left:24px; top:496px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/ClimateShift.png" alt=""></div></div></div><span class="hl ws">Shift</span></div>
-  <div class="hbtn c-sky" style="left:116px; top:496px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Settings.png" alt=""></div></div></div><span class="hl ws">Settings</span></div>
+  <!-- LEFT: weather-badge buttons, two columns (x 24 / 116), rows every 100 px -->
+  <div class="hbtn c-sky" style="left:24px;  top:168px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Pets.png" alt=""></div></div></div><span class="hl ws">Pets</span><span class="badge" style="right:-8px; top:-6px;">!</span></div>
+  <div class="hbtn c-sky" style="left:116px; top:168px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Eggs.png" alt=""></div></div></div><span class="hl ws">Eggs</span></div>
+  <div class="hbtn c-sky" style="left:24px;  top:268px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Shop.png" alt=""></div></div></div><span class="hl ws">Shop</span></div>
+  <div class="hbtn c-sky" style="left:116px; top:268px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Upgrades.png" alt=""></div></div></div><span class="hl ws">Upgrades</span></div>
+  <div class="hbtn c-sky" style="left:24px;  top:368px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Rewards.png" alt=""></div></div></div><span class="hl ws">Rewards</span><span class="badge" style="right:-8px; top:-6px;">2</span></div>
+  <div class="hbtn c-sky" style="left:116px; top:368px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Teleport.png" alt=""></div></div></div><span class="hl ws">Teleport</span></div>
+  <div class="hbtn c-sky" style="left:24px;  top:468px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/ClimateShift.png" alt=""></div></div></div><span class="hl ws">Shift</span></div>
+  <div class="hbtn c-sky" style="left:116px; top:468px;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Settings.png" alt=""></div></div></div><span class="hl ws">Settings</span></div>
 
-  <!-- right: active boost + storm radar -->
-  <div class="timer c-sunset" style="left:1192px; top:184px; --p:72%;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Energy.png" alt="" style="width:40px;height:40px"></div></div></div><span class="chip">x2</span><span class="tl ws">4:32</span></div>
-  <div class="timer c-storm" style="left:1192px; top:288px; --p:40%;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/MegaStorm.png" alt="" style="width:42px;height:42px"></div></div></div><span class="chip">!</span><span class="tl ws">1:45</span></div>
+  <!-- RIGHT: active boost timer + Storm Radar alert (same rows as the left column) -->
+  <div class="timer c-sunset" style="left:1188px; top:168px; --p:72%;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Volts.png" alt="" style="width:40px;height:40px"></div></div></div><span class="chip">x2</span><span class="tl ws">4:32</span></div>
+  <div class="timer c-storm" style="left:1188px; top:268px; --p:40%;"><div class="orb"><div class="ring"><div class="face"><img src="../assets/ui/Radar.png" alt="" style="width:40px;height:40px"></div></div></div><span class="badge" style="right:-8px; top:-6px;">!</span><span class="tl ws">1:45</span></div>
 
-  <!-- the Upgrades window -->
-  <div class="window" style="left:260px; top:184px; width:760px; height:414px;">
+  <!-- the Upgrades cloud window (760 x 412, centred) -->
+  <div class="window" style="left:260px; top:196px; width:760px; height:412px;">
     <div class="wshadow"></div>
-    <div class="puffs line">
-      <i style="left:548px; top:-22px; width:58px; height:58px;"></i>
-      <i style="left:588px; top:-34px; width:76px; height:76px;"></i>
-      <i style="left:644px; top:-18px; width:52px; height:52px;"></i>
+    <!-- cloud puffs: Ink discs first, white discs on top, both behind the body -->
+    <div class="puffs">
+      <i style="left:540px; top:-26px; width:64px; height:64px;"></i>
+      <i style="left:582px; top:-44px; width:88px; height:88px;"></i>
+      <i style="left:650px; top:-22px; width:56px; height:56px;"></i>
+      <b style="left:543px; top:-23px; width:58px; height:58px;"></b>
+      <b style="left:585px; top:-41px; width:82px; height:82px;"></b>
+      <b style="left:653px; top:-19px; width:50px; height:50px;"></b>
     </div>
     <div class="wbody">
       <div class="band"></div>
-      <div class="puffs fill">
-        <i style="left:551px; top:-19px; width:52px; height:52px;"></i>
-        <i style="left:591px; top:-31px; width:70px; height:70px;"></i>
-        <i style="left:647px; top:-15px; width:46px; height:46px;"></i>
-      </div>
-      <div class="wtitle ws3">Upgrades</div>
+      <div class="wtitle ws6">Upgrades</div>
       <div class="content">
 
         <div class="ucard c-bolt">
           <div class="well"><img src="../assets/ui/Power.png" alt=""></div>
-          <div class="uname">Vacuum Power <span class="lv">Lv 24 / 60</span></div>
+          <div class="uname">Vacuum Power <span class="lv">Lv 24</span></div>
           <div class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="ustat"><div class="cap body-b">Strength</div><div class="vals"><span class="old">303</span><svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg><span>352</span></div></div>
+          <div class="ustat"><div class="cap">Strength</div><div class="vals"><span class="old">303</span><svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg><span class="new">352</span></div></div>
           <div class="candy c-storm bmax"><div class="face"><span class="lbl">MAX</span></div></div>
           <div class="candy c-leaf bbuy"><div class="face"><img class="ico" src="../assets/ui/Volts.png" alt=""><span class="lbl">1.23M</span></div></div>
         </div>
 
         <div class="ucard c-rain">
           <div class="well"><img src="../assets/ui/Tank.png" alt=""></div>
-          <div class="uname">Storm Tank <span class="lv">Lv 22 / 60</span></div>
-          <div class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="part"><b style="width:67%"></b></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="ustat"><div class="cap body-b">Capacity</div><div class="vals"><span class="old">13.6K</span><svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg><span>16.5K</span></div></div>
+          <div class="uname">Storm Tank <span class="lv">Lv 22</span></div>
+          <div class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="ustat"><div class="cap">Capacity</div><div class="vals"><span class="old">13.6K</span><svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg><span class="new">16.5K</span></div></div>
           <div class="candy c-storm bmax"><div class="face"><span class="lbl">MAX</span></div></div>
           <div class="candy c-leaf bbuy"><div class="face"><img class="ico" src="../assets/ui/Volts.png" alt=""><span class="lbl">676K</span></div></div>
         </div>
 
         <div class="ucard c-storm">
           <div class="well"><img src="../assets/ui/Range.png" alt=""></div>
-          <div class="uname">Vacuum Range <span class="lv">Lv 6 / 10</span></div>
+          <div class="uname">Vacuum Range <span class="lv">Lv 6</span></div>
           <div class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
-          <div class="ustat"><div class="cap body-b">Reach</div><div class="vals"><span class="old">37</span><svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg><span>40</span><span class="unit">studs</span></div></div>
+          <div class="ustat"><div class="cap">Reach</div><div class="vals"><span class="old">37</span><svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg><span class="new">40</span><span class="unit">studs</span></div></div>
           <div class="candy c-storm bmax"><div class="face"><span class="lbl">MAX</span></div></div>
           <div class="candy c-leaf bbuy"><div class="face"><img class="ico" src="../assets/ui/Volts.png" alt=""><span class="lbl">512K</span></div></div>
         </div>
 
         <div class="ucard c-leaf">
           <div class="well"><img src="../assets/ui/Speed.png" alt=""></div>
-          <div class="uname">Storm Boots <span class="lv">Lv 8 / 10</span></div>
+          <div class="uname">Storm Boots <span class="lv">Lv 8</span></div>
           <div class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
-          <div class="ustat"><div class="cap body-b">Run speed</div><div class="vals"><span class="old">30</span><svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg><span>32</span></div></div>
+          <div class="ustat"><div class="cap">Run speed</div><div class="vals"><span class="old">30</span><svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg><span class="new">32</span></div></div>
           <div class="candy c-storm bmax"><div class="face"><span class="lbl">MAX</span></div></div>
           <div class="candy c-leaf bbuy"><div class="face"><img class="ico" src="../assets/ui/Volts.png" alt=""><span class="lbl">6.55M</span></div></div>
         </div>
@@ -504,38 +529,200 @@
     </div></div>
   </div>
 
-  <!-- bottom centre: storm jar + SELL -->
-  <div class="jar" style="left:340px; top:640px; width:444px;">
+  <!-- BOTTOM CENTRE: storm jar + SELL (group centred on x 640) -->
+  <div class="jar" style="left:353px; top:640px; width:440px;">
     <div class="track">
       <div class="liquid" style="width:62%;">
-        <i class="bub" style="left:70px; top:24px; width:12px; height:12px;"></i>
-        <i class="dot" style="left:98px; top:32px; width:6px; height:6px;"></i>
-        <i class="bub" style="left:150px; top:16px; width:9px; height:9px;"></i>
-        <i class="dot" style="left:196px; top:30px; width:5px; height:5px;"></i>
-        <i class="bub" style="left:232px; top:22px; width:14px; height:14px;"></i>
-        <i class="dot" style="left:252px; top:14px; width:6px; height:6px;"></i>
+        <i class="bub" style="left:46px;  top:26px; width:12px; height:12px;"></i>
+        <i class="dot" style="left:70px;  top:33px; width:6px;  height:6px;"></i>
+        <i class="bub" style="left:96px;  top:16px; width:9px;  height:9px;"></i>
+        <i class="dot" style="left:122px; top:29px; width:5px;  height:5px;"></i>
+        <i class="bub" style="left:142px; top:22px; width:7px;  height:7px;"></i>
       </div>
-      <i class="glare"></i><i class="glare2"></i>
+      <i class="glass"></i>
       <div class="amt">620 / 1,000</div>
     </div>
     <img class="jico" src="../assets/ui/Tank.png" alt="">
   </div>
-  <div class="candy c-leaf" style="position:absolute; left:804px; top:630px; --w:136px; --h:66px;">
-    <div class="face"><img class="ico" src="../assets/ui/Sell.png" alt="" style="--is:40px; margin-left:-6px;"><span class="lbl ws3" style="--fs:30px; -webkit-text-stroke:6px #1C6229;">SELL</span></div>
+  <div class="candy c-leaf" style="position:absolute; left:813px; top:634px; --w:136px; --h:64px;">
+    <div class="face"><img class="ico" src="../assets/ui/Sell.png" alt="" style="--is:40px; margin-left:-4px;"><span class="lbl" style="--fs:30px; -webkit-text-stroke:6px #1C6229;">SELL</span></div>
   </div>
 </div>
 
-<!-- =================================================================================== COMPONENT SHEET -->
+<!-- ================================================================================================ COMPONENT SHEET -->
 <div id="components" class="screen">
-  <div class="abs" style="left:32px; top:24px; font-size:30px; line-height:1;">Sky Lab UI kit</div>
-  <div class="abs body-m" style="left:34px; top:60px; font-size:13px; color:var(--ink-soft);">Storm Catcher Simulator · 1 px = 1 offset px at 1280×720 · outlines 3 px Ink (2 px on small parts)</div>
-  <!-- palette -->
-  <div id="palette"></div>
+  <!-- filled by the script below so every repeated part is built the same way -->
 </div>
 
 <script>
   const view = new URLSearchParams(location.search).get("view") || "hud";
   document.getElementById(view === "components" ? "components" : "hud").classList.add("on");
+
+  const ICON = (name) => `../assets/ui/${name}.png`;
+  const X_MARK = `<svg class="xmark" viewBox="0 0 22 22"><path d="M5 5 L17 17 M17 5 L5 17" stroke="#7D2030" stroke-width="9" stroke-linecap="round"/><path d="M5 5 L17 17 M17 5 L5 17" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/></svg>`;
+  const ARROW = `<svg width="18" height="16" viewBox="0 0 18 16"><path d="M2 5.5 h7 v-4 l7.5 6.5 l-7.5 6.5 v-4 h-7 z" fill="#5FD24E" stroke="#1C6229" stroke-width="2" stroke-linejoin="round"/></svg>`;
+
+  function candy(colour, label, { w = 96, h = 48, fs = 22, icon = null, is = 28, cls = "", style = "" } = {}) {
+    const ico = icon ? `<img class="ico" src="${ICON(icon)}" alt="">` : "";
+    const lbl = label ? `<span class="lbl">${label}</span>` : "";
+    return `<div class="candy c-${colour} ${cls}" style="--w:${w}px; --h:${h}px; --fs:${fs}px; --is:${is}px; ${style}"><div class="face">${ico}${lbl}</div></div>`;
+  }
+  function orb(colour, icon, size, extra = "") {
+    return `<div class="orb c-${colour}" style="inset:0; ${extra}"><div class="ring"><div class="face"><img src="${ICON(icon)}" alt="" style="width:${size}px;height:${size}px"></div></div></div>`;
+  }
+
+  if (view === "components") {
+    const root = document.getElementById("components");
+    let html = "";
+    const L = 32;          // left column x (728 wide)
+    const R = 808;         // right column x (440 wide)
+    const sec = (x, y, title, note = "") => `<div class="sec" style="left:${x}px; top:${y}px;">${title}${note ? `<span>${note}</span>` : ""}</div>`;
+    const cap = (x, y, text, extra = "") => `<div class="cap2" style="left:${x}px; top:${y}px; ${extra}">${text}</div>`;
+
+    // ---------------------------------------------------------------- title
+    html += `<div class="abs" style="left:${L}px; top:24px; font-size:30px; line-height:1;">Sky Lab UI kit</div>`;
+    html += `<div class="abs" style="left:${L + 1}px; top:60px; font-family:var(--body); font-weight:500; font-size:12px; line-height:1; color:var(--ink-soft);">Storm Catcher Simulator · 1 px = 1 offset px at 1280×720 · Ink outlines 3 px (2 px on small parts) · Fredoka One + Gotham</div>`;
+
+    // ---------------------------------------------------------------- palette (right column, top)
+    const palette = [
+      ["Ink", "#233066"], ["InkSoft", "#5B6A9E"], ["Cloud", "linear-gradient(#FFFFFF,#EAF3FF)"], ["Haze", "#D5E5FB"],
+      ["Sky", "linear-gradient(#5CC8FF,#2F86F2)"], ["Bolt", "linear-gradient(#FFE15A,#FFAA1F)"], ["Rain", "linear-gradient(#54E0FF,#1E9BEF)"],
+      ["Storm", "linear-gradient(#A98BFF,#6B4BE6)"], ["Leaf", "linear-gradient(#7BE36A,#33B24A)"], ["Coral", "linear-gradient(#FF7A85,#E43A58)"],
+      ["Sunset", "linear-gradient(#FFB15C,#F2702A)"],
+    ];
+    palette.forEach(([name, fill], i) => {
+      const x = R + i * 40;
+      html += `<div class="swatch" style="left:${x + 5}px; top:22px; background:${fill};"></div>`;
+      html += cap(x, 60, name, "width:40px; text-align:center; font-size:10px;");
+    });
+
+    // ---------------------------------------------------------------- candy buttons
+    const colours = ["sky", "bolt", "rain", "storm", "leaf", "coral", "sunset"];
+    const names = ["Sky", "Bolt", "Rain", "Storm", "Leaf", "Coral", "Sunset"];
+    html += sec(L, 88, "Candy button", "corner 14 · lip 5 px (face ×0.62) · shine over the top 35 % · label stroke ×0.55 · pressed: face 3 px down");
+    colours.forEach((c, i) => {
+      const x = L + 64 + i * 95;
+      html += `<div class="abs" style="left:${x}px; top:108px;">${candy(c, names[i], { w: 88, h: 48, fs: 20 })}</div>`;
+      html += `<div class="abs" style="left:${x}px; top:164px;">${candy(c, names[i], { w: 88, h: 48, fs: 20, cls: "pressed" })}</div>`;
+    });
+    html += cap(L, 127, "normal");
+    html += cap(L, 185, "pressed");
+
+    const vy = 226;
+    html += `<div class="abs" style="left:${L}px; top:${vy}px;">${candy("leaf", "1.23M", { w: 136, h: 50, fs: 22, icon: "Volts" })}</div>`;
+    html += `<div class="abs" style="left:${L + 152}px; top:${vy}px;">${candy("storm", "MAX", { w: 64, h: 50, fs: 18 })}</div>`;
+    html += `<div class="abs" style="left:${L + 232}px; top:${vy}px;">${candy("off", "6.55M", { w: 136, h: 50, fs: 22, icon: "Lock", is: 26 })}</div>`;
+    html += `<div class="abs" style="left:${L + 384}px; top:${vy}px;">${candy("bolt", "MAXED", { w: 112, h: 50, fs: 20 })}</div>`;
+    html += `<div class="abs" style="left:${L + 512}px; top:${vy}px;">${candy("sky", "Equip", { w: 104, h: 50, fs: 20, cls: "pill hover" })}</div>`;
+    html += `<div class="abs" style="left:${L + 636}px; top:${vy + 1}px;"><div class="candy round c-coral" style="--w:48px; --h:48px;"><div class="face">${X_MARK}</div></div></div>`;
+    html += `<div class="abs" style="left:${L + 698}px; top:${vy + 9}px;">${candy("leaf", "+", { w: 32, h: 32, fs: 26, cls: "sm" })}</div>`;
+    [["buy · Leaf + price", 0], ["buy max", 152], ["can't afford", 232], ["maxed", 384], ["pill · hover ×1.04", 512], ["close", 640], ["add", 702]].forEach(([t, x]) =>
+      html += cap(L + x, vy + 60, t));
+
+    // ---------------------------------------------------------------- tiles
+    html += sec(L, 314, "Tile · rarity pedestal", "Cloud, 2 px Haze, corner 18 · pedestal = bottom 30 % · selected: 3 px Sky + 4 px lift · equipped: check");
+    const tiles = [
+      ["Puffling", "Common", "common"], ["Droplet", "Uncommon", "uncommon"], ["Sunny", "Rare", "rare"],
+      ["Aurora Fox", "Epic", "epic"], ["Breeze King", "Legendary", "legendary"], ["Tempest Titan", "Exclusive", "exclusive"],
+    ];
+    tiles.forEach(([name, rarity, key], i) => {
+      const x = L + i * 123;
+      const sel = i === 2 ? " sel" : "";
+      const file = name.replace(/\s/g, "");
+      const chk = i === 4 ? `<img class="chk" src="${ICON("Check")}" alt="">` : "";
+      const fs = name.length > 12 ? "font-size:14px; top:11px;" : "";
+      html += `<div class="tile r-${key}${sel}" style="left:${x}px; top:338px;">
+        <div class="tname" style="${fs}">${name}</div><div class="ped"><span>${rarity}</span></div>
+        <img class="art" src="mockup/pets/${file}.png" alt="">${chk}</div>`;
+    });
+
+    // ---------------------------------------------------------------- storm jar
+    html += sec(L, 504, "Storm jar", "Haze track, 3 px Ink · Rain liquid, shine stripe, bubbles · amount Ink Fredoka · full: glow + wobble");
+    const jars = [[0, "0 / 1,000", "empty"], [50, "500 / 1,000", "half"], [100, "1,000 / 1,000", "full: glows and wobbles"]];
+    jars.forEach(([pct, amt, label], i) => {
+      const x = L + 24 + i * 250;
+      const full = pct === 100 ? " full" : "";
+      const bubbles = pct === 0 ? "" : `
+        <i class="bub" style="left:36px; top:26px; width:11px; height:11px;"></i>
+        <i class="dot" style="left:56px; top:33px; width:5px; height:5px;"></i>
+        <i class="bub" style="left:${pct === 100 ? 178 : 76}px; top:19px; width:8px; height:8px;"></i>
+        ${pct === 100 ? '<i class="dot" style="left:162px; top:31px; width:5px; height:5px;"></i>' : ""}`;
+      html += `<div class="jar${full}" style="left:${x}px; top:528px; width:204px;">
+        <div class="track"><div class="liquid" style="width:${pct}%; ${pct === 100 ? "border-radius:0;" : ""}">${bubbles}</div><i class="glass"></i>
+        <div class="amt" style="font-size:20px;">${amt}</div></div>
+        <img class="jico" src="${ICON("Tank")}" alt="" style="width:58px;height:58px;margin-top:-31px;left:-22px;">
+        ${pct === 100 ? '<span class="badge" style="right:-10px; top:-12px;">FULL</span>' : ""}</div>`;
+      html += cap(x + 2, 592, label);
+    });
+
+    // ---------------------------------------------------------------- right column: window header
+    html += sec(R, 88, "Cloud window · header");
+    const wy = 146, ww = 404;
+    html += `<div class="window" style="left:${R + 18}px; top:${wy}px; width:${ww}px; height:128px;">
+      <div class="wshadow"></div>
+      <div class="puffs">
+        <i style="left:222px; top:-24px; width:58px; height:58px;"></i>
+        <i style="left:260px; top:-40px; width:78px; height:78px;"></i>
+        <i style="left:320px; top:-20px; width:50px; height:50px;"></i>
+        <b style="left:225px; top:-21px; width:52px; height:52px;"></b>
+        <b style="left:263px; top:-37px; width:72px; height:72px;"></b>
+        <b style="left:323px; top:-17px; width:44px; height:44px;"></b>
+      </div>
+      <div class="wbody"><div class="band"></div><div class="wtitle ws6">Pets</div>
+        <div class="tabs" style="left:18px; right:18px; top:74px; height:44px;">
+          ${candy("sky", "Inventory", { h: 36, fs: 17, cls: "pill" })}<div class="tab" style="font-size:17px;">Index</div><div class="tab" style="font-size:17px;">Craft</div>
+        </div>
+      </div>
+      <div class="orb wbadge c-bolt"><div class="ring"><div class="face"><img src="${ICON("Pets")}" alt=""></div></div></div>
+      <div class="candy round c-coral wclose"><div class="face">${X_MARK}</div></div>
+    </div>`;
+    // numbered callouts + legend
+    const callouts = [[R - 4, wy - 26, "1"], [R + 156, wy + 2, "2"], [R + 226, wy - 34, "3"], [R + 428, wy + 30, "4"], [R + 2, wy + 84, "5"]];
+    callouts.forEach(([x, y, n]) => html += `<div class="num" style="left:${x}px; top:${y}px;">${n}</div>`);
+    const legend = [
+      "weather badge 76 px: white face, 4 px Bolt ring, Ink outline, panel icon",
+      "Sky header band 60 px · title white Fredoka 32 with 3 px Ink stroke",
+      "three white cloud puffs (same outline) rising above the band's right half",
+      "close: 48 px round Coral candy with a white ✕",
+      "tabs: pills in a Haze track; the active tab is a Sky candy pill",
+    ];
+    legend.forEach((t, i) => html += cap(R, 292 + i * 16, `<b style="color:var(--ink); display:inline-block; width:14px;">${i + 1}</b>${t}`));
+
+    // ---------------------------------------------------------------- capsules
+    html += sec(R, 392, "Capsule", "Cloud→Mist pill · 54 px icon over the left end · Fredoka 26");
+    html += `<div class="capsule" style="left:${R + 18}px; top:416px; width:208px;"><img class="cico" src="${ICON("Volts")}" alt=""><span class="val">12.4M</span>${candy("leaf", "+", { w: 32, h: 32, fs: 26, cls: "sm" })}</div>`;
+    html += `<div class="capsule" style="left:${R + 262}px; top:416px; width:122px;"><img class="cico" src="${ICON("ClimateShift")}" alt=""><span class="val">3</span></div>`;
+
+    // ---------------------------------------------------------------- HUD buttons, timer, badges
+    html += sec(R, 488, "HUD button · boost timer · badge");
+    const hy = 512;
+    html += `<div class="hbtn c-sky" style="left:${R + 6}px; top:${hy}px;">${orb("sky", "Shop", 44)}<span class="hl ws">Shop</span></div>`;
+    html += `<div class="hbtn c-sky" style="left:${R + 98}px; top:${hy}px;">${orb("sky", "Rewards", 44)}<span class="hl ws">Rewards</span><span class="badge" style="right:-8px; top:-6px;">2</span></div>`;
+    html += `<div class="hbtn c-sky hover" style="left:${R + 190}px; top:${hy}px;">${orb("sky", "Teleport", 44)}<span class="hl ws">Teleport</span></div>`;
+    html += `<div class="timer c-sunset" style="left:${R + 282}px; top:${hy}px; --p:72%;">${orb("sunset", "Volts", 40)}<span class="chip">x2</span><span class="tl ws">4:32</span></div>`;
+    html += `<div class="badge" style="left:${R + 376}px; top:${hy + 2}px;">!</div>`;
+    html += `<div class="badge" style="left:${R + 410}px; top:${hy + 2}px;">3</div>`;
+    html += `<div class="badge" style="left:${R + 384}px; top:${hy + 38}px;">99+</div>`;
+    [["68 px · Sky ring", 2], ["+ Coral badge", 96], ["hover ×1.04", 192], ["boost timer", 282], ["badges", 388]].forEach(([t, x]) =>
+      html += cap(R + x, hy + 86, t));
+
+    // ---------------------------------------------------------------- toasts (full width)
+    html += sec(L, 624, "Toast", "Cloud pill, 2 px Ink, coloured icon disk on the left · slides down from the top and bounces once");
+    const toasts = [
+      ["leaf", "Check", `Hatched <em style="color:#2F86F2">Sunny</em>!`],
+      ["bolt", "Gift", `+<em style="color:#E08A00">25K</em> Volts`],
+      ["coral", "Lock", `Need <em>6.55M</em> Volts`],
+      ["storm", "Radar", `<em>Mega Storm</em> in 1:45`],
+      ["sky", "Teleport", `Welcome to <em>Dune Sea</em>`],
+    ];
+    html += `<div class="abs" style="left:${L}px; top:646px; width:1216px; height:52px; display:flex; justify-content:space-between;">`;
+    toasts.forEach(([c, icon, text]) => {
+      html += `<div class="toast c-${c}" style="position:relative;"><div class="disk"><img src="${ICON(icon)}" alt=""></div><span>${text}</span></div>`;
+    });
+    html += `</div>`;
+
+    root.innerHTML = html;
+  }
 </script>
 </body>
 </html>

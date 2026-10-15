@@ -1,4 +1,4 @@
-"""Runs the Luau mock tests for the pet mesh pack (and the server's pack loader) outside Roblox.
+"""Runs the Luau mock tests for the pet mesh pack, the server's pack loaders and WorldProps outside Roblox.
 
 Bundles tests/mock/RobloxMock.luau, the game modules under test and the spec into one script and runs
 it with the `luau` command line (https://github.com/luau-lang/luau/releases). Set LUAU=path/to/luau if
@@ -8,6 +8,7 @@ it isn't on your PATH.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -20,8 +21,11 @@ MODULES = {
     "PetModels": "src/shared/Models/PetModels.luau",
     "PetController": "src/client/Controllers/PetController.luau",
     "PetMeshService": "src/server/Services/PetMeshService.luau",
+    "WorldProps": "src/server/Services/WorldProps.luau",
+    "WorldPropsData": "src/shared/Config/WorldPropsData.luau",  # generated; optional
 }
-SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau"]
+OPTIONAL = {"WorldPropsData"}
+SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau", "WorldProps.spec.luau"]
 
 
 def read(path):
@@ -29,10 +33,18 @@ def read(path):
         return handle.read()
 
 
+def module_source(path):
+    # Each module becomes a function body, where Luau only allows local type aliases
+    return re.sub(r"^export type ", "type ", read(path), flags=re.M)
+
+
 def bundle(spec):
     chunks = [read(os.path.join(MOCK, "RobloxMock.luau")), "local __sources = {}"]
     for name, path in MODULES.items():
-        chunks.append(f'__sources["{name}"] = function(script)\n{read(os.path.join(ROOT, path))}\nend')
+        path = os.path.join(ROOT, path)
+        if name in OPTIONAL and not os.path.exists(path):
+            continue
+        chunks.append(f'__sources["{name}"] = function(script)\n{module_source(path)}\nend')
     chunks.append(read(os.path.join(MOCK, spec)))
     return "\n".join(chunks)
 

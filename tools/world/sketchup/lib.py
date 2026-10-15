@@ -6,17 +6,19 @@
 # folder then start with `L = session_state["L"]`.
 #
 # Sandbox rules (checked by `python3 tools/world/build_world_pack.py --check`): no imports (math is
-# pre-loaded), no eval/exec/open/type/setattr/globals, no dunders, no classes, plain builtins only.
+# pre-loaded), no eval/exec/open/type/setattr/globals, no dunders, no classes, no any()/all(), plain
+# builtins only. Every chunk runs in a fresh namespace: only session_state survives between calls.
 #
 # Conventions (docs/STYLE_GUIDE.md, "Prop kit"):
 #   * Build scripts work in STUDS. piece() writes inches into SketchUp (12 in = 1 stud), Z up, the
 #     prop's front faces -Y, origin at the centre of its base.
 #   * A prop is a group "Prop_<PropId>" holding leaf groups named by paint: Primary, Secondary,
-#     Tertiary (recoloured per biome), Color_RRGGBB, Neon_RRGGBB (glows) or Glass_RRGGBB.
+#     Tertiary (recoloured per biome), Color_RRGGBB, Neon_RRGGBB (glows) or Glass_RRGGBB. Several
+#     leaf groups may share a paint (one per blob, say); the pack merges them.
 #   * A mesh is a dict {"v": [[x, y, z], ...], "f": [[i, j, k, ...], ...]}; faces are wound
 #     counter-clockwise seen from outside. Primitives return closed meshes that face outward.
 
-# ===== chunk 1/3: vectors, meshes, transforms, noise =====
+# ===== chunk 1/4: vectors, meshes, transforms, noise =====
 L = session_state.setdefault("L", {})
 AXES = {"x": [1.0, 0.0, 0.0], "y": [0.0, 1.0, 0.0], "z": [0.0, 0.0, 1.0]}
 
@@ -162,10 +164,10 @@ L.update({"AXES": AXES, "v_add": v_add, "v_sub": v_sub, "v_mul": v_mul, "v_dot":
           "orient": orient, "bounds": bounds, "rng": rng, "lumps": lumps})
 result = {"chunk": 1, "functions": len(L)}
 
-# ===== chunk 2/3: primitives (balls, blobs, rocks, lathes, rounded boxes, tubes, extrusions) =====
+# ===== chunk 2/4: round solids (balls, blobs, rocks, lathes, cones, pucks) =====
 L = session_state["L"]
-v_add, v_sub, v_mul, v_dot, v_cross, v_norm, orient, lumps = [L[k] for k in (
-    "v_add", "v_sub", "v_mul", "v_dot", "v_cross", "v_norm", "orient", "lumps")]
+v_add, v_sub, v_mul, v_dot, v_norm, orient, lumps = [L[k] for k in (
+    "v_add", "v_sub", "v_mul", "v_dot", "v_norm", "orient", "lumps")]
 GRIDS = {}
 
 
@@ -207,7 +209,7 @@ def ball(center, radii, seg=6, shape=None):
     for d in dirs:
         k = shape(d) if shape else 1.0
         verts.append([center[i] + radii[i] * d[i] * k for i in range(3)])
-    return {"v": verts, "f": [list(f) for f in faces]}
+    return orient({"v": verts, "f": [list(f) for f in faces]})
 
 
 def blob(center, radius, squash=0.88, lump=0.05, seed=1, seg=6, freq=2.4):
@@ -216,18 +218,32 @@ def blob(center, radius, squash=0.88, lump=0.05, seed=1, seg=6, freq=2.4):
     return ball(center, [radius, radius, radius * squash], seg, lambda d: 1.0 + lump * noise(d))
 
 
-def rock(center, planes, soft, seg=6):
+def rock(center, planes, soft, seg=6, stretch=(1.0, 1.0, 1.0), floor=None):
     """Faceted-but-soft boulder: the convex solid cut by planes [[normal, distance], ...] around
-    `center`, its edges rounded by a smooth minimum over `soft` (same units as the distances)."""
+    `center`, its edges rounded by a smooth minimum over `soft` (same units as the distances).
+    The planes must enclose the centre on every side. stretch = rough proportions of the rock
+    (e.g. [1, 1, 0.6] for a squat one) spreads the vertices evenly over it. floor = flatten
+    everything below this height (bury it a little below z = 0 so the base looks planted)."""
     dirs, faces = sphere_grid(seg)
-    cut = [[v_norm(p[0]), p[1]] for p in planes]
+    cut = []
+    for n, h in planes:
+        n = v_norm(n)
+        sn = [n[0] * stretch[0], n[1] * stretch[1], n[2] * stretch[2]]
+        k = math.sqrt(v_dot(sn, sn))
+        cut.append([[sn[0] / k, sn[1] / k, sn[2] / k], h / k])
+    unit = (stretch[0] * stretch[1] * stretch[2]) ** (1.0 / 3.0)
+    soft = soft / unit
     verts = []
     for d in dirs:
         ts = [h / v_dot(n, d) for n, h in cut if v_dot(n, d) > 1e-3]
+        if not ts:
+            raise Exception("rock(): the planes leave direction " + str(d) + " open")
         lo = min(ts)
-        t = lo - soft * math.log(sum([math.exp(-(x - lo) / soft) for x in ts]))
-        verts.append(v_add(center, v_mul(d, t)))
-    return {"v": verts, "f": [list(f) for f in faces]}
+        t = max(lo - soft * math.log(sum([math.exp(-(x - lo) / soft) for x in ts])), 0.05 * lo)
+        z = center[2] + d[2] * t * stretch[2]
+        verts.append([center[0] + d[0] * t * stretch[0], center[1] + d[1] * t * stretch[1],
+                      z if floor is None else max(z, floor)])
+    return orient({"v": verts, "f": [list(f) for f in faces]})
 
 
 def loft_faces(rings):
@@ -249,9 +265,9 @@ def loft_faces(rings):
 
 
 def lathe(profile, n=16, center=(0.0, 0.0, 0.0), phase=0.0):
-    """Solid of revolution around a vertical axis. profile = [(radius, z), ...] bottom to top, or
-    (radius, z, dx, dy) to shift a ring sideways (bent trunks). Radius 0 at an end closes it in a
-    point, otherwise that end gets a flat cap."""
+    """Lofted solid of revolution around a vertical axis. profile = [(radius, z), ...] bottom to
+    top, or (radius, z, dx, dy) to shift a ring sideways (bent trunks). Radius 0 at an end closes it
+    in a point (pole), otherwise that end gets a flat cap."""
     verts, rings = [], []
     for i, p in enumerate(profile):
         dx = p[2] if len(p) > 2 else 0.0
@@ -270,8 +286,53 @@ def lathe(profile, n=16, center=(0.0, 0.0, 0.0), phase=0.0):
     return orient({"v": verts, "f": loft_faces(rings)})
 
 
+def arc_profile(r0, z0, r1, z1, bulge=0.0, steps=4):
+    """Profile points from (r0, z0) to (r1, z1) bowed outward by `bulge` (for lathe())."""
+    out = []
+    for k in range(steps + 1):
+        t = k / steps
+        out.append((r0 + (r1 - r0) * t + bulge * math.sin(math.pi * t), z0 + (z1 - z0) * t))
+    return out
+
+
+def puck(center, radius, height, bevel, n=16, seg=2):
+    """Chunky disc / cylinder with all-round rounded rims (bevel = rim radius)."""
+    b = min(bevel, radius * 0.95, height / 2.0)
+    prof = []
+    for k in range(seg + 1):
+        a = math.pi / 2 * k / seg
+        prof.append((radius - b + b * math.sin(a), b - b * math.cos(a)))
+    for k in range(seg + 1):
+        a = math.pi / 2 * k / seg
+        prof.append((radius - b + b * math.cos(a), height - b + b * math.sin(a)))
+    prof = [(0.0, 0.0)] + prof + [(0.0, height)]
+    return lathe(prof, n, center)
+
+
+def cone(center, r_bottom, r_top, height, n=16, round_top=0.0):
+    """Tapered cylinder (r_top 0 = cone). round_top > 0 swaps the top for a dome of that height."""
+    prof = [(0.0, 0.0), (r_bottom, 0.0), (r_top, height)]
+    if round_top > 0:
+        for k in range(1, 5):
+            a = math.pi / 2 * k / 4
+            prof.append((r_top * math.cos(a), height + round_top * math.sin(a)))
+    elif r_top > 0:
+        prof.append((0.0, height))
+    return lathe(prof, n, center)
+
+
+L.update({"sphere_grid": sphere_grid, "ball": ball, "blob": blob, "rock": rock, "loft_faces": loft_faces,
+          "lathe": lathe, "arc_profile": arc_profile, "puck": puck, "cone": cone})
+result = {"chunk": 2, "functions": len(L)}
+
+# ===== chunk 3/4: rounded boxes, tubes, 2D shapes + extrusions (bolts, stars) =====
+L = session_state["L"]
+v_add, v_sub, v_mul, v_dot, v_cross, v_norm, orient, loft_faces = [L[k] for k in (
+    "v_add", "v_sub", "v_mul", "v_dot", "v_cross", "v_norm", "orient", "loft_faces")]
+
+
 def rounded_box(center, size, radius, seg=3):
-    """Box of size [w, d, h] whose edges and corners are all rounded by `radius`."""
+    """Box of size [w, d, h] centred on `center` whose edges and corners are rounded by `radius`."""
     half = [size[0] / 2.0, size[1] / 2.0, size[2] / 2.0]
     r = min(radius, half[0], half[1], half[2])
     inner = [h - r for h in half]
@@ -301,8 +362,11 @@ def rounded_box(center, size, radius, seg=3):
             ids.append(row)
         for i in range(len(ids) - 1):
             for j in range(len(ids[0]) - 1):
-                faces.append([ids[i][j], ids[i + 1][j], ids[i + 1][j + 1], ids[i][j + 1]])
-    return {"v": verts, "f": faces}
+                f = [ids[i][j], ids[i + 1][j], ids[i + 1][j + 1], ids[i][j + 1]]
+                f = [x for k, x in enumerate(f) if x != f[k - 1]]
+                if len(f) >= 3:
+                    faces.append(f)
+    return orient({"v": verts, "f": faces})
 
 
 def tube(path, radius, n=12, caps="round", cap_seg=3):
@@ -314,13 +378,12 @@ def tube(path, radius, n=12, caps="round", cap_seg=3):
     tans = [v_norm(v_sub(pts[min(i + 1, m - 1)], pts[max(i - 1, 0)])) for i in range(m)]
     ref = [0.0, 0.0, 1.0] if abs(tans[0][2]) < 0.9 else [1.0, 0.0, 0.0]
     nrm = v_norm(v_cross(v_cross(tans[0], ref), tans[0]))
-    centers, frames, rads = [], [], []
+    frames = []
     for i in range(m):
         t = tans[i]
         nrm = v_norm(v_sub(nrm, v_mul(t, v_dot(nrm, t))))
-        centers.append(pts[i])
         frames.append([nrm, v_cross(t, nrm)])
-        rads.append(radii[i])
+    centers, rads = list(pts), list(radii)
     if caps == "round":
         for end in (0, 1):
             i = 0 if end == 0 else m - 1
@@ -350,21 +413,8 @@ def tube(path, radius, n=12, caps="round", cap_seg=3):
         rings.append(ring)
     faces = loft_faces(rings)
     if caps == "open":
-        faces = [f for f in faces if len(f) <= 4]
+        faces = faces[:-2] if len(rings[0]) > 1 and len(rings[-1]) > 1 else faces
     return orient({"v": verts, "f": faces})
-
-
-L.update({"sphere_grid": sphere_grid, "ball": ball, "blob": blob, "rock": rock,
-          "loft_faces": loft_faces, "lathe": lathe, "rounded_box": rounded_box, "tube": tube})
-result = {"chunk": 2, "functions": len(L)}
-
-# ===== chunk 3/3: 2D shapes + extrusions, then the SketchUp side (materials, props, pieces) =====
-L = session_state["L"]
-v_sub, v_cross, v_dot, v_norm, v_len, orient, loft_faces, bounds = [L[k] for k in (
-    "v_sub", "v_cross", "v_dot", "v_norm", "v_len", "orient", "loft_faces", "bounds")]
-TINTS = ("Primary", "Secondary", "Tertiary")
-FIXED = ("Color_", "Neon_", "Glass_")
-HEX = "0123456789ABCDEF"
 
 
 def round_poly(poly, radius, seg=3):
@@ -433,6 +483,18 @@ def extrude(poly, depth, bevel=0.0, seg=2, y=0.0):
     return orient({"v": verts, "f": loft_faces(rings)})
 
 
+L.update({"rounded_box": rounded_box, "tube": tube, "round_poly": round_poly, "star_poly": star_poly,
+          "bolt_poly": bolt_poly, "offset_poly": offset_poly, "extrude": extrude})
+result = {"chunk": 3, "functions": len(L)}
+
+# ===== chunk 4/4: the SketchUp side - paints, materials, props, pieces =====
+L = session_state["L"]
+v_sub, v_cross, v_dot, v_norm, v_len, bounds = [L[k] for k in ("v_sub", "v_cross", "v_dot", "v_norm", "v_len", "bounds")]
+TINTS = ("Primary", "Secondary", "Tertiary")
+FIXED = ("Color_", "Neon_", "Glass_")
+HEX = "0123456789ABCDEF"
+
+
 def check_paint(paint):
     if paint in TINTS:
         return paint
@@ -448,6 +510,7 @@ def hex_rgb(code):
 
 
 def get_material(name, rgb, alpha=255):
+    """Solid-colour material by name (reused and recoloured if it already exists)."""
     for m in model.get_materials():
         if m.get_name() == name:
             m.set_color(SUColor(rgb[0], rgb[1], rgb[2], alpha))
@@ -460,11 +523,12 @@ def get_material(name, rgb, alpha=255):
 
 
 def paint_material(prop, paint):
-    """Tint paints get a per-prop material in the prop's default colour; fixed paints are shared."""
+    """Tint paints get a per-prop material "<PropId>_<Paint>" in the prop's default colour (edit its
+    colour in SketchUp to change the default); fixed paints share one material per colour."""
     if paint in TINTS:
         return get_material(prop["id"] + "_" + paint, hex_rgb(prop["paints"].get(paint, "C8C8C8")))
     code = paint.split("_")[1]
-    return get_material(paint, hex_rgb(code), 120 if paint.startswith("Glass_") else 255)
+    return get_material(paint, hex_rgb(code), 110 if paint.startswith("Glass_") else 255)
 
 
 def find_prop(prop_id):
@@ -476,7 +540,7 @@ def find_prop(prop_id):
 
 def new_prop(prop_id, x=0.0, y=0.0, paints=None, solid=False, category="common", unit=12.0):
     """Start (or rebuild) the group Prop_<prop_id> at layout slot (x, y) in studs. paints = default
-    colours for the tint paints, e.g. {"Primary": "5CC94F"}; solid = players bump into it."""
+    colours of the tint paints, e.g. {"Primary": "5CC94F"}; solid = players bump into it."""
     old = find_prop(prop_id)
     if old is not None:
         model.get_entities().erase_entities([old])
@@ -495,13 +559,6 @@ def new_prop(prop_id, x=0.0, y=0.0, paints=None, solid=False, category="common",
             "warnings": [], "lo": [1e9, 1e9, 1e9], "hi": [-1e9, -1e9, -1e9]}
 
 
-def planar(pts):
-    if len(pts) == 3:
-        return True
-    n = v_norm(v_cross(v_sub(pts[1], pts[0]), v_sub(pts[2], pts[0])))
-    return abs(v_dot(n, v_sub(pts[3], pts[0]))) < 2e-4 * max(1.0, v_len(v_sub(pts[2], pts[0])))
-
-
 def face_normal(pts):
     n = [0.0, 0.0, 0.0]
     for i in range(len(pts)):
@@ -511,9 +568,17 @@ def face_normal(pts):
     return n
 
 
-def piece(prop, paint, m, crease=40.0):
+def planar(pts):
+    """True when every point lies within 0.0001 in of the face plane (SketchUp refuses warped faces)."""
+    n = v_norm(face_normal(pts))
+    return len([p for p in pts if abs(v_dot(n, v_sub(p, pts[0]))) > 1e-4]) == 0
+
+
+def piece(prop, paint, m, crease=40.0, collide=None):
     """Add mesh m (studs) to the prop as a leaf group named by its paint. Edges between faces that
-    meet at less than `crease` degrees are soft + smooth, the rest stay hard (crisp)."""
+    meet at less than `crease` degrees are soft + smooth, the rest stay crisp; the pack shades the
+    piece the same way (the crease is stored on the group). collide: override the prop's solid
+    flag for this piece (e.g. False for a tree canopy)."""
     check_paint(paint)
     u = prop["unit"]
     verts = [[p[0] * u, p[1] * u, p[2] * u] for p in m["v"]]
@@ -522,9 +587,12 @@ def piece(prop, paint, m, crease=40.0):
         pts = [verts[i] for i in f]
         if v_len(face_normal(pts)) < 1e-6:
             continue
-        if len(f) == 4 and not planar(pts):
-            d1, d2 = v_len(v_sub(pts[2], pts[0])), v_len(v_sub(pts[3], pts[1]))
-            faces += [[f[0], f[1], f[2]], [f[0], f[2], f[3]]] if d1 <= d2 else [[f[0], f[1], f[3]], [f[1], f[2], f[3]]]
+        if len(f) > 3 and not planar(pts):
+            if len(f) == 4:
+                d1, d2 = v_len(v_sub(pts[2], pts[0])), v_len(v_sub(pts[3], pts[1]))
+                faces += [[f[0], f[1], f[2]], [f[0], f[2], f[3]]] if d1 <= d2 else [[f[0], f[1], f[3]], [f[1], f[2], f[3]]]
+            else:
+                faces += [[f[0], f[i], f[i + 1]] for i in range(1, len(f) - 1)]
         else:
             faces.append(list(f))
     normals = [v_norm(face_normal([verts[i] for i in f])) for f in faces]
@@ -554,6 +622,10 @@ def piece(prop, paint, m, crease=40.0):
     prop["group"].get_entities().add_group(g)
     g.set_name(paint)
     g.get_entities().fill(gi, weld_vertices=True)
+    meta = g.get_attribute_dictionary("storm_piece")
+    meta["crease"] = TypedValue(double_value=float(crease))
+    if collide is not None:
+        meta["collide"] = TypedValue(bool_value=bool(collide))
     made = len(g.get_entities().get_faces())
     if made != len(faces):
         prop["warnings"].append(paint + ": SketchUp made " + str(made) + " of " + str(len(faces)) + " faces")
@@ -572,8 +644,7 @@ def report(prop):
             "min": [round(x, 2) for x in prop["lo"]], "max": [round(x, 2) for x in prop["hi"]]}
 
 
-L.update({"TINTS": TINTS, "round_poly": round_poly, "star_poly": star_poly, "bolt_poly": bolt_poly,
-          "offset_poly": offset_poly, "extrude": extrude, "check_paint": check_paint, "hex_rgb": hex_rgb,
-          "get_material": get_material, "paint_material": paint_material, "find_prop": find_prop,
-          "new_prop": new_prop, "piece": piece, "report": report})
-result = {"chunk": 3, "functions": len(L)}
+L.update({"TINTS": TINTS, "check_paint": check_paint, "hex_rgb": hex_rgb, "get_material": get_material,
+          "paint_material": paint_material, "find_prop": find_prop, "new_prop": new_prop,
+          "face_normal": face_normal, "piece": piece, "report": report})
+result = {"chunk": 4, "functions": len(L)}

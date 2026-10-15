@@ -6,6 +6,7 @@ official Open Cloud API. Claude can run them from a cloud session, and you can r
 | Script | What it does |
 |--------|--------------|
 | `upload_pets.py` | Uploads `assets/models/StormlingPets.glb` as a Model on your account (or group), waits for Roblox to approve it and writes its id into `GameConfig.PetMeshAssetId`. When a server starts, `PetMeshService` inserts that model into `ReplicatedStorage.PetMeshes`, so every pet uses its mesh model. Run it again after changing the pets (it uploads a new model). |
+| `upload_model.py` | The same upload for any model file and `GameConfig` key, e.g. the world prop pack (see [World props and other models](#world-props-and-other-models)). `upload_pets.py` is this script with the pet pack filled in. |
 | `publish_place.py` | Builds the place with Rojo and publishes it to your game (or only saves a version with `--saved`). |
 
 Only the Python standard library is needed (and `rojo` for `publish_place.py`).
@@ -16,7 +17,7 @@ Only the Python standard library is needed (and `rojo` for `publish_place.py`).
 2. **Create an API key.** Go to [Creator Dashboard → Open Cloud → API Keys](https://create.roblox.com/dashboard/credentials?activeTab=ApiKeysTab)
    → **Create API Key** and give it a name.
    - Under **Access Permissions**, choose these APIs one at a time with **Select API System**:
-     - **assets**: operations **Read** and **Write** (for `upload_pets.py`).
+     - **assets**: operations **Read** and **Write** (for `upload_pets.py` and `upload_model.py`).
      - **universe-places**: pick your game, operation **Write** (for `publish_place.py`).
    - Under **Security**, leave **Restrict IP addresses** off (cloud sessions don't have a fixed address).
    - Optionally set an expiration date. Then **Save & Generate Key** and copy the key.
@@ -52,6 +53,23 @@ python tools/roblox/publish_place.py --yes      # build and publish the game (ne
 - `publish_place.py --saved` saves a version you can open in Studio, without publishing it to players.
 
 After `upload_pets.py`, commit the changed `GameConfig.luau` so the id stays with the code, then publish.
+
+## World props and other models
+
+`upload_model.py` uploads any `.glb`/`.gltf`/`.fbx` and writes its id into the `GameConfig` field you name
+(the line `GameConfig.<key> = <number>` must already be there). For the SketchUp world prop pack
+(`tools/world/README.md`):
+
+```powershell
+python tools/roblox/upload_model.py --file assets/models/StormWorldProps.glb --config-key WorldPropsAssetId --name "Storm World Props" --description "Map props for Storm Catcher Simulator"
+```
+
+When a server starts, `WorldProps` (used by `MapService`) inserts that model into
+`ServerStorage.WorldProps` and places the props from it; a `WorldProps` pack already in `ServerStorage`
+or `ReplicatedStorage` wins. With `WorldPropsAssetId = 0`, or if the model can't be loaded, the map
+builds its props from parts. `--dry-run`, `--update`, `--no-config` and `--no-wait` work as for
+`upload_pets.py`; without `--config-key` the id is only printed. Upload the pack again whenever
+`build_world_pack.py` changes it, so the meshes match `WorldPropsData.luau`.
 
 ## Good to know
 
