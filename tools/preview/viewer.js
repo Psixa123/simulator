@@ -60,6 +60,13 @@ const skyMaterial = new THREE.ShaderMaterial({
     screenMix: { value: 0 },
     height: { value: H },
     stars: { value: 0 },
+    sunDir: { value: new THREE.Vector3(...L.sun.direction).normalize() },
+    sunColor: { value: color(L.sun.color) },
+    sunDisc: { value: 0 },
+    cloudCover: { value: 0 },
+    cloudDensity: { value: 0 },
+    cloudColor: { value: new THREE.Color(1, 1, 1) },
+    cloudShade: { value: new THREE.Color(0.8, 0.84, 0.95) },
   },
   vertexShader: `
     varying vec3 vDir;
@@ -72,8 +79,26 @@ const skyMaterial = new THREE.ShaderMaterial({
     uniform vec3 zenith; uniform vec3 horizon; uniform vec3 below;
     uniform vec3 screenTop; uniform vec3 screenBottom; uniform float screenMix; uniform float height;
     uniform float stars;
+    uniform vec3 sunDir; uniform vec3 sunColor; uniform float sunDisc;
+    uniform float cloudCover; uniform float cloudDensity; uniform vec3 cloudColor; uniform vec3 cloudShade;
     varying vec3 vDir;
     float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+    float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash2(i), hash2(i + vec2(1.0, 0.0)), u.x), mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), u.x), u.y);
+    }
+    float fbm(vec2 p) {
+      float v = 0.0, a = 0.55;
+      for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.03 + vec2(17.1, 9.3); a *= 0.48; }
+      return v;
+    }
+    // cloud field: low-frequency fbm with a little domain warp for round, billowy shapes
+    float cloudField(vec2 p) {
+      vec2 w = vec2(noise(p * 0.45 + 3.1), noise(p * 0.45 + 8.7)) - 0.5;
+      return fbm(p + w * 1.4);
+    }
     void main() {
       vec3 d = normalize(vDir);
       vec3 col = d.y > 0.0 ? mix(horizon, zenith, pow(clamp(d.y, 0.0, 1.0), 0.55))
@@ -84,6 +109,24 @@ const skyMaterial = new THREE.ShaderMaterial({
         vec3 centre = (cell + 0.5 + 0.35 * (vec3(hash(cell + 1.7), hash(cell + 3.1), hash(cell + 5.3)) - 0.5)) / 220.0;
         float star = smoothstep(0.0028, 0.0008, length(d - normalize(centre))) * step(0.965, h);
         col += star * stars * smoothstep(0.02, 0.25, d.y) * vec3(1.0, 0.97, 0.9) * (0.6 + 0.8 * hash(cell + 9.1));
+      }
+      // sun: a soft disc and a halo (day only)
+      float s = max(dot(d, sunDir), 0.0);
+      col += sunDisc * (sunColor * smoothstep(0.9993, 0.9997, s) * 0.9 + sunColor * pow(s, 24.0) * 0.18);
+      // Roblox Clouds (Terrain.Clouds) as a layer of flat cartoon clouds: crisp edges, white bodies and a
+      // tinted band along their far (lower on screen) edge
+      if (cloudCover > 0.0 && d.y > 0.0) {
+        vec2 uv = d.xz / (d.y + 0.08) * 0.9;
+        float th = mix(0.74, 0.34, cloudCover);
+        float n = cloudField(uv);
+        float aa = fwidth(n) * 1.2 + 0.004;
+        float body = smoothstep(th, th + aa, n);
+        vec2 away = normalize(uv + 1e-4) * 0.16;
+        float back = cloudField(uv + away);
+        float shade = 1.0 - smoothstep(th + 0.01, th + 0.01 + aa + fwidth(back), back);
+        vec3 c = mix(cloudColor, cloudShade, shade * 0.85);
+        float fade = smoothstep(0.0, 0.14, d.y);
+        col = mix(col, mix(horizon, c, 0.3 + 0.7 * fade), body * cloudDensity * fade);
       }
       // aerial shots look down at the void under the world: use a soft top-to-bottom gradient instead
       float t = gl_FragCoord.y / height;
@@ -610,6 +653,14 @@ function applyLighting(l) {
   skyMaterial.uniforms.screenTop.value.set('#' + l.sky.screenTop);
   skyMaterial.uniforms.screenBottom.value.set('#' + l.sky.screenBottom);
   skyMaterial.uniforms.stars.value = l.sky.stars || 0;
+  skyMaterial.uniforms.sunDir.value.set(...l.sun.direction).normalize();
+  skyMaterial.uniforms.sunColor.value.set('#' + l.sun.color);
+  skyMaterial.uniforms.sunDisc.value = l.sky.sun ?? 0;
+  const clouds = l.clouds || { cover: 0, density: 0, color: 'FFFFFF', shade: 'CCD6F2' };
+  skyMaterial.uniforms.cloudCover.value = clouds.cover;
+  skyMaterial.uniforms.cloudDensity.value = clouds.density;
+  skyMaterial.uniforms.cloudColor.value.set('#' + clouds.color);
+  skyMaterial.uniforms.cloudShade.value.set('#' + clouds.shade);
   world.fog.color.set('#' + l.fog.color);
   hemi.color.set('#' + l.hemi.sky);
   hemi.groundColor.set('#' + l.hemi.ground);
@@ -638,6 +689,7 @@ function resize(w, h) {
 }
 
 const results = [];
+const cameras = [];
 for (const shot of scene.shots) {
   const t0 = performance.now();
   const [sw, sh] = shot.size || [W, H];
@@ -645,9 +697,11 @@ for (const shot of scene.shots) {
   applyLighting(shot.lighting || L);
   const camera = new THREE.PerspectiveCamera(shot.fov, sw / sh, 0.5, 20000);
   let focusDistance;
+  let lookAt;
   if (shot.kind === 'eye') {
     camera.position.set(...shot.position);
-    camera.lookAt(new THREE.Vector3(...shot.look));
+    lookAt = new THREE.Vector3(...shot.look);
+    camera.lookAt(lookAt);
     focusDistance = 160;
   } else {
     const box = shot.focus;
@@ -656,6 +710,7 @@ for (const shot of scene.shots) {
     const dir = new THREE.Vector3(...shot.dir).normalize();
     const distance = fitDistance(camera, center, box, dir) * (shot.margin ?? 1.04);
     camera.position.copy(center).addScaledVector(dir, distance);
+    lookAt = center;
     camera.lookAt(center);
     focusDistance = distance;
   }
@@ -673,7 +728,10 @@ for (const shot of scene.shots) {
   const blob = await new Promise((resolve) => renderer.domElement.toBlob(resolve, 'image/png'));
   await post('/__shot?name=' + encodeURIComponent(shot.name), blob);
   results.push(`${shot.name} ${Math.round(performance.now() - t0)}ms`);
+  const r = (v) => [v.x, v.y, v.z].map((n) => Math.round(n * 10) / 10).join(',');
+  cameras.push({ name: shot.name, pos: r(camera.position), look: r(lookAt), fov: shot.fov });
 }
 
 log(`rendered ${scene.shots.length} shots, ${instanceCount} part instances: ${results.join(', ')}`);
+await post('/__cameras', JSON.stringify(cameras));
 post('/__done', 'ok');

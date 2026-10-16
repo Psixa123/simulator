@@ -28,7 +28,39 @@ local realPrint = print
 local realClock = os.clock
 local fmt = string.format
 
+-- Game code can pcall around a mock gap (WorldProps does), which would hide it, so every failure that
+-- names something the mock lacks is also recorded in Mock.Gaps (with the game-code line that hit it) and
+-- preview_map.py reports it even when the game caught the error. "x is not a valid member" can also be
+-- a missing child (a real Roblox error), so those are recorded as Maybe.
+Mock.Gaps = {}
+local gapSeen = {}
+local function recordGap(message)
+	local maybe = string.find(message, "is not a valid member", 1, true) ~= nil
+	local gap = maybe
+		or string.find(message, "MapMock.luau", 1, true) ~= nil
+		or string.find(message, "not supported", 1, true) ~= nil
+		or string.find(message, "is not a valid property", 1, true) ~= nil
+	if not gap then
+		return
+	end
+	local where = nil
+	for line in string.gmatch(debug.traceback(), "[^\n]+") do
+		local source = string.match(line, "^%s*(.-:%d+)")
+		if source and not string.find(source, "preview_bundle.luau", 1, true) then
+			where = source
+			break
+		end
+	end
+	local key = message .. "|" .. tostring(where)
+	if gapSeen[key] then
+		return
+	end
+	gapSeen[key] = true
+	table.insert(Mock.Gaps, { Message = "mock: " .. message, Where = where, Maybe = maybe })
+end
+
 local function fail(message, level)
+	recordGap(message)
 	error("mock: " .. message, (level or 1) + 1)
 end
 
@@ -2444,7 +2476,7 @@ IM.__index = function(self, key)
 			return child
 		end
 	end
-	fail(fmt("%q is not a valid member of %s (if MapService really uses it, add it to tools/preview/MapMock.luau)", tostring(key), describe(self)), 2)
+	fail(fmt("%q is not a valid member of %s (if the game really uses it, add it to tools/preview/MapMock.luau)", tostring(key), describe(self)), 2)
 end
 
 IM.__newindex = function(self, key, value)
@@ -2508,7 +2540,7 @@ IM.__newindex = function(self, key, value)
 	elseif findIn(className, "Setters", key) then
 		findIn(className, "Setters", key)(self, value)
 	else
-		fail(fmt("%q is not a valid property of %s (if MapService really uses it, add it to CLASSES in tools/preview/MapMock.luau)", tostring(key), describe(self)), 2)
+		fail(fmt("%q is not a valid property of %s (if the game really uses it, add it to CLASSES in tools/preview/MapMock.luau)", tostring(key), describe(self)), 2)
 	end
 	local signals = self.__signals
 	local changed = signals["Changed:" .. key]
@@ -2745,7 +2777,7 @@ function methods.GetStyled(self, name)
 end
 
 local function cloneTree(object, map)
-	if not object.__props.Archivable then
+	if object.__props.Archivable == false then -- __props only holds values that were set (default true)
 		return nil
 	end
 	local copy = newObject(object.__class)
@@ -3872,6 +3904,7 @@ local function dumpWorld()
 		Warnings = Mock.Warnings,
 		Prints = Mock.Prints,
 		Errors = Mock.Errors,
+		Gaps = Mock.Gaps,
 		SimulatedSeconds = Mock.Now,
 	}
 end
