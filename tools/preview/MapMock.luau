@@ -3758,6 +3758,18 @@ local function dumpWorld()
 	local parts, guis, lights, beams = {}, {}, {}, {}
 	local partIndex = {}
 	local counts = {}
+	-- parts held by a weld (an unanchored part welded to something doesn't fall on its own)
+	local welded = {}
+	for object in allInstances do
+		local class = object.__class
+		if (class == "WeldConstraint" or isA(class, "JointInstance")) and not rawget(object, "__destroyed") then
+			local part0, part1 = object.__props.Part0, object.__props.Part1
+			if part0 and part0 ~= NIL and part1 and part1 ~= NIL then
+				welded[part0] = true
+				welded[part1] = true
+			end
+		end
+	end
 	local function visit(node, path)
 		local class = node.__class
 		counts[class] = (counts[class] or 0) + 1
@@ -3773,6 +3785,8 @@ local function dumpWorld()
 				Material = node.Material,
 				Transparency = node.Transparency,
 				CastShadow = node.CastShadow,
+				Anchored = node.Anchored,
+				Welded = if welded[node] then true else nil,
 			}
 			if class == "Part" or class == "SpawnLocation" or class == "Seat" then
 				record.Shape = node.Shape

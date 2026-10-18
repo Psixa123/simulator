@@ -117,8 +117,39 @@ def root_flare(trunk, bumps=5, amount=0.34, height=1.6, phase=0.4):
     return L["warp"](trunk, fn)
 
 
+def puff(center, balls, blend=0.8, seg=7):
+    """One soft cloud made of overlapping balls [[x, y, z, rx, ry, rz], ...] melted together (a
+    smooth union, `blend` studs wide, so the valleys between them are rounded): a cube sphere around
+    `center` whose every vertex is pushed out to the surface. `center` must see the whole surface."""
+    def dist(p):
+        d = None
+        for b in balls:
+            q = [(p[0] - b[0]) / b[3], (p[1] - b[1]) / b[4], (p[2] - b[2]) / b[5]]
+            s = (math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]) - 1.0) * min(b[3], b[4], b[5])
+            if d is None:
+                d = s
+            else:
+                h = max(blend - abs(d - s), 0.0) / blend
+                d = min(d, s) - h * h * blend / 4.0
+        return d
+
+    far = max([v_len(v_sub(b[:3], center)) + max(b[3:]) for b in balls]) + blend
+    dirs, faces = L["sphere_grid"](seg)
+    verts = []
+    for d in dirs:
+        lo, hi = 0.0, far
+        for k in range(26):
+            mid = (lo + hi) / 2.0
+            if dist(v_add(center, v_mul(d, mid))) < 0:
+                lo = mid
+            else:
+                hi = mid
+        verts.append(v_add(center, v_mul(d, (lo + hi) / 2.0)))
+    return L["orient"]({"v": verts, "f": [list(f) for f in faces]})
+
+
 N.update({"revolve": revolve, "blade": blade, "align": align, "floor_at": floor_at, "stone": stone,
-          "root_flare": root_flare})
+          "root_flare": root_flare, "puff": puff})
 result = {"chunk": 1, "helpers": sorted(N.keys())}
 
 # ===== chunk 2/4: TreeTall (cotton-candy tree), BushRound, TreePine (soft cones with snow caps) =====
@@ -136,22 +167,27 @@ def tree_tall():
 
     prof = []
     for z, r in ((-0.3, 1.15), (0.1, 1.02), (0.6, 0.8), (1.4, 0.68), (3.0, 0.62), (5.0, 0.6), (7.0, 0.58),
-                 (10.0, 0.55), (13.0, 0.5)):
+                 (10.0, 0.55), (12.2, 0.5)):
         prof.append((r, z, bend(z), 0.0))
     L["piece"](p, "Color_A8724C", N["root_flare"](L["lathe"](prof, n=16), amount=0.42, height=1.2), crease=50)
-    # Three stacked fluffy tiers: a core puff ringed by smaller puffs (a cotton-candy cloud outline)
-    tiers = [(7.85, 3.1, 0.8, 4, 2.0, 2.75, -0.5, 45, "Primary", 5),
-             (11.75, 2.45, 0.84, 3, 1.6, 2.05, -0.35, 20, "Secondary", 4),
-             (15.3, 1.9, 0.95, 3, 1.15, 1.4, -0.35, 75, "Primary", 4)]
-    for z, r, sq, ring, rr, dist, dz, ph, paint, seg in tiers:
+    # Three stacked cotton-candy tiers, each one soft cloud: a core ball, a ring of round puffs round
+    # its waist and a few puffs on its top, melted together; (height, core radius, squash, ring
+    # count, ring radius, ring distance, top puffs, top radius, phase, paint, mesh density)
+    tiers = [(7.8, 2.65, 0.9, 6, 1.9, 2.6, 3, 1.6, 15, "Primary", 9),
+             (11.6, 2.1, 0.9, 5, 1.5, 2.05, 3, 1.2, 50, "Secondary", 8),
+             (15.1, 1.7, 0.95, 4, 1.2, 1.4, 1, 1.3, 80, "Primary", 7)]
+    for z, r, sq, ring, rr, dist, tops, tr, ph, paint, seg in tiers:
         c = [bend(z) - 0.15, 0.0, z]
-        L["piece"](p, paint, L["blob"](c, r, squash=sq, lump=0.04, seed=int(z * 10), seg=seg), crease=60,
-                   collide=False)
+        balls = [[c[0], c[1], z, r, r, r * sq]]
         for k in range(ring):
             a = math.radians(ph + 360.0 * k / ring)
-            pc = [c[0] + dist * math.cos(a), c[1] + dist * math.sin(a), z + dz + 0.25 * math.sin(3 * a)]
-            L["piece"](p, paint, L["blob"](pc, rr, squash=0.9, lump=0.05, seed=k + int(z * 10), seg=4), crease=60,
-                       collide=False)
+            balls.append([c[0] + dist * math.cos(a), c[1] + dist * math.sin(a), z - 0.3 + 0.28 * (k % 2),
+                          rr, rr, rr * 0.92])
+        for k in range(tops):
+            a = math.radians(ph + 60 + 360.0 * k / tops)
+            d = 0.0 if tops == 1 else 0.95 * r * 0.55
+            balls.append([c[0] + d * math.cos(a), c[1] + d * math.sin(a), z + r * sq * 0.62, tr, tr, tr * 0.9])
+        L["piece"](p, paint, N["puff"](c, balls, blend=0.5, seg=seg), crease=60, collide=False)
     return p
 
 
@@ -219,7 +255,9 @@ def pine_tier(z0, R, H, lobes, ph, cap_from, n):
             return shape(s0, a, 0.06)
         if i == 2:
             return shape(s0 + 0.015, a, 0.17)
-        return shape(s0 + 0.03 + (1.0 - s0 - 0.03) * (i - 3) / 4.0, a, 0.17 * (1.0 - (i - 3) / 4.0) + 0.02)
+        if i == 7:
+            return 0.0, shape(1.0, a, 0.0)[1] + 0.1
+        return shape(s0 + 0.03 + (1.0 - s0 - 0.03) * (i - 3) / 4.0, a, 0.17 * (1.0 - (i - 3) / 4.0) + 0.08)
 
     cap = N["revolve"](8, n, cap_fn)
     return cone, cap
@@ -255,55 +293,57 @@ def tree_palm():
         return [2.0 * t ** 1.8 - 0.3, 0.35 * t ** 2, z]
 
     # Trunk: stacked rings, each a little wider at its top with a crisp step to the next one
-    path, radii = [spine(-0.3)], [1.1]
+    path, radii = [spine(-0.3)], [1.25]
     segs = 9
     for k in range(segs):
         z0 = 0.35 + (top - 0.35) * k / segs
         z1 = 0.35 + (top - 0.35) * (k + 1) / segs
-        taper = 1.0 - 0.3 * k / segs
+        taper = 1.12 - 0.34 * k / segs
         for f, r in ((0.0, 0.7), (0.55, 0.78), (0.92, 0.88)):
             path.append(spine(z0 + (z1 - z0) * f))
             radii.append(r * taper * (1.25 if k == 0 and f == 0.0 else 1.0))
     path.append(spine(top + 0.15))
-    radii.append(0.6)
-    trunk = L["tube"](path, radii, n=14, caps="flat")
+    radii.append(0.62)
+    trunk = L["tube"](path, radii, n=12, caps="flat")
     L["piece"](p, "Color_C8925A", N["root_flare"](trunk, bumps=4, amount=0.3, height=0.9), crease=35)
     crown = spine(top)
-    L["piece"](p, "Primary", L["blob"]([crown[0], crown[1], top + 0.45], 0.9, squash=0.85, lump=0.03, seed=41, seg=4),
+    L["piece"](p, "Primary", L["blob"]([crown[0], crown[1], top + 0.5], 1.05, squash=0.85, lump=0.03, seed=41, seg=4),
                collide=False)
-    # Six fat arched leaves rising a little then drooping, edges curled down, and two young upright ones
-    leaves = [(15, 4.8, 0.55, 0.95), (75, 4.4, 0.5, 1.0), (138, 4.7, 0.55, 0.95), (200, 4.5, 0.5, 1.0),
-              (262, 4.7, 0.6, 0.95), (322, 4.3, 0.6, 1.0), (105, 3.0, 1.0, 0.85), (290, 2.8, 1.0, 0.85)]
+    # Six fat fronds arching up and over, edges curled down, tips drooping to a soft point, and two
+    # young ones standing up in the middle; (direction, reach, rise, fall)
+    leaves = [(15, 5.0, 0.7, 1.08), (75, 4.6, 0.74, 1.12), (138, 4.95, 0.68, 1.05), (200, 4.7, 0.74, 1.12),
+              (262, 5.0, 0.68, 1.05), (322, 4.6, 0.74, 1.12), (105, 2.8, 1.4, 1.2), (290, 2.7, 1.4, 1.2)]
+    ts = [0.0, 0.08, 0.17, 0.27, 0.38, 0.5, 0.61, 0.71, 0.8, 0.88, 0.95, 1.0]
     for az, length, rise, fall in leaves:
         a = math.radians(az)
         d = [math.cos(a), math.sin(a)]
         pts, ws = [], []
-        steps = 9
-        for k in range(steps + 1):
-            t = k / steps
-            z = top + 0.5 + length * (rise * t - fall * t * t)
+        for t in ts:
+            z = top + 0.55 + length * (rise * t - fall * t * t)
             pts.append([crown[0] + d[0] * (0.3 + length * t), crown[1] + d[1] * (0.3 + length * t), z])
-            ws.append((0.25 * length) * math.sin(math.pi * t ** 0.85) ** 0.6)
+            ws.append((0.3 * length) * math.sin(math.pi * t ** 0.78) ** 0.75)
         ws[0], ws[-1] = 0.0, 0.0
-        L["piece"](p, "Primary", N["blade"](pts, ws, 0.24, n=10, droop=0.32), crease=55, collide=False)
-    # Coconuts tucked under the crown
-    for dx, dy, dz in ((0.35, -0.68, -0.55), (-0.62, -0.38, -0.65), (0.4, 0.5, -0.7)):
-        L["piece"](p, "Color_7A4E2E", L["ball"]([crown[0] + dx, crown[1] + dy, top + dz], 0.6, seg=3), crease=60,
+        thick = [0.3 - 0.14 * t for t in ts]
+        L["piece"](p, "Primary", N["blade"](pts, ws, thick, n=10, droop=0.34), crease=55, collide=False)
+    # Three fat coconuts hanging under the crown, toward the front
+    for dx, dy, dz in ((0.5, -0.72, -0.62), (-0.62, -0.42, -0.72), (0.05, 0.55, -0.8)):
+        L["piece"](p, "Color_7A4E2E", L["ball"]([crown[0] + dx, crown[1] + dy, top + dz], 0.68, seg=3), crease=60,
                    collide=False)
     return p
 
 
 def flower_head(R, lobes=5):
-    """A cupped cartoon flower around +Z: round petals joined in the middle, with a domed centre."""
-    rows = [(0.0, 0.26), (0.5, 0.22), (0.86, 0.3), (1.0, 0.17), (0.82, -0.05), (0.0, -0.13)]
+    """A cupped cartoon flower around +Z: fat round petals joined in the middle (6 rings of 30, so
+    every petal gets a round tip and a notch), with a domed centre."""
+    rows = [(0.0, 0.22), (0.5, 0.2), (0.84, 0.27), (1.0, 0.14), (0.84, -0.04), (0.0, -0.1)]
 
     def fn(i, a):
-        k = 0.56 + 0.44 * math.cos(lobes * a / 2.0) ** 2
+        k = 0.4 + 0.6 * abs(math.cos(lobes * a / 2.0)) ** 0.55
         return rows[i][0] * R * k, rows[i][1] * R
 
     eye = L["lathe"]([(0.0, 0.1 * R), (0.36 * R, 0.13 * R), (0.34 * R, 0.33 * R), (0.2 * R, 0.44 * R),
                       (0.0, 0.47 * R)], n=12)
-    return N["revolve"](len(rows), 25, fn), eye
+    return N["revolve"](len(rows), 6 * lobes, fn), eye
 
 
 def flower_patch():
@@ -317,14 +357,14 @@ def flower_patch():
 
     mound = L["ball"]([0.0, 0.0, -0.55], [2.95, 2.75, 1.25], seg=7, shape=mound_shape)
     L["piece"](p, "Primary", N["floor_at"](mound, -0.3), crease=60)
-    flowers = [(-1.2, -0.95, 1.45, 0.78, "Secondary", 10), (0.6, -1.35, 1.25, 0.7, "Tertiary", 40),
-               (1.45, 0.25, 1.65, 0.8, "Secondary", 70), (-0.15, 0.7, 1.95, 0.85, "Tertiary", 15),
-               (-1.8, 0.6, 1.3, 0.66, "Tertiary", 55), (1.0, 1.55, 1.4, 0.66, "Secondary", 30),
-               (0.15, -0.2, 1.15, 0.6, "Secondary", 5)]
+    # (x, y, stem length, flower radius, paint, spin); the flowers lean out and toward the front
+    flowers = [(-1.25, -1.0, 1.25, 0.82, "Secondary", 10), (0.65, -1.4, 1.05, 0.76, "Tertiary", 40),
+               (1.5, 0.3, 1.45, 0.84, "Secondary", 70), (-0.2, 0.5, 1.7, 0.88, "Tertiary", 15),
+               (-1.75, 0.8, 1.15, 0.72, "Tertiary", 55), (0.95, 1.6, 1.25, 0.72, "Secondary", 30)]
     for x, y, h, R, paint, spin in flowers:
         lean = [x * 0.14, y * 0.1 - 0.32, 1.0]
         top = L["v_add"]([x, y, 0.0], L["v_mul"](L["v_norm"](lean), h))
-        L["piece"](p, "Primary", L["tube"]([[x, y, 0.2], L["v_lerp"]([x, y, 0.2], top, 0.5), top], 0.19, n=8,
+        L["piece"](p, "Primary", L["tube"]([[x, y, 0.2], L["v_lerp"]([x, y, 0.2], top, 0.5), top], 0.23, n=8,
                                            caps="flat"), crease=60)
         head, eye = flower_head(R)
         L["piece"](p, paint, L["move"](N["align"](head, lean, spin), top), crease=60)
@@ -335,8 +375,8 @@ def flower_patch():
 def grass_tuft():
     p = L["new_prop"]("GrassTuft", 106, 24, {"Primary": "5BCB4C"}, category=CAT)
     # (direction, length, lean) per blade; each blade arcs outward and ends in a rounded tip
-    blades = [(330, 1.75, 3), (150, 1.5, 8), (10, 1.35, 20), (62, 1.2, 26), (115, 1.4, 18), (195, 1.15, 26),
-              (245, 1.35, 20), (290, 1.1, 28)]
+    blades = [(330, 1.75, 3), (150, 1.5, 8), (18, 1.35, 20), (75, 1.25, 24), (125, 1.4, 18), (205, 1.2, 26),
+              (265, 1.35, 22)]
     ts = [0.0, 0.16, 0.32, 0.48, 0.62, 0.74, 0.84, 0.92, 0.97, 1.0]
     for az, length, tilt in blades:
         a = math.radians(az)
@@ -412,11 +452,11 @@ def rock_tall():
     p = L["new_prop"]("RockTall", 72, 24, {"Primary": "959ECB", "Secondary": "B9C0E8"}, solid=True, category=CAT)
     # A balanced cairn: four flat faceted stones, each smaller, nudged and tipped against the one
     # below (tip = axis + degrees about the stone's bottom centre), and a pebble at the foot
-    stones = [("Primary", (0.0, 0.2, 1.3), 3.1, -0.5, 3.4, 61, 5, 0.4, 9, (0.15, -0.1), None),
-              ("Secondary", (0.55, -0.05, 4.6), 2.45, 3.05, 6.5, 62, 5, 0.4, 8, (-0.2, 0.1), ([0.3, 1.0, 0.0], 8)),
-              ("Primary", (-0.2, 0.2, 7.5), 1.8, 6.1, 8.7, 63, 5, 0.35, 7, (0.25, -0.15), ([1.0, -0.4, 0.0], -10)),
-              ("Secondary", (0.15, 0.1, 9.3), 1.05, 8.45, 10.1, 64, 4, 0.28, 5, (-0.2, 0.2), None),
-              ("Secondary", (-2.55, -1.75, 0.4), 1.1, -0.5, 1.5, 66, 4, 0.25, 4, (0.0, 0.0), None)]
+    stones = [("Primary", (0.0, 0.15, 1.3), 2.7, -0.5, 3.4, 61, 5, 0.4, 9, (0.15, -0.1), None),
+              ("Secondary", (0.4, -0.05, 4.6), 2.15, 3.05, 6.5, 62, 5, 0.38, 8, (-0.2, 0.1), ([0.3, 1.0, 0.0], 8)),
+              ("Primary", (-0.15, 0.15, 7.5), 1.6, 6.1, 8.75, 63, 5, 0.34, 7, (0.25, -0.15), ([1.0, -0.4, 0.0], -10)),
+              ("Secondary", (0.1, 0.05, 9.35), 0.98, 8.5, 10.2, 64, 4, 0.28, 5, (-0.2, 0.2), None),
+              ("Secondary", (-2.2, -1.5, 0.4), 0.95, -0.5, 1.4, 66, 4, 0.25, 4, (0.0, 0.0), None)]
     for paint, c, r, z0, z1, seed, sides, soft, seg, lean, tip in stones:
         m = N["stone"](c, r, z0, z1, seed=seed, sides=sides, soft=soft, seg=seg, lean=lean,
                        floor=-0.5 if z0 < 0 else None, shoulders=3 if r > 1.0 else 2)
@@ -440,11 +480,12 @@ def crystal(h, w, tip):
 
 def crystal_cluster():
     p = L["new_prop"]("CrystalCluster", 82, 24, {"Primary": "7650EE", "Secondary": "6E75B0"}, category=CAT)
-    L["piece"](p, "Secondary", N["stone"]((0.0, 0.0, 0.35), 2.7, -0.5, 1.25, seed=71, seg=8, soft=0.45,
+    L["piece"](p, "Secondary", N["stone"]((0.0, 0.0, 0.35), 2.45, -0.5, 1.25, seed=71, seg=8, soft=0.45,
                                           floor=-0.5), crease=30)
-    gems = [((0.0, 0.3, 0.5), 6.3, 1.3, (0.05, 0.1), 0), ((-1.5, -0.4, 0.5), 4.3, 0.95, (-0.55, -0.2), 15),
-            ((1.55, -0.2, 0.45), 4.8, 1.0, (0.6, -0.15), 40), ((0.6, 1.5, 0.45), 3.6, 0.85, (0.3, 0.6), 25),
-            ((-1.05, 1.25, 0.45), 3.0, 0.75, (-0.5, 0.45), 5), ((0.35, -1.65, 0.3), 2.2, 0.65, (0.15, -0.75), 20)]
+    # (base, height, width, lean, spin): a tall middle crystal, four leaning out round it, a small one
+    gems = [((0.0, 0.25, 0.5), 7.4, 1.3, (0.05, 0.08), 0), ((-1.3, -0.35, 0.5), 4.6, 0.95, (-0.42, -0.16), 15),
+            ((1.35, -0.2, 0.45), 5.1, 1.0, (0.46, -0.12), 40), ((0.5, 1.3, 0.45), 3.9, 0.85, (0.24, 0.46), 25),
+            ((-0.95, 1.1, 0.45), 3.3, 0.75, (-0.4, 0.36), 5), ((0.3, -1.45, 0.3), 2.3, 0.65, (0.12, -0.6), 20)]
     for c, h, w, lean, spin in gems:
         body, point = crystal(h, w, 0.3)
         n = [lean[0], lean[1], 1.0]

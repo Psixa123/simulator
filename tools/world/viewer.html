@@ -184,17 +184,47 @@ new GLTFLoader().load(glbUrl, (gltf) => {
   const box = new THREE.Box3();
   for (const o of visible) box.expandByObject(o);
   box.min.y = Math.max(box.min.y, 0);
-  // Glow halo around glowing pieces
+  // Glow halo around glowing pieces: one per separate blob of a Neon mesh (a paint's blobs are merged
+  // into one mesh, e.g. a crystal cluster's tips; in the game each glows on its own)
+  function blobBoxes(o) {
+    const pos = o.geometry.attributes.position;
+    const count = pos.count;
+    const parent = new Int32Array(count);
+    for (let i = 0; i < count; i++) parent[i] = i;
+    const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    const join = (a, b) => { a = find(a); b = find(b); if (a !== b) parent[a] = b; };
+    const seen = new Map();  // vertices at the same spot (split by creases) belong together
+    for (let i = 0; i < count; i++) {
+      const key = [pos.getX(i), pos.getY(i), pos.getZ(i)].map((x) => Math.round(x * 100)).join(',');
+      if (seen.has(key)) join(i, seen.get(key)); else seen.set(key, i);
+    }
+    const index = o.geometry.index;
+    const tris = index ? index.count : count;
+    const at = (k) => (index ? index.getX(k) : k);
+    for (let t = 0; t + 2 < tris; t += 3) {
+      join(at(t), at(t + 1));
+      join(at(t), at(t + 2));
+    }
+    const boxes = new Map();
+    const p = new THREE.Vector3();
+    for (let i = 0; i < count; i++) {
+      const r = find(i);
+      if (!boxes.has(r)) boxes.set(r, new THREE.Box3());
+      boxes.get(r).expandByPoint(p.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld));
+    }
+    return [...boxes.values()];
+  }
   for (const [o, info] of glows) {
-    const b = new THREE.Box3().setFromObject(o);
-    const s = b.getSize(new THREE.Vector3());
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: srgbHex(info.rgb),
-      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.6 }));
-    sprite.material.userData.outlineParameters = { visible: false };
-    sprite.position.copy(b.getCenter(new THREE.Vector3()));
-    sprite.scale.setScalar(Math.max(s.x, s.y, s.z) * 2.1);
-    sprite.renderOrder = 3;
-    scene.add(sprite);
+    for (const b of blobBoxes(o)) {
+      const s = b.getSize(new THREE.Vector3());
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: srgbHex(info.rgb),
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.6 }));
+      sprite.material.userData.outlineParameters = { visible: false };
+      sprite.position.copy(b.getCenter(new THREE.Vector3()));
+      sprite.scale.setScalar(Math.max(s.x, s.y, s.z) * 2.1);
+      sprite.renderOrder = 3;
+      scene.add(sprite);
+    }
   }
   // The ground: anything below y = 0 is buried in the game. An invisible plane that only writes
   // depth hides it and keeps the background transparent.

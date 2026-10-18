@@ -22,6 +22,18 @@ function fail(message) {
 window.addEventListener('error', (e) => fail(`${e.message} (${e.filename}:${e.lineno})`));
 window.addEventListener('unhandledrejection', (e) => fail(`unhandled rejection: ${e.reason && (e.reason.stack || e.reason)}`));
 
+// Neutral tone mapping, but without its strong toe: the original subtracts nearly all of the darkest channel
+// from dark colours, which crushes dusk and night zones to black (Roblox keeps them coloured)
+{
+  const chunk = THREE.ShaderChunk.tonemapping_pars_fragment;
+  const toe = 'float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;';
+  if (chunk.includes(toe)) {
+    THREE.ShaderChunk.tonemapping_pars_fragment = chunk.replace(toe, 'float offset = 0.04 * smoothstep( 0.0, 0.12, x );');
+  } else {
+    log('note: this three.js has a different NeutralToneMapping; dark scenes may render darker');
+  }
+}
+
 const scene = await (await fetch('/__data/scene.json')).json();
 const [W, H] = scene.size;
 const settings = scene.settings || {};
@@ -34,7 +46,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = settings.exposure ?? 1.0;
 renderer.shadowMap.enabled = settings.shadows !== false;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = settings.shadowType === 'pcf' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 const world = new THREE.Scene();
@@ -100,6 +112,9 @@ const skyMaterial = new THREE.ShaderMaterial({
       return fbm(p + w * 1.4);
     }
     void main() {
+      float t = gl_FragCoord.y / height;
+      vec3 screen = mix(screenBottom, screenTop, smoothstep(0.0, 1.0, t));
+      if (screenMix >= 1.0) { gl_FragColor = vec4(screen, 1.0); return; }
       vec3 d = normalize(vDir);
       vec3 col = d.y > 0.0 ? mix(horizon, zenith, pow(clamp(d.y, 0.0, 1.0), 0.55))
                            : mix(horizon, below, pow(clamp(-d.y * 3.0, 0.0, 1.0), 0.7));
@@ -128,9 +143,7 @@ const skyMaterial = new THREE.ShaderMaterial({
         float fade = smoothstep(0.0, 0.14, d.y);
         col = mix(col, mix(horizon, c, 0.3 + 0.7 * fade), body * cloudDensity * fade);
       }
-      // aerial shots look down at the void under the world: use a soft top-to-bottom gradient instead
-      float t = gl_FragCoord.y / height;
-      vec3 screen = mix(screenBottom, screenTop, smoothstep(0.0, 1.0, t));
+      // aerial shots look down at the void under the world: they use a soft top-to-bottom gradient instead
       gl_FragColor = vec4(mix(col, screen, screenMix), 1.0);
     }`,
 });
@@ -214,12 +227,16 @@ async function loadBinary(url) {
 
 if (scene.meshes && scene.meshes.url) {
   const buffer = await loadBinary(scene.meshes.url);
-  for (const [name, m] of Object.entries(scene.meshes.items)) {
+  const geometryAt = (m) => {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buffer, m.position, m.vertices * 3), 3));
     g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(buffer, m.normal, m.vertices * 3), 3));
     g.setIndex(new THREE.BufferAttribute(new Uint32Array(buffer, m.index, m.indices), 1));
-    GEOMETRY['mesh:' + name] = g;
+    return g;
+  };
+  for (const [name, m] of Object.entries(scene.meshes.items)) {
+    GEOMETRY['mesh:' + name] = geometryAt(m);
+    if (m.lod) GEOMETRY['mesh:' + name + '#lod'] = geometryAt(m.lod);
   }
 }
 
@@ -248,14 +265,21 @@ function material(kind, opacity) {
 
 // ------------------------------------------------------------------------------------ parts
 // part: [shape, kind, opacity, castShadow, x, y, z, r00..r22, sx, sy, sz, "RRGGBB"]
+// Instanced per (shape, material) and per CHUNK x CHUNK studs cell, so three.js can skip the cells a shot
+// (or the sun's shadow camera) doesn't see; each cell's prop meshes switch to their low-detail version
+// (LOD) when the cell is far away.
+const CHUNK = settings.chunk ?? 128;
 const groups = new Map();
 for (const p of scene.parts) {
-  const key = p[0] + '|' + p[1] + '|' + p[2] + '|' + p[3];
+  const big = Math.max(p[16], p[17], p[18]) > CHUNK;
+  const cell = big ? 'big' : Math.floor(p[4] / CHUNK) + ':' + Math.floor(p[6] / CHUNK);
+  const key = p[0] + '|' + p[1] + '|' + p[2] + '|' + p[3] + '|' + cell;
   if (!groups.has(key)) groups.set(key, []);
   groups.get(key).push(p);
 }
 const matrix = new THREE.Matrix4();
 const tmpColor = new THREE.Color();
+const lodMeshes = []; // { full, low } instanced meshes of one cell
 let instanceCount = 0;
 for (const [key, list] of groups) {
   const [shape, kind, opacityText, castText] = key.split('|');
@@ -282,10 +306,42 @@ for (const [key, list] of groups) {
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.castShadow = castText === '1' && kind !== 'force' && opacity >= 0.6;
   mesh.receiveShadow = kind !== 'neon' && kind !== 'force';
-  mesh.frustumCulled = false;
+  mesh.computeBoundingSphere();
+  mesh.frustumCulled = true;
   if (opacity < 1) mesh.renderOrder = 10;
   world.add(mesh);
   instanceCount += list.length;
+  const low = GEOMETRY[shape + '#lod'];
+  if (low) {
+    const lowMesh = new THREE.InstancedMesh(low, mesh.material, list.length);
+    lowMesh.instanceMatrix = mesh.instanceMatrix;
+    lowMesh.instanceColor = mesh.instanceColor;
+    lowMesh.castShadow = mesh.castShadow;
+    lowMesh.receiveShadow = mesh.receiveShadow;
+    lowMesh.boundingSphere = mesh.boundingSphere.clone();
+    lowMesh.renderOrder = mesh.renderOrder;
+    lowMesh.visible = false;
+    world.add(lowMesh);
+    lodMeshes.push({ full: mesh, low: lowMesh });
+  }
+}
+
+// Far cells draw their low-detail meshes: when a stud covers fewer than LOD_PIXELS pixels at the cell's
+// nearest point
+const LOD_PIXELS = settings.lodPixels ?? 7;
+function chooseDetail(camera, height) {
+  const pixelsPerStudAtOne = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+  const lodDistance = pixelsPerStudAtOne / LOD_PIXELS;
+  let low = 0;
+  for (const entry of lodMeshes) {
+    const sphere = entry.full.boundingSphere;
+    const near = camera.position.distanceTo(sphere.center) - sphere.radius;
+    const far = near > lodDistance;
+    entry.full.visible = !far;
+    entry.low.visible = far;
+    if (far) low += entry.full.count;
+  }
+  return low;
 }
 
 // ------------------------------------------------------------------------------------ terrain
@@ -721,7 +777,11 @@ for (const shot of scene.shots) {
   const fog = shot.fog || [focusDistance * 1.2, focusDistance * 4.5];
   world.fog.near = fog[0];
   world.fog.far = fog[1];
+  // nothing past the fog's far end shows, so don't draw it
+  camera.far = Math.min(20000, fog[1] * 1.02);
+  camera.updateProjectionMatrix();
   setShadowBox(shot.shadow);
+  const lowDetail = chooseDetail(camera, sh);
   placeBillboards(camera);
   renderPass.camera = camera;
   composer.render();

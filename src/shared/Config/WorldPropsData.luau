@@ -34,9 +34,76 @@ export type Prop = {
 local WorldPropsData = {}
 
 WorldPropsData.RootSize = 1
-WorldPropsData.Order = { "LampPost", "RockCluster", "TreeRound" }
+WorldPropsData.Order = { "BushRound", "CrystalCluster", "Fence", "FlowerPatch", "GrassTuft", "LampPost", "Mushroom", "RockCluster", "RockTall", "TreePalm", "TreePine", "TreeRound", "TreeTall" }
 
 local Props: { [string]: Prop } = {
+	BushRound = {
+		Category = "nature",
+		Size = Vector3.new(6.021, 4.018, 4.883),
+		Center = Vector3.new(0.007, 1.771, 0.025),
+		Footprint = 3.035,
+		Collide = false,
+		Tris = 1632,
+		Paints = { Primary = Color3.fromRGB(69, 194, 90), Secondary = Color3.fromRGB(143, 227, 111) },
+		Pieces = {
+			{ Name = "BushRound.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(69, 194, 90), Center = Vector3.new(0.007, 1.542, 0.025), Size = Vector3.new(6.021, 3.56, 4.883), Collide = false, Tris = 1332 },
+			{ Name = "BushRound.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(143, 227, 111), Center = Vector3.new(0.469, 2.744, -0.797), Size = Vector3.new(2.395, 2.072, 2.299), Collide = false, Tris = 300 },
+		},
+	},
+	CrystalCluster = {
+		Category = "nature",
+		Size = Vector3.new(6.945, 8.723, 5.802),
+		Center = Vector3.new(-0.17, 3.506, 0.161),
+		Footprint = 3.666,
+		Collide = false,
+		Tris = 1128,
+		Paints = { Primary = Color3.fromRGB(118, 80, 238), Secondary = Color3.fromRGB(110, 117, 176) },
+		Pieces = {
+			{ Name = "CrystalCluster.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(118, 80, 238), Center = Vector3.new(-0.17, 3.189, 0.161), Size = Vector3.new(6.945, 8.088, 5.802), Collide = false, Tris = 288 },
+			{ Name = "CrystalCluster.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(110, 117, 176), Center = Vector3.new(-0.08, 0.392, 0.16), Size = Vector3.new(5.664, 1.785, 5.587), Collide = false, Tris = 768 },
+			{ Name = "CrystalCluster.Neon_FFFFFF", Paint = "Neon_FFFFFF", Kind = "Neon", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(-0.192, 4.914, 0.143), Size = Vector3.new(6.623, 5.907, 5.567), Collide = false, Tris = 72 },
+		},
+	},
+	Fence = {
+		Category = "nature",
+		Size = Vector3.new(10.18, 4.65, 1.28),
+		Center = Vector3.new(0, 2.025, 0),
+		Footprint = 5.09,
+		Collide = false,
+		Tris = 1680,
+		Paints = { Primary = Color3.fromRGB(255, 246, 232), Secondary = Color3.fromRGB(125, 180, 245) },
+		Pieces = {
+			{ Name = "Fence.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 246, 232), Center = Vector3.new(0, 2.025, 0), Size = Vector3.new(10.18, 4.65, 1.28), Collide = false, Tris = 1464 },
+			{ Name = "Fence.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(125, 180, 245), Center = Vector3.new(0, 1.65, 0.26), Size = Vector3.new(8.6, 1.9, 0.42), Collide = false, Tris = 216 },
+		},
+	},
+	FlowerPatch = {
+		Category = "nature",
+		Size = Vector3.new(5.865, 2.363, 5.466),
+		Center = Vector3.new(-0.162, 0.882, 0.067),
+		Footprint = 3.112,
+		Collide = false,
+		Tris = 2720,
+		Paints = { Primary = Color3.fromRGB(76, 194, 84), Secondary = Color3.fromRGB(255, 134, 182), Tertiary = Color3.fromRGB(255, 255, 255) },
+		Pieces = {
+			{ Name = "FlowerPatch.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(76, 194, 84), Center = Vector3.new(-0.162, 0.704, 0.067), Size = Vector3.new(5.865, 2.008, 5.466), Collide = false, Tris = 848 },
+			{ Name = "FlowerPatch.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(255, 134, 182), Center = Vector3.new(-0.205, 1.323, -0.07), Size = Vector3.new(4.854, 0.968, 4.306), Collide = false, Tris = 720 },
+			{ Name = "FlowerPatch.Tertiary", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0.64, 1.368, -0.712), Size = Vector3.new(4.121, 1.392, 3.685), Collide = false, Tris = 720 },
+			{ Name = "FlowerPatch.Color_FFE15A", Paint = "Color_FFE15A", Kind = "Color", Color = Color3.fromRGB(255, 225, 90), Center = Vector3.new(0.094, 1.493, -0.265), Size = Vector3.new(4.432, 1.134, 3.822), Collide = false, Tris = 432 },
+		},
+	},
+	GrassTuft = {
+		Category = "nature",
+		Size = Vector3.new(1.89, 1.539, 2.016),
+		Center = Vector3.new(0.002, 0.507, -0.021),
+		Footprint = 1.033,
+		Collide = false,
+		Tris = 994,
+		Paints = { Primary = Color3.fromRGB(91, 203, 76) },
+		Pieces = {
+			{ Name = "GrassTuft.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(91, 203, 76), Center = Vector3.new(0.002, 0.507, -0.021), Size = Vector3.new(1.89, 1.539, 2.016), Collide = false, Tris = 994 },
+		},
+	},
 	LampPost = {
 		Category = "common",
 		Size = Vector3.new(5.42, 9.76, 2.772),
@@ -49,6 +116,20 @@ local Props: { [string]: Prop } = {
 			{ Name = "LampPost.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(83, 97, 201), Center = Vector3.new(-0.87, 4.88, 0), Size = Vector3.new(4.54, 9.76, 2.772), Collide = false, Tris = 928 },
 			{ Name = "LampPost.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(255, 201, 60), Center = Vector3.new(-1.61, 4.908, 0), Size = Vector3.new(4.82, 7.377, 2.52), Collide = false, Tris = 1116 },
 			{ Name = "LampPost.Neon_FFF3B0", Paint = "Neon_FFF3B0", Kind = "Neon", Color = Color3.fromRGB(255, 243, 176), Center = Vector3.new(-2.76, 6.72, 0), Size = Vector3.new(1.72, 1.72, 1.72), Collide = false, Tris = 432 },
+		},
+	},
+	Mushroom = {
+		Category = "nature",
+		Size = Vector3.new(5.572, 5.885, 4.9),
+		Center = Vector3.new(0.017, 2.642, 0.3),
+		Footprint = 3.022,
+		Collide = false,
+		Tris = 1968,
+		Paints = { Primary = Color3.fromRGB(255, 94, 108) },
+		Pieces = {
+			{ Name = "Mushroom.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 94, 108), Center = Vector3.new(0.015, 3.366, 0.3), Size = Vector3.new(5.569, 4.208, 4.9), Collide = false, Tris = 792 },
+			{ Name = "Mushroom.Color_FFF4E0", Paint = "Color_FFF4E0", Kind = "Color", Color = Color3.fromRGB(255, 244, 224), Center = Vector3.new(-0.359, 1.35, -0.168), Size = Vector3.new(3.458, 3.3, 2.944), Collide = false, Tris = 384 },
+			{ Name = "Mushroom.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0.13, 3.742, 0.17), Size = Vector3.new(5.348, 3.685, 4.569), Collide = false, Tris = 792 },
 		},
 	},
 	RockCluster = {
@@ -64,6 +145,47 @@ local Props: { [string]: Prop } = {
 			{ Name = "RockCluster.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(185, 192, 232), Center = Vector3.new(-2.302, 1.004, -1.095), Size = Vector3.new(4.423, 3.008, 4.567), Collide = true, Tris = 972 },
 		},
 	},
+	RockTall = {
+		Category = "nature",
+		Size = Vector3.new(7.084, 10.653, 6.882),
+		Center = Vector3.new(-0.077, 4.827, 0.131),
+		Footprint = 3.903,
+		Collide = true,
+		Tris = 2820,
+		Paints = { Primary = Color3.fromRGB(149, 158, 203), Secondary = Color3.fromRGB(185, 192, 232) },
+		Pieces = {
+			{ Name = "RockTall.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(149, 158, 203), Center = Vector3.new(-0.077, 4.156, 0.131), Size = Vector3.new(7.084, 9.312, 6.882), Collide = true, Tris = 1560 },
+			{ Name = "RockTall.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(185, 192, 232), Center = Vector3.new(0.026, 4.827, -0.175), Size = Vector3.new(6.522, 10.653, 4.962), Collide = true, Tris = 1260 },
+		},
+	},
+	TreePalm = {
+		Category = "nature",
+		Size = Vector3.new(9.817, 15.776, 9.982),
+		Center = Vector3.new(-1.91, 7.583, 0.092),
+		Footprint = 7.033,
+		Collide = false,
+		Tris = 2808,
+		Paints = { Primary = Color3.fromRGB(62, 196, 94) },
+		Pieces = {
+			{ Name = "TreePalm.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(62, 196, 94), Center = Vector3.new(-1.91, 13.86, 0.092), Size = Vector3.new(9.817, 3.221, 9.982), Collide = false, Tris = 1792 },
+			{ Name = "TreePalm.Color_7A4E2E", Paint = "Color_7A4E2E", Kind = "Color", Color = Color3.fromRGB(122, 78, 46), Center = Vector3.new(-1.64, 12.89, 0.265), Size = Vector3.new(2.392, 1.452, 2.542), Collide = false, Tris = 324 },
+			{ Name = "TreePalm.Color_C8925A", Paint = "Color_C8925A", Kind = "Color", Color = Color3.fromRGB(200, 146, 90), Center = Vector3.new(-0.21, 6.802, -0.128), Size = Vector3.new(4.309, 14.213, 2.794), Collide = false, Tris = 692 },
+		},
+	},
+	TreePine = {
+		Category = "nature",
+		Size = Vector3.new(9.28, 17.21, 8.338),
+		Center = Vector3.new(0, 8.305, 0),
+		Footprint = 4.64,
+		Collide = false,
+		Tris = 2754,
+		Paints = { Primary = Color3.fromRGB(47, 168, 102), Tertiary = Color3.fromRGB(242, 248, 255) },
+		Pieces = {
+			{ Name = "TreePine.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(47, 168, 102), Center = Vector3.new(0, 9.385, 0), Size = Vector3.new(9.28, 14.851, 8.338), Collide = false, Tris = 1632 },
+			{ Name = "TreePine.Tertiary", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(242, 248, 255), Center = Vector3.new(0, 10.894, 0), Size = Vector3.new(5.698, 12.032, 5.122), Collide = false, Tris = 946 },
+			{ Name = "TreePine.Color_8A5A3C", Paint = "Color_8A5A3C", Kind = "Color", Color = Color3.fromRGB(138, 90, 60), Center = Vector3.new(-0.14, 1.45, -0.132), Size = Vector3.new(2.497, 3.5, 2.522), Collide = false, Tris = 176 },
+		},
+	},
 	TreeRound = {
 		Category = "common",
 		Size = Vector3.new(11.825, 13.48, 9.13),
@@ -76,6 +198,20 @@ local Props: { [string]: Prop } = {
 			{ Name = "TreeRound.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(76, 197, 82), Center = Vector3.new(0.002, 8.559, 0.329), Size = Vector3.new(11.825, 7.951, 8.628), Collide = false, Tris = 1452 },
 			{ Name = "TreeRound.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(142, 227, 107), Center = Vector3.new(0.869, 10.758, -1.748), Size = Vector3.new(5.372, 4.844, 5.478), Collide = false, Tris = 432 },
 			{ Name = "TreeRound.Color_A8724C", Paint = "Color_A8724C", Kind = "Color", Color = Color3.fromRGB(168, 114, 76), Center = Vector3.new(-0.257, 2.85, 0), Size = Vector3.new(5.413, 6.3, 5.637), Collide = true, Tris = 396 },
+		},
+	},
+	TreeTall = {
+		Category = "nature",
+		Size = Vector3.new(8.734, 17.531, 8.734),
+		Center = Vector3.new(-0.348, 8.465, -0.02),
+		Footprint = 4.815,
+		Collide = false,
+		Tris = 2612,
+		Paints = { Primary = Color3.fromRGB(255, 140, 198), Secondary = Color3.fromRGB(255, 196, 225) },
+		Pieces = {
+			{ Name = "TreeTall.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 140, 198), Center = Vector3.new(-0.348, 11.33, -0.02), Size = Vector3.new(8.734, 11.801, 8.734), Collide = false, Tris = 1560 },
+			{ Name = "TreeTall.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(255, 196, 225), Center = Vector3.new(0.551, 11.778, -0.16), Size = Vector3.new(6.803, 4.136, 6.757), Collide = false, Tris = 768 },
+			{ Name = "TreeTall.Color_A8724C", Paint = "Color_A8724C", Kind = "Color", Color = Color3.fromRGB(168, 114, 76), Center = Vector3.new(-0.135, 5.95, 0.113), Size = Vector3.new(2.849, 12.5, 2.791), Collide = false, Tris = 284 },
 		},
 	},
 }

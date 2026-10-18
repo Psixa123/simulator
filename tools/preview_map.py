@@ -430,9 +430,8 @@ def run_mock(args, out_dir, pack):
         else:
             print(f"  MOCK GAP: {gap['Message']}{where} - caught by a pcall in the game code, so the game "
                   "carried on, but the preview may differ from Roblox")
-    counts = world.get("Counts", {})
-    print(f"  mock: {len(world['Parts'])} parts ({counts.get('MeshPart', 0)} MeshParts), "
-          f"{len(world['Terrain']['Fills'])} terrain fills, {len(world['Guis'])} guis in {time.time() - started:.1f}s")
+    print(f"  mock: ran in {time.time() - started:.1f}s: {len(world['Parts'])} parts, "
+          f"{len(world['Terrain']['Fills'])} terrain fills, {len(world['Guis'])} guis")
     if (errors or gaps) and not args.keep_going:
         what = "raised errors in the mock" if errors else "used something the mock doesn't support"
         sys.exit(f"the map code {what} (see above; fix it, or pass --keep-going to render anyway)")
@@ -680,18 +679,83 @@ def export_meshes(pack, names, path):
         lo, hi = pos.min(0), pos.max(0)
         size = np.maximum(hi - lo, 1e-4)
         pos = (pos - (lo + hi) / 2) / size
-        nrm = nrm * size
-        nrm /= np.maximum(np.linalg.norm(nrm, axis=1, keepdims=True), 1e-9)
-        entry = {"vertices": len(pos), "indices": len(idx)}
-        for key, array in (("position", pos.astype(np.float32)), ("normal", nrm.astype(np.float32)),
-                           ("index", idx.astype(np.uint32))):
-            entry[key] = offset
-            data = array.tobytes()
-            chunks.append(data)
-            offset += len(data)
+        nrm = unit_normals(nrm * size, pos)
+
+        def pack_arrays(p, n, i):
+            nonlocal offset
+            entry = {"vertices": len(p), "indices": len(i)}
+            for key, array in (("position", p.astype(np.float32)), ("normal", n.astype(np.float32)),
+                               ("index", i.astype(np.uint32))):
+                entry[key] = offset
+                data = array.tobytes()
+                chunks.append(data)
+                offset += len(data)
+            return entry
+        entry = pack_arrays(pos, nrm, idx)
+        if len(idx) // 3 > LOD_MIN_TRIANGLES:
+            low = simplify_mesh(pos, nrm, idx, size)
+            if low is not None:
+                entry["lod"] = pack_arrays(*low)
         items[name] = entry
     path.write_bytes(b"".join(chunks))
     return items
+
+
+def unit_normals(normals, positions):
+    """Normalised normals; where one is (nearly) zero - opposite faces averaged together - it points away from
+    the mesh centre instead (a zero normal turns into NaN in the shader, and bloom smears NaN over the image)."""
+    import numpy as np
+    length = np.linalg.norm(normals, axis=1, keepdims=True)
+    outward = positions - positions.mean(axis=0)
+    outward /= np.maximum(np.linalg.norm(outward, axis=1, keepdims=True), 1e-9)
+    outward[np.linalg.norm(outward, axis=1) < 0.5] = [0.0, 1.0, 0.0]
+    return np.where(length > 1e-6, normals / np.maximum(length, 1e-12), outward)
+
+
+LOD_MIN_TRIANGLES = 300                # meshes with more triangles get a low-detail version for far instances
+LOD_CELLS = (0.6, 0.85, 1.2, 1.6)      # studs: vertex clustering grids tried, finest first...
+LOD_TARGET = 0.35                      # ...until the low-detail mesh has at most this share of the triangles
+
+
+def simplify_mesh(pos, nrm, idx, size):
+    """Low-detail version of a mesh (unit-box positions, normals, triangle indices; `size` = its real size in
+    studs) for instances far from the camera, by vertex clustering: the vertices in each grid cell merge into
+    their average. Tries the LOD_CELLS grids finest first and keeps the first one reaching LOD_TARGET.
+    Returns (positions, normals, indices), or None when no grid saves at least 30%."""
+    best = None
+    for cell in LOD_CELLS:
+        low = cluster_vertices(pos, nrm, idx, size, cell)
+        if low is not None and len(low[2]) <= 0.7 * len(idx):
+            best = low
+            if len(low[2]) <= LOD_TARGET * len(idx):
+                break
+    return best
+
+
+def cluster_vertices(pos, nrm, idx, size, cell):
+    import numpy as np
+    cells = np.maximum(np.ceil(size / cell), 2).astype(np.int64)
+    grid = np.clip(np.floor((pos + 0.5) * cells), 0, cells - 1).astype(np.int64)
+    key = (grid[:, 0] * cells[1] + grid[:, 1]) * cells[2] + grid[:, 2]
+    unique, cluster = np.unique(key, return_inverse=True)
+    cluster = cluster.reshape(-1)
+    count = np.bincount(cluster, minlength=len(unique)).astype(np.float64)[:, None]
+    new_pos = np.zeros((len(unique), 3))
+    new_nrm = np.zeros((len(unique), 3))
+    np.add.at(new_pos, cluster, pos)
+    np.add.at(new_nrm, cluster, nrm)
+    new_pos /= count
+    new_nrm = unit_normals(new_nrm, new_pos)
+    tris = cluster[idx.reshape(-1, 3)]
+    tris = tris[(tris[:, 0] != tris[:, 1]) & (tris[:, 1] != tris[:, 2]) & (tris[:, 0] != tris[:, 2])]
+    if len(tris) == 0:
+        return None
+    # one copy of each triangle (the same corners in any rotation)
+    first = np.argmin(tris, axis=1)
+    canon = np.stack([tris[np.arange(len(tris)), (first + k) % 3] for k in range(3)], axis=1)
+    _, keep = np.unique(canon, axis=0, return_index=True)
+    tris = tris[np.sort(keep)]
+    return new_pos, new_nrm, tris.reshape(-1).astype(np.uint32)
 
 
 # --------------------------------------------------------------------------------------- scene
@@ -791,7 +855,10 @@ def part_records(world, mesh_names):
     return records, used_meshes
 
 
-def lighting_settings(world, preset=None):
+SUN_AZIMUTH = 53  # degrees, the camera azimuth convention (look_direction): the sun is on the -X/+Z side
+
+
+def lighting_settings(world, preset=None, sun_azimuth=SUN_AZIMUTH):
     """Renderer lighting from the Lighting service as MapService left it, with a zone's Lighting preset
     (Config/Zones, applied by ZoneController when a player enters the zone) on top."""
     props = dict(world["Lighting"]["Properties"])
@@ -822,12 +889,10 @@ def lighting_settings(world, preset=None):
     horizon = mix(horizon_night, horizon_day, day)
     zenith = mix(zenith_night, zenith_day, day)
     below = mix(horizon, [0.93, 0.95, 1.0], 0.6 * day + 0.1)
-    if day > 0:
-        elevation = math.radians(max(18, min(68, 90 - from_noon * 13)))
-        side = -1 if clock >= 12 else 1  # afternoon sun from -X, morning from +X
-    else:  # moonlight
-        elevation, side = math.radians(42), 1
-    horizontal = [0.42 * side, -0.9]
+    # the sun's (or moon's) height follows ClockTime; it always shines from the -X/+Z side, behind the default
+    # cameras (eye shots look along +X, aerial shots look from the +Z side), so shots show the lit side of things
+    elevation = math.radians(max(18, min(68, 90 - from_noon * 13)) if day > 0 else 42)
+    horizontal = [-math.sin(math.radians(sun_azimuth)), math.cos(math.radians(sun_azimuth))]
     norm = math.hypot(*horizontal)
     direction = [math.cos(elevation) * horizontal[0] / norm, math.sin(elevation), math.cos(elevation) * horizontal[1] / norm]
     sun_color = mix([0.72, 0.78, 1.0], mix([1.0, 0.96, 0.89], [1.0, 0.76, 0.52], late), day)
@@ -881,9 +946,34 @@ def region_key(region):
     return "hub" if region["Id"] == 0 else str(region["Id"])
 
 
-def world_regions(world):
+PART_BUDGET = 12000  # STYLE_GUIDE "Performance": at most this many parts in the whole world
+
+
+def report_world(world):
+    """Prints the part count against the budget (per region) and the parts that would fall in game."""
+    regions, _ = world_regions(world, quiet=True)
+    parts = world["Parts"]
+    per_region = {}
+    for part in parts:
+        region = region_at(regions, part["CFrame"][0])
+        key = region_key(region) if region else "?"
+        per_region[key] = per_region.get(key, 0) + 1
+    split = " ".join(f"{k}={per_region[k]}" for k in [region_key(r) for r in regions] + ["?"] if k in per_region)
+    meshes = sum(1 for part in parts if part["Class"] == "MeshPart")
+    print(f"  parts: {len(parts)} ({meshes} MeshParts) of the {PART_BUDGET:,} budget; by region: {split}")
+    if len(parts) > PART_BUDGET:
+        print(f"  warn: {len(parts)} parts is over the STYLE_GUIDE budget of {PART_BUDGET:,}")
+    loose = [part for part in parts if part.get("Anchored") is False and not part.get("Welded")]
+    if loose:
+        names = ", ".join(part.get("Path", part["Name"]) for part in loose[:6])
+        what = "1 part is" if len(loose) == 1 else f"{len(loose)} parts are"
+        print(f"  warn: {what} neither Anchored nor welded, so they would fall in game: {names}"
+              + (", ..." if len(loose) > 6 else ""))
+
+
+def world_regions(world, quiet=False):
     layout = world.get("Layout") or {}
-    if layout.get("Error"):
+    if layout.get("Error") and not quiet:
         print(f"  warn: couldn't read MapLayout/Zones ({layout['Error']}); using the default region layout")
     return layout.get("Regions") or DEFAULT_REGIONS, layout.get("HalfWidth", 120)
 
@@ -959,9 +1049,21 @@ def ground_height(world, x, z, below):
     return best if best > -math.inf else None
 
 
-def region_box(region, half, ground):
-    """What a region's aerial shot frames: its x range, the playable width plus a margin, ground level."""
-    return [region["X0"], ground, -half - 16, region["X1"], ground + 16, half + 16]
+def region_box(world, region, half, ground):
+    """What a region's aerial shot frames: its x range; across, the playable width plus a margin, widened to
+    the things standing on the ground beyond it (edge props), up to EDGE_REACH studs more; ground level."""
+    z0, z1 = -half - 16, half + 16
+    for part in world["Parts"]:
+        if part.get("Transparency", 0) >= 0.98 or not region["X0"] <= part["CFrame"][0] < region["X1"]:
+            continue
+        lo, hi = part_box(part)
+        if ground - 6 <= lo[1] <= ground + 4 and hi[1] - lo[1] < 80:
+            z0 = min(z0, max(lo[2], -half - EDGE_REACH))
+            z1 = max(z1, min(hi[2], half + EDGE_REACH))
+    return [region["X0"], ground, z0, region["X1"], ground + 16, z1]
+
+
+EDGE_REACH = 90
 
 
 def look_direction(azimuth, elevation):
@@ -1040,7 +1142,8 @@ def parse_region_list(text):
     return [k for k in dict.fromkeys(keys) if k != "none"]
 
 
-SHOT_KEYS = {"pos", "look", "dir", "target", "az", "el", "dist", "box", "region", "fit", "fov", "size", "light", "fog"}
+SHOT_KEYS = {"pos", "look", "dir", "target", "az", "el", "dist", "box", "region", "fit", "fov", "size", "light", "fog",
+             "sun"}
 
 
 def custom_shot(spec, world, regions, half, presets):
@@ -1068,18 +1171,29 @@ def parse_shot(spec, world, regions, half, presets):
         opts[key] = value
     fov = float(opts["fov"]) if "fov" in opts else None
     size = parse_size(opts["size"]) if "size" in opts else None
+    sun_option = opts.get("sun", "").lower()
 
-    def lighting_for(x):
+    def sun_for(camera_azimuth):
+        if sun_option in ("", "default"):
+            return SUN_AZIMUTH
+        if sun_option == "behind":  # behind the camera, a little to its left
+            return camera_azimuth + 30
+        try:
+            return float(sun_option)
+        except ValueError:
+            raise ValueError(f"--shot {name}: sun= takes an azimuth in degrees or 'behind', got {sun_option!r}")
+
+    def lighting_for(x, camera_azimuth):
+        sun = sun_for(camera_azimuth)
         light = opts.get("light")
         if light in (None, ""):
-            region = region_at(regions, x)
-            return presets(region)
+            return presets(region_at(regions, x), sun)
         if light == "world":
-            return presets(None)
+            return presets(None, sun)
         wanted = "hub" if light in ("0", "hub") else light
         for region in regions:
             if region_key(region) == wanted:
-                return presets(region)
+                return presets(region, sun)
         raise ValueError(f"--shot {name}: light= must be world, hub or 1..6, got {light!r}")
 
     if "pos" in opts:
@@ -1092,7 +1206,8 @@ def parse_shot(spec, world, regions, half, presets):
         else:
             look = [pos[0] + 100, pos[1] - 4, pos[2]]
         fog = parse_numbers(opts["fog"], 2, "fog") if "fog" in opts else None
-        return eye_shot(name, pos, look, lighting_for(look[0]), fov or EYE_FOV, fog, size)
+        camera_azimuth = math.degrees(math.atan2(-(pos[0] - look[0]), pos[2] - look[2]))
+        return eye_shot(name, pos, look, lighting_for(look[0], camera_azimuth), fov or EYE_FOV, fog, size)
 
     az = float(opts.get("az", 24))
     el = float(opts.get("el", 40))
@@ -1102,7 +1217,7 @@ def parse_shot(spec, world, regions, half, presets):
         d = look_direction(az, el)
         pos = [target[i] + d[i] * dist for i in range(3)]
         fog = parse_numbers(opts["fog"], 2, "fog") if "fog" in opts else None
-        return eye_shot(name, pos, target, lighting_for(target[0]), fov or 45, fog, size)
+        return eye_shot(name, pos, target, lighting_for(target[0], az), fov or 45, fog, size)
     if "box" in opts:
         box = parse_numbers(opts["box"], 6, "box")
         box = [min(box[0], box[3]), min(box[1], box[4]), min(box[2], box[5]),
@@ -1114,14 +1229,17 @@ def parse_shot(spec, world, regions, half, presets):
             raise ValueError(f"--shot {name}: region= must be hub or 1..6")
         spawn = region["Spawn"][:3]
         ground = ground_height(world, spawn[0], spawn[2], spawn[1] + 2)
-        box = region_box(region, half, spawn[1] - 4 if ground is None else ground)
+        box = region_box(world, region, half, spawn[1] - 4 if ground is None else ground)
     elif "fit" in opts:
         box = visible_bounds(world)
         if not box:
             raise ValueError(f"--shot {name}: fit: the world has no visible parts")
     else:
         raise ValueError(f"--shot {name}: give pos= (+ look=/dir=), target= (+ az/el/dist), box=, region= or fit")
-    light = lighting_for((box[0] + box[3]) / 2) if opts.get("light") or "fit" not in opts else presets(None)
+    if opts.get("light") or "fit" not in opts:
+        light = lighting_for((box[0] + box[3]) / 2, az)
+    else:  # fit: the whole world, so the Lighting service's own settings
+        light = presets(None, sun_for(az))
     return aerial_shot(name, box, light, az, el, fov or 38, 1.0, size)
 
 
@@ -1134,10 +1252,12 @@ def make_shots(world, args, width):
         raise ValueError("--views takes aerial, eye or aerial,eye")
     cache = {}
 
-    def presets(region):
-        key = region_key(region) if region else "world"
+    def presets(region, sun=SUN_AZIMUTH):
+        """Lighting of a region (its zone's Lighting preset; None = the Lighting service as the map left it),
+        with the sun at azimuth `sun`."""
+        key = (region_key(region) if region else "world", round(float(sun), 2))
         if key not in cache:
-            cache[key] = lighting_settings(world, region.get("Lighting") if region else None)
+            cache[key] = lighting_settings(world, region.get("Lighting") if region else None, sun)
         return cache[key]
 
     shots = []
@@ -1155,7 +1275,7 @@ def make_shots(world, args, width):
         ground = ground_height(world, spawn[0] - EYE_BACK, spawn[2], spawn[1] + 2)
         ground = spawn[1] - 4 if ground is None else ground  # MapLayout spawns are 4 studs up
         if "aerial" in views:
-            shots.append(aerial_shot(f"{slug}_aerial", region_box(region, half, ground), lighting))
+            shots.append(aerial_shot(f"{slug}_aerial", region_box(world, region, half, ground), lighting))
         if "eye" in views:
             eye = [spawn[0] - EYE_BACK, ground + EYE_HEIGHT, spawn[2]]
             shots.append(eye_shot(f"{slug}_eye", eye, [eye[0] + 120, ground + 2, eye[2]], lighting))
@@ -1166,11 +1286,9 @@ def make_shots(world, args, width):
     if args.showcase:
         box = visible_bounds(world)
         if box:
-            shots.append(aerial_shot("showcase", box, presets(None), azimuth=205, elevation=38, fov=30))
-            cx = (box[0] + box[3]) / 2
-            front = [cx, 14, box[2] - 30]
-            shots.append(eye_shot("showcase_front", front, [cx, 4, box[2] + 18], presets(None), fov=50,
-                                  fog=[400, 3000]))
+            # props face -Z: look at them from the -Z side, with the sun behind the camera
+            shots.append(aerial_shot("showcase", box, presets(None, 230), azimuth=200, elevation=36, fov=30))
+            shots.append(aerial_shot("showcase_front", box, presets(None, 220), azimuth=180, elevation=14, fov=30))
     for spec in args.shot or []:
         shots.append(custom_shot(spec, world, regions, half, presets))
     names = [shot["name"] for shot in shots]
@@ -1392,6 +1510,7 @@ def main(argv=None):
     what = Path(args.script).name if args.script else "MapService"
     print(f"Running {what} in the mock Roblox runtime...")
     world = run_mock(args, out_dir, pack)
+    report_world(world)
     (out_dir / "world.json").write_text(json.dumps(world, separators=(",", ":")), encoding="utf-8")
     if args.dump_only:
         print(f"Wrote {out_dir / 'world.json'} in {time.time() - started:.1f}s")
