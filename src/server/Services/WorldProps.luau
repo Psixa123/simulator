@@ -271,7 +271,7 @@ local function gather(propId: string, list, info, rootSize: number)
 			end
 			root = entry.Part
 		else
-			table.insert(pieces, { Part = entry.Part, Paint = paint, Kind = kind, Color = color })
+			table.insert(pieces, { Part = entry.Part, Paint = paint, Kind = kind, Color = color, Suffix = string.match(string.lower(entry.Name), "^" .. string.lower(paint) .. "(_%d+)$") })
 		end
 	end
 	if #pieces == 0 or #pieces > MAX_PIECES then
@@ -343,7 +343,7 @@ local function build(prop, turn: number)
 		if not copy then
 			return nil, `has a "{piece.Paint}" piece that can't be copied (Archivable is off)`
 		end
-		copy.Name = prop.Id .. "." .. piece.Paint -- as in the pack (and its MeshId stays the pack's)
+		copy.Name = prop.Id .. "." .. piece.Paint .. (piece.Suffix or "") -- as in the pack (and its MeshId stays the pack's)
 		copy:ClearAllChildren() -- SurfaceAppearances, welds etc. from the importer
 		copy.Anchored = true
 		copy.CanCollide = false

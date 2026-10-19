@@ -34,7 +34,7 @@ export type Prop = {
 local WorldPropsData = {}
 
 WorldPropsData.RootSize = 1
-WorldPropsData.Order = { "AuroraArch", "BushRound", "Cactus", "CitadelTower", "CloudBank", "CrystalCluster", "Fence", "FloatingIsland", "FlowerPatch", "GrassTuft", "HayBale", "IceCastleTower", "Igloo", "LampPost", "LavaSpire", "LightningRod", "Mushroom", "OasisPool", "Pyramid", "RockCluster", "RockTall", "SandArch", "Snowman", "StarLamp", "SteamVent", "StormCloud", "TeslaTower", "TreePalm", "TreePine", "TreeRound", "TreeTall", "Volcano", "Windmill", "WindmillBlades" }
+WorldPropsData.Order = { "AuroraArch", "Bench", "BushRound", "Cactus", "CitadelTower", "CliffSegment", "CloudBank", "CloudPuff", "CrystalCluster", "EggIncubator", "Fence", "FloatingIsland", "FlowerPatch", "ForecastTower", "GrassTuft", "HayBale", "IceCastleTower", "Igloo", "LampPost", "LavaSpire", "LeaderboardFrame", "LightningRod", "Mushroom", "OasisPool", "Planter", "Pyramid", "RebirthShrine", "RockCluster", "RockTall", "SandArch", "SellMachine", "SignPost", "Snowman", "StarLamp", "StationBooth", "SteamVent", "StormCloud", "TeslaTower", "TreePalm", "TreePine", "TreeRound", "TreeTall", "Volcano", "WeatherLab", "WeatherTower", "Windmill", "WindmillBlades", "ZoneGate" }
 
 local Props: { [string]: Prop } = {
 	AuroraArch = {
@@ -48,6 +48,19 @@ local Props: { [string]: Prop } = {
 		Pieces = {
 			{ Name = "AuroraArch.Glass_9EF0D8", Paint = "Glass_9EF0D8", Kind = "Glass", Color = Color3.fromRGB(158, 240, 216), Center = Vector3.new(0.036, 8.875, 0.027), Size = Vector3.new(26.591, 19.037, 3.675), Collide = false, Tris = 920 },
 			{ Name = "AuroraArch.Glass_B58CFF", Paint = "Glass_B58CFF", Kind = "Glass", Color = Color3.fromRGB(181, 140, 255), Center = Vector3.new(0, 7.37, 0.05), Size = Vector3.new(22.795, 16.023, 1.333), Collide = false, Tris = 460 },
+		},
+	},
+	Bench = {
+		Category = "structures",
+		Size = Vector3.new(6, 3.944, 2.534),
+		Center = Vector3.new(0, 1.522, 0.247),
+		Footprint = 3.23,
+		Collide = true,
+		Tris = 944,
+		Paints = { Primary = Color3.fromRGB(255, 177, 92), Secondary = Color3.fromRGB(91, 106, 158) },
+		Pieces = {
+			{ Name = "Bench.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 177, 92), Center = Vector3.new(0, 2.374, 0.245), Size = Vector3.new(6, 1.708, 2.291), Collide = true, Tris = 432 },
+			{ Name = "Bench.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(91, 106, 158), Center = Vector3.new(0, 1.522, 0.247), Size = Vector3.new(5, 3.944, 2.534), Collide = true, Tris = 512 },
 		},
 	},
 	BushRound = {
@@ -92,6 +105,20 @@ local Props: { [string]: Prop } = {
 			{ Name = "CitadelTower.Neon_FFF3B0", Paint = "Neon_FFF3B0", Kind = "Neon", Color = Color3.fromRGB(255, 243, 176), Center = Vector3.new(-1.014, 16.155, -0.496), Size = Vector3.new(9.494, 19.109, 8.458), Collide = false, Tris = 676 },
 		},
 	},
+	CliffSegment = {
+		Category = "structures",
+		Size = Vector3.new(40, 29.821, 18.8),
+		Center = Vector3.new(0, -14.91, -8.8),
+		Footprint = 27.041,
+		Collide = false,
+		Tris = 2896,
+		Paints = { Primary = Color3.fromRGB(110, 224, 90), Secondary = Color3.fromRGB(217, 154, 98), Tertiary = Color3.fromRGB(184, 117, 74) },
+		Pieces = {
+			{ Name = "CliffSegment.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(110, 224, 90), Center = Vector3.new(0, -1.87, -8.8), Size = Vector3.new(40, 3.741, 18.8), Collide = false, Tris = 820 },
+			{ Name = "CliffSegment.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(217, 154, 98), Center = Vector3.new(0, -15.58, -8.331), Size = Vector3.new(40, 28.482, 17.462), Collide = false, Tris = 1212 },
+			{ Name = "CliffSegment.Tertiary", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(184, 117, 74), Center = Vector3.new(0, -19.217, -7.225), Size = Vector3.new(40, 21.205, 15.249), Collide = false, Tris = 864 },
+		},
+	},
 	CloudBank = {
 		Category = "landmarks",
 		Size = Vector3.new(25.6, 10.454, 11.942),
@@ -103,6 +130,19 @@ local Props: { [string]: Prop } = {
 		Pieces = {
 			{ Name = "CloudBank.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(211, 220, 255), Center = Vector3.new(0, 1.632, 0.3), Size = Vector3.new(25.6, 3.663, 9.2), Collide = false, Tris = 734 },
 			{ Name = "CloudBank.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0, 5.907, 0.229), Size = Vector3.new(24.6, 8.693, 11.942), Collide = false, Tris = 1998 },
+		},
+	},
+	CloudPuff = {
+		Category = "structures",
+		Size = Vector3.new(32.24, 13.044, 19.627),
+		Center = Vector3.new(-0.202, 6.322, 0.3),
+		Footprint = 16.376,
+		Collide = false,
+		Tris = 2864,
+		Paints = { Secondary = Color3.fromRGB(220, 230, 250) },
+		Pieces = {
+			{ Name = "CloudPuff.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(220, 230, 250), Center = Vector3.new(-0.202, 1.875, 0.2), Size = Vector3.new(32.24, 4.149, 14.832), Collide = false, Tris = 850 },
+			{ Name = "CloudPuff.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(-0.002, 6.91, 0.3), Size = Vector3.new(31.44, 11.869, 19.627), Collide = false, Tris = 2014 },
 		},
 	},
 	CrystalCluster = {
@@ -117,6 +157,20 @@ local Props: { [string]: Prop } = {
 			{ Name = "CrystalCluster.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(118, 80, 238), Center = Vector3.new(-0.17, 3.189, 0.161), Size = Vector3.new(6.945, 8.088, 5.802), Collide = false, Tris = 288 },
 			{ Name = "CrystalCluster.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(110, 117, 176), Center = Vector3.new(-0.08, 0.392, 0.16), Size = Vector3.new(5.664, 1.785, 5.587), Collide = false, Tris = 768 },
 			{ Name = "CrystalCluster.Neon_FFFFFF", Paint = "Neon_FFFFFF", Kind = "Neon", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(-0.192, 4.914, 0.143), Size = Vector3.new(6.623, 5.907, 5.567), Collide = false, Tris = 72 },
+		},
+	},
+	EggIncubator = {
+		Category = "structures",
+		Size = Vector3.new(11.6, 13.106, 11.6),
+		Center = Vector3.new(0, 6.058, 0),
+		Footprint = 6.28,
+		Collide = true,
+		Tris = 2656,
+		Paints = { Primary = Color3.fromRGB(238, 240, 255), Secondary = Color3.fromRGB(92, 200, 255) },
+		Pieces = {
+			{ Name = "EggIncubator.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(238, 240, 255), Center = Vector3.new(0, 6.155, 0), Size = Vector3.new(11.6, 12.911, 11.6), Collide = false, Tris = 708 },
+			{ Name = "EggIncubator.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(92, 200, 255), Center = Vector3.new(0, 5.69, -0.3), Size = Vector3.new(10.4, 12.37, 11), Collide = false, Tris = 1612 },
+			{ Name = "EggIncubator.Glass_DFF6FF", Paint = "Glass_DFF6FF", Kind = "Glass", Color = Color3.fromRGB(223, 246, 255), Center = Vector3.new(0, 7.45, 0), Size = Vector3.new(9, 7.9, 9), Collide = false, Tris = 336 },
 		},
 	},
 	Fence = {
@@ -159,6 +213,21 @@ local Props: { [string]: Prop } = {
 			{ Name = "FlowerPatch.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(255, 134, 182), Center = Vector3.new(-0.205, 1.323, -0.07), Size = Vector3.new(4.854, 0.968, 4.306), Collide = false, Tris = 720 },
 			{ Name = "FlowerPatch.Tertiary", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0.64, 1.368, -0.712), Size = Vector3.new(4.121, 1.392, 3.685), Collide = false, Tris = 720 },
 			{ Name = "FlowerPatch.Color_FFE15A", Paint = "Color_FFE15A", Kind = "Color", Color = Color3.fromRGB(255, 225, 90), Center = Vector3.new(0.094, 1.493, -0.265), Size = Vector3.new(4.432, 1.134, 3.822), Collide = false, Tris = 432 },
+		},
+	},
+	ForecastTower = {
+		Category = "structures",
+		Size = Vector3.new(15.84, 23.75, 7.02),
+		Center = Vector3.new(0, 11.475, 0.17),
+		Footprint = 8.229,
+		Collide = true,
+		Tris = 2428,
+		Paints = { Primary = Color3.fromRGB(92, 200, 255), Secondary = Color3.fromRGB(63, 143, 214) },
+		Pieces = {
+			{ Name = "ForecastTower.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(92, 200, 255), Center = Vector3.new(0, 12.115, 0.17), Size = Vector3.new(15.84, 22.23, 7.02), Collide = false, Tris = 940 },
+			{ Name = "ForecastTower.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(63, 143, 214), Center = Vector3.new(0, 10.95, 0.3), Size = Vector3.new(15.3, 22.7, 5.4), Collide = false, Tris = 612 },
+			{ Name = "ForecastTower.Color_EEF0FF", Paint = "Color_EEF0FF", Kind = "Color", Color = Color3.fromRGB(238, 240, 255), Center = Vector3.new(0, 14, 0.18), Size = Vector3.new(14.2, 11.4, 6), Collide = true, Tris = 300 },
+			{ Name = "ForecastTower.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0.15, 21.575, 0.2), Size = Vector3.new(8.5, 3.55, 4), Collide = false, Tris = 576 },
 		},
 	},
 	GrassTuft = {
@@ -241,6 +310,21 @@ local Props: { [string]: Prop } = {
 			{ Name = "LavaSpire.Neon_FF7A2E", Paint = "Neon_FF7A2E", Kind = "Neon", Color = Color3.fromRGB(255, 122, 46), Center = Vector3.new(-0.16, 5.736, -0.613), Size = Vector3.new(6.654, 10.427, 6.618), Collide = false, Tris = 468 },
 		},
 	},
+	LeaderboardFrame = {
+		Category = "structures",
+		Size = Vector3.new(22.4, 25.767, 4.6),
+		Center = Vector3.new(0, 12.434, 0),
+		Footprint = 11.2,
+		Collide = true,
+		Tris = 1876,
+		Paints = { Primary = Color3.fromRGB(255, 201, 60), Secondary = Color3.fromRGB(91, 106, 158) },
+		Pieces = {
+			{ Name = "LeaderboardFrame.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 201, 60), Center = Vector3.new(0, 13.263, -0.19), Size = Vector3.new(22.4, 23.926, 3.68), Collide = false, Tris = 672 },
+			{ Name = "LeaderboardFrame.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(91, 106, 158), Center = Vector3.new(0, 12.055, 0), Size = Vector3.new(22.1, 25.009, 4.6), Collide = false, Tris = 748 },
+			{ Name = "LeaderboardFrame.Color_EEF0FF", Paint = "Color_EEF0FF", Kind = "Color", Color = Color3.fromRGB(238, 240, 255), Center = Vector3.new(0, 13, 0), Size = Vector3.new(18.2, 20.2, 3), Collide = true, Tris = 300 },
+			{ Name = "LeaderboardFrame.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0, 23.876, -1.35), Size = Vector3.new(3.032, 2.883, 0.7), Collide = false, Tris = 156 },
+		},
+	},
 	LightningRod = {
 		Category = "landmarks",
 		Size = Vector3.new(3, 10.32, 2.955),
@@ -284,6 +368,19 @@ local Props: { [string]: Prop } = {
 			{ Name = "OasisPool.Glass_5CC8FF", Paint = "Glass_5CC8FF", Kind = "Glass", Color = Color3.fromRGB(92, 200, 255), Center = Vector3.new(0, 0.335, -0.636), Size = Vector3.new(14, 0.57, 9.127), Collide = false, Tris = 380 },
 		},
 	},
+	Planter = {
+		Category = "structures",
+		Size = Vector3.new(9.56, 2.54, 9.56),
+		Center = Vector3.new(0, 0.97, 0),
+		Footprint = 4.78,
+		Collide = true,
+		Tris = 1152,
+		Paints = { Primary = Color3.fromRGB(255, 177, 92) },
+		Pieces = {
+			{ Name = "Planter.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 177, 92), Center = Vector3.new(0, 0.97, 0), Size = Vector3.new(9.56, 2.54, 9.56), Collide = true, Tris = 1008 },
+			{ Name = "Planter.Color_6B4A35", Paint = "Color_6B4A35", Kind = "Color", Color = Color3.fromRGB(107, 74, 53), Center = Vector3.new(0, 1.755, 0), Size = Vector3.new(7.64, 0.41, 7.64), Collide = false, Tris = 144 },
+		},
+	},
 	Pyramid = {
 		Category = "landmarks",
 		Size = Vector3.new(30, 22.5, 32.7),
@@ -296,6 +393,20 @@ local Props: { [string]: Prop } = {
 			{ Name = "Pyramid.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(245, 199, 126), Center = Vector3.new(0, 9.225, -1.5), Size = Vector3.new(29.4, 19.45, 32.4), Collide = true, Tris = 1732 },
 			{ Name = "Pyramid.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(224, 154, 80), Center = Vector3.new(0, 8.787, -1), Size = Vector3.new(30, 18.575, 32), Collide = true, Tris = 968 },
 			{ Name = "Pyramid.Color_FFE15A", Paint = "Color_FFE15A", Kind = "Color", Color = Color3.fromRGB(255, 225, 90), Center = Vector3.new(0, 19.95, 0), Size = Vector3.new(4.455, 4.1, 4.455), Collide = true, Tris = 48 },
+		},
+	},
+	RebirthShrine = {
+		Category = "structures",
+		Size = Vector3.new(18, 20.297, 17.817),
+		Center = Vector3.new(0, 9.748, 0),
+		Footprint = 9,
+		Collide = true,
+		Tris = 2944,
+		Paints = { Primary = Color3.fromRGB(226, 216, 255), Secondary = Color3.fromRGB(138, 108, 240) },
+		Pieces = {
+			{ Name = "RebirthShrine.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(226, 216, 255), Center = Vector3.new(0, 8.15, 0), Size = Vector3.new(18, 17.1, 17.817), Collide = false, Tris = 892 },
+			{ Name = "RebirthShrine.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(138, 108, 240), Center = Vector3.new(0, 10.373, 0), Size = Vector3.new(15.6, 19.047, 15.442), Collide = false, Tris = 1332 },
+			{ Name = "RebirthShrine.Neon_B58CFF", Paint = "Neon_B58CFF", Kind = "Neon", Color = Color3.fromRGB(181, 140, 255), Center = Vector3.new(-0.287, 8.395, -0.556), Size = Vector3.new(12.482, 13.41, 12.698), Collide = false, Tris = 720 },
 		},
 	},
 	RockCluster = {
@@ -337,6 +448,38 @@ local Props: { [string]: Prop } = {
 			{ Name = "SandArch.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(247, 201, 138), Center = Vector3.new(1.067, 2.338, 0.015), Size = Vector3.new(22.571, 5.676, 7.377), Collide = false, Tris = 492 },
 		},
 	},
+	SellMachine = {
+		Category = "structures",
+		Size = Vector3.new(10, 13.368, 8.2),
+		Center = Vector3.new(0, 6.284, -0.1),
+		Footprint = 6.136,
+		Collide = true,
+		Tris = 2300,
+		Paints = { Primary = Color3.fromRGB(123, 227, 106), Secondary = Color3.fromRGB(51, 178, 74) },
+		Pieces = {
+			{ Name = "SellMachine.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(123, 227, 106), Center = Vector3.new(0, 3.55, 0.1), Size = Vector3.new(8.6, 5.1, 6.6), Collide = true, Tris = 300 },
+			{ Name = "SellMachine.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(51, 178, 74), Center = Vector3.new(0, 5.96, -0.1), Size = Vector3.new(10, 12.72, 8.2), Collide = false, Tris = 916 },
+			{ Name = "SellMachine.Color_233066", Paint = "Color_233066", Kind = "Color", Color = Color3.fromRGB(35, 48, 102), Center = Vector3.new(-2.15, 4.55, -3.55), Size = Vector3.new(1.5, 0.38, 0.3), Collide = false, Tris = 108 },
+			{ Name = "SellMachine.Color_FFC93C", Paint = "Color_FFC93C", Kind = "Color", Color = Color3.fromRGB(255, 201, 60), Center = Vector3.new(-2.15, 3.05, -3.75), Size = Vector3.new(1.7, 1.627, 0.743), Collide = false, Tris = 168 },
+			{ Name = "SellMachine.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(-0.107, 9.845, 0.097), Size = Vector3.new(3.983, 1.98, 1.97), Collide = false, Tris = 324 },
+			{ Name = "SellMachine.Glass_54E0FF", Paint = "Glass_54E0FF", Kind = "Glass", Color = Color3.fromRGB(84, 224, 255), Center = Vector3.new(0, 8.9, 0), Size = Vector3.new(5.44, 4.2, 5.44), Collide = false, Tris = 160 },
+			{ Name = "SellMachine.Neon_FFE15A", Paint = "Neon_FFE15A", Kind = "Neon", Color = Color3.fromRGB(255, 225, 90), Center = Vector3.new(0.912, 7.358, -1.441), Size = Vector3.new(3.32, 11.218, 4.117), Collide = false, Tris = 324 },
+		},
+	},
+	SignPost = {
+		Category = "structures",
+		Size = Vector3.new(6.49, 8.598, 1.606),
+		Center = Vector3.new(0, 3.999, 0.283),
+		Footprint = 3.245,
+		Collide = false,
+		Tris = 780,
+		Paints = { Primary = Color3.fromRGB(168, 114, 76), Secondary = Color3.fromRGB(92, 200, 255) },
+		Pieces = {
+			{ Name = "SignPost.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(168, 114, 76), Center = Vector3.new(0, 3.999, 0.42), Size = Vector3.new(5.8, 8.598, 1.332), Collide = false, Tris = 416 },
+			{ Name = "SignPost.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(92, 200, 255), Center = Vector3.new(0, 6, -0.02), Size = Vector3.new(6.49, 3.89, 1), Collide = false, Tris = 256 },
+			{ Name = "SignPost.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0, 6, 0), Size = Vector3.new(5.5, 2.9, 0.7), Collide = false, Tris = 108 },
+		},
+	},
 	Snowman = {
 		Category = "landmarks",
 		Size = Vector3.new(4.6, 8.713, 4.6),
@@ -363,6 +506,22 @@ local Props: { [string]: Prop } = {
 		Pieces = {
 			{ Name = "StarLamp.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(124, 108, 240), Center = Vector3.new(0, 3.6, 0), Size = Vector3.new(2.8, 7.8, 2.757), Collide = false, Tris = 776 },
 			{ Name = "StarLamp.Neon_FFE15A", Paint = "Neon_FFE15A", Kind = "Neon", Color = Color3.fromRGB(255, 225, 90), Center = Vector3.new(0, 8.633, 0), Size = Vector3.new(2.648, 2.518, 0.95), Collide = false, Tris = 356 },
+		},
+	},
+	StationBooth = {
+		Category = "structures",
+		Size = Vector3.new(21.6, 18.85, 16.801),
+		Center = Vector3.new(0, 9.125, -0.6),
+		Footprint = 13.015,
+		Collide = true,
+		Tris = 2712,
+		Paints = { Primary = Color3.fromRGB(92, 200, 255), Secondary = Color3.fromRGB(63, 143, 214) },
+		Pieces = {
+			{ Name = "StationBooth.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(92, 200, 255), Center = Vector3.new(0, 13.076, -0.6), Size = Vector3.new(21.6, 8.848, 16.801), Collide = false, Tris = 612 },
+			{ Name = "StationBooth.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(63, 143, 214), Center = Vector3.new(0, 9.125, -0.075), Size = Vector3.new(20.1, 18.85, 14.15), Collide = false, Tris = 700 },
+			{ Name = "StationBooth.Color_EEF0FF", Paint = "Color_EEF0FF", Kind = "Color", Color = Color3.fromRGB(238, 240, 255), Center = Vector3.new(0, 7.95, 0), Size = Vector3.new(20.653, 14.7, 13.8), Collide = true, Tris = 912 },
+			{ Name = "StationBooth.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(-1, 7.447, -5.925), Size = Vector3.new(14.8, 6.795, 6.151), Collide = false, Tris = 312 },
+			{ Name = "StationBooth.Neon_FFF3B0", Paint = "Neon_FFF3B0", Kind = "Neon", Color = Color3.fromRGB(255, 243, 176), Center = Vector3.new(0, 7.425, 2.06), Size = Vector3.new(19.76, 3.45, 6.42), Collide = false, Tris = 176 },
 		},
 	},
 	SteamVent = {
@@ -476,6 +635,39 @@ local Props: { [string]: Prop } = {
 			{ Name = "Volcano.Neon_FF7A2E", Paint = "Neon_FF7A2E", Kind = "Neon", Color = Color3.fromRGB(255, 122, 46), Center = Vector3.new(0.127, 27.877, -1.922), Size = Vector3.new(21.425, 23.353, 23.365), Collide = false, Tris = 810 },
 		},
 	},
+	WeatherLab = {
+		Category = "structures",
+		Size = Vector3.new(23.4, 21.024, 19.4),
+		Center = Vector3.new(0, 10.212, 0),
+		Footprint = 14.888,
+		Collide = true,
+		Tris = 2764,
+		Paints = { Primary = Color3.fromRGB(255, 201, 60), Secondary = Color3.fromRGB(63, 143, 214) },
+		Pieces = {
+			{ Name = "WeatherLab.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 201, 60), Center = Vector3.new(0, 12.823, 0), Size = Vector3.new(23.4, 15.287, 19.4), Collide = false, Tris = 488 },
+			{ Name = "WeatherLab.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(63, 143, 214), Center = Vector3.new(0, 10.212, -0.1), Size = Vector3.new(22.1, 21.024, 18.2), Collide = false, Tris = 780 },
+			{ Name = "WeatherLab.Color_EEF0FF", Paint = "Color_EEF0FF", Kind = "Color", Color = Color3.fromRGB(238, 240, 255), Center = Vector3.new(0, 10.348, 0), Size = Vector3.new(22.653, 19.497, 17.8), Collide = false, Tris = 1072 },
+			{ Name = "WeatherLab.Glass_9EE8FF", Paint = "Glass_9EE8FF", Kind = "Glass", Color = Color3.fromRGB(158, 232, 255), Center = Vector3.new(4.3, 17.45, 3.2), Size = Vector3.new(9.7, 4.9, 9.553), Collide = false, Tris = 180 },
+			{ Name = "WeatherLab.Neon_9EE8FF", Paint = "Neon_9EE8FF", Kind = "Neon", Color = Color3.fromRGB(158, 232, 255), Center = Vector3.new(-2.102, 11.655, 4.428), Size = Vector3.new(12.04, 15.158, 5.643), Collide = false, Tris = 156 },
+			{ Name = "WeatherLab.Neon_FFF3B0", Paint = "Neon_FFF3B0", Kind = "Neon", Color = Color3.fromRGB(255, 243, 176), Center = Vector3.new(0, 7.4, 1), Size = Vector3.new(21.76, 3.3, 3.3), Collide = false, Tris = 88 },
+		},
+	},
+	WeatherTower = {
+		Category = "structures",
+		Size = Vector3.new(21.2, 60.55, 21.2),
+		Center = Vector3.new(0, 29.875, 0),
+		Footprint = 11.452,
+		Collide = true,
+		Tris = 2890,
+		Paints = { Primary = Color3.fromRGB(92, 200, 255), Secondary = Color3.fromRGB(138, 108, 240) },
+		Pieces = {
+			{ Name = "WeatherTower.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(92, 200, 255), Center = Vector3.new(0, 30.098, 0), Size = Vector3.new(19.36, 57.596, 19.36), Collide = false, Tris = 1182 },
+			{ Name = "WeatherTower.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(138, 108, 240), Center = Vector3.new(0, 29.875, 0), Size = Vector3.new(21.2, 60.55, 21.2), Collide = false, Tris = 716 },
+			{ Name = "WeatherTower.Color_EEF0FF", Paint = "Color_EEF0FF", Kind = "Color", Color = Color3.fromRGB(238, 240, 255), Center = Vector3.new(-0.315, 22.3, -0.714), Size = Vector3.new(17.331, 41.8, 18.127), Collide = false, Tris = 536 },
+			{ Name = "WeatherTower.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0.25, 55.681, -0.788), Size = Vector3.new(8.7, 7.037, 7.495), Collide = false, Tris = 240 },
+			{ Name = "WeatherTower.Neon_9EE8FF", Paint = "Neon_9EE8FF", Kind = "Neon", Color = Color3.fromRGB(158, 232, 255), Center = Vector3.new(0.493, 25.275, -1.793), Size = Vector3.new(14.814, 33.65, 13.826), Collide = false, Tris = 216 },
+		},
+	},
 	Windmill = {
 		Category = "landmarks",
 		Size = Vector3.new(13.258, 30.55, 13.258),
@@ -501,6 +693,24 @@ local Props: { [string]: Prop } = {
 		Pieces = {
 			{ Name = "WindmillBlades.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 212, 92), Center = Vector3.new(0, 0, -0.755), Size = Vector3.new(20.507, 20.507, 1.23), Collide = false, Tris = 464 },
 			{ Name = "WindmillBlades.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(92, 168, 255), Center = Vector3.new(0, 0, 0), Size = Vector3.new(21.387, 21.387, 1.9), Collide = false, Tris = 1496 },
+		},
+	},
+	ZoneGate = {
+		Category = "structures",
+		Size = Vector3.new(43.2, 32.25, 11.2),
+		Center = Vector3.new(0, 15.775, 0),
+		Footprint = 21.6,
+		Collide = true,
+		Tris = 2844,
+		Paints = { Primary = Color3.fromRGB(238, 240, 255), Secondary = Color3.fromRGB(92, 200, 255), Tertiary = Color3.fromRGB(63, 143, 214) },
+		Pieces = {
+			{ Name = "ZoneGate.Primary_2", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(238, 240, 255), Center = Vector3.new(-16, 16.75, 0), Size = Vector3.new(9.44, 30.3, 9.44), Collide = true, Tris = 256 },
+			{ Name = "ZoneGate.Primary_3", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(238, 240, 255), Center = Vector3.new(16, 16.75, 0), Size = Vector3.new(9.44, 30.3, 9.44), Collide = true, Tris = 256 },
+			{ Name = "ZoneGate.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(92, 200, 255), Center = Vector3.new(0, 21.825, 0), Size = Vector3.new(32, 13.65, 8.4), Collide = true, Tris = 332 },
+			{ Name = "ZoneGate.Tertiary", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(63, 143, 214), Center = Vector3.new(0, 21.713, 0), Size = Vector3.new(32.127, 14.914, 8.9), Collide = true, Tris = 408 },
+			{ Name = "ZoneGate.Tertiary_2", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(63, 143, 214), Center = Vector3.new(-16, 14.9, 0), Size = Vector3.new(11.2, 30.5, 11.2), Collide = true, Tris = 508 },
+			{ Name = "ZoneGate.Tertiary_3", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(63, 143, 214), Center = Vector3.new(16, 14.9, 0), Size = Vector3.new(11.2, 30.5, 11.2), Collide = true, Tris = 508 },
+			{ Name = "ZoneGate.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(-0.05, 29.525, -0.1), Size = Vector3.new(9.9, 4.55, 4.6), Collide = false, Tris = 576 },
 		},
 	},
 }

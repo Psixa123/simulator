@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Measures glyph advance widths (at 100 px) of the fonts page.html draws with, for the Luau text
+     layout (mock_layout.luau). tools/preview_ui.py loads this with headless Chromium --dump-dom and
+     caches the result in build/ui_preview/cache/metrics.json. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Fredoka One"; src: url("../../assets/source/fonts/FredokaOne-Regular.ttf"); }
+  @font-face { font-family: "Luckiest Guy"; src: url("../../assets/source/fonts/LuckiestGuy-Regular.ttf"); }
+  @font-face { font-family: "Gotham Preview"; src: url("fonts/Montserrat-latin.woff2") format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Sans Preview"; src: local("Arimo"), local("Liberation Sans"), local("Arial"), local("DejaVu Sans"); font-weight: 400; }
+  @font-face { font-family: "Sans Preview"; src: local("Arimo Bold"), local("Liberation Sans Bold"), local("Arial Bold"), local("DejaVu Sans Bold"), local("DejaVuSans-Bold"); font-weight: 700; }
+</style>
+</head>
+<body>
+<pre id="out">pending</pre>
+<script>
+(async function () {
+  const FONTS = {
+    fredoka: ["400", "Fredoka One"],
+    luckiest: ["400", "Luckiest Guy"],
+    gotham400: ["400", "Gotham Preview"],
+    gotham500: ["500", "Gotham Preview"],
+    gotham600: ["600", "Gotham Preview"],
+    gotham700: ["700", "Gotham Preview"],
+    gotham800: ["800", "Gotham Preview"],
+    gotham900: ["900", "Gotham Preview"],
+    sans400: ["400", "Sans Preview"],
+    sans700: ["700", "Sans Preview"],
+  };
+  // Latin, punctuation, arrows, symbols, dingbats (emoji in the astral planes share one width)
+  const RANGES = [[0x20, 0x7e], [0xa0, 0x24f], [0x2000, 0x206f], [0x20a0, 0x20bf], [0x2100, 0x215f], [0x2190, 0x23ff],
+                  [0x2460, 0x24ff], [0x2500, 0x27bf], [0x2900, 0x297f], [0x2b00, 0x2bff], [0x3000, 0x303f]];
+  for (const [weight, family] of Object.values(FONTS)) {
+    await document.fonts.load(`${weight} 100px "${family}"`, "AaZz0123").catch(() => null);
+  }
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const result = { Ref: 100, Fonts: {}, Avg: {} };
+  for (const [key, [weight, family]] of Object.entries(FONTS)) {
+    ctx.font = `${weight} 100px "${family}", "Sans Preview", sans-serif`;
+    const widths = {};
+    let total = 0, count = 0;
+    for (const [lo, hi] of RANGES) {
+      for (let cp = lo; cp <= hi; cp++) {
+        const w = ctx.measureText(String.fromCodePoint(cp)).width;
+        widths[cp] = Math.round(w * 100) / 100;
+        if (cp >= 0x61 && cp <= 0x7a) { total += w; count += 1; }
+      }
+    }
+    result.Fonts[key] = widths;
+    result.Avg[key] = Math.round((total / count) * 100) / 100;
+  }
+  ctx.font = `400 100px "Fredoka One", sans-serif`;
+  result.Emoji = Math.round(ctx.measureText("\u{1F600}").width * 100) / 100;
+  result.Check = { fredokaLoaded: document.fonts.check('400 20px "Fredoka One"'), gothamLoaded: document.fonts.check('700 20px "Gotham Preview"') };
+  document.getElementById("out").textContent = JSON.stringify(result);
+})();
+</script>
+</body>
+</html>

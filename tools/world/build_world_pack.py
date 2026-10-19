@@ -64,7 +64,14 @@ TINTS = ("Primary", "Secondary", "Tertiary")
 GLASS_ALPHA = 0.45
 # Props whose origin is not the centre of their base (tools/world/PROPS.md): the base check is skipped
 # and the previews frame the whole prop without a ground (viewer.html pivot=1)
-PIVOT_PROPS = {"WindmillBlades"}  # origin at the hub centre: MapService spins the blades about it
+# WindmillBlades: origin at the hub centre (MapService spins the blades about it); CliffSegment: origin on its
+# flat top, the rock hangs below it
+PIVOT_PROPS = {"WindmillBlades", "CliffSegment"}
+# Props with a walk-through opening between same-paint parts (ZoneGate: a pillar each side of the path). Their
+# pieces of one paint are kept as up to three meshes - "<PropId>.<Paint>" across the middle (|x| <= the band, in
+# studs), "<PropId>.<Paint>_2" on the -X side and "<PropId>.<Paint>_3" on the +X side - so no merged mesh (nor its
+# box, nor a hull collision) spans the opening. WorldProps reads the suffixed names as the same paint.
+SPLIT_PROPS = {"ZoneGate": 6.0}
 
 sys.path.insert(0, str(HERE))
 
@@ -274,7 +281,12 @@ def build_prop(prop_id, prop):
         remap[used] = np.arange(len(used))
         # shade each leaf group on its own, with the crease angle it was modelled with
         pos, nrm, t = smooth_normals(verts[used], remap[tris], piece.get("crease") or CREASE_DEG)
-        entry = by_paint.setdefault(paint, {"pos": [], "nrm": [], "tris": [], "rgb": None, "collide": None, "n": 0})
+        key = paint
+        if prop_id in SPLIT_PROPS:
+            cx = (pos[:, 0].min() + pos[:, 0].max()) / 2.0
+            key = paint if abs(cx) <= SPLIT_PROPS[prop_id] else paint + ("_2" if cx < 0 else "_3")
+        entry = by_paint.setdefault(key, {"pos": [], "nrm": [], "tris": [], "rgb": None, "collide": None, "n": 0,
+                                          "paint": paint})
         entry["pos"].append(pos)
         entry["nrm"].append(nrm)
         entry["tris"].append(t + entry["n"])
@@ -285,12 +297,13 @@ def build_prop(prop_id, prop):
             entry["rgb"] = piece.get("rgb")
     pieces = {}
     total = 0
-    for paint, entry in sorted(by_paint.items(), key=lambda kv: (paint_kind(kv[0]) != "Tint", kv[0])):
+    for key, entry in sorted(by_paint.items(), key=lambda kv: (paint_kind(kv[1]["paint"]) != "Tint", kv[0])):
+        paint = entry["paint"]
         p, n, t = np.concatenate(entry["pos"]), np.concatenate(entry["nrm"]), np.concatenate(entry["tris"])
         a, b, c = p[t[:, 0]], p[t[:, 1]], p[t[:, 2]]
         vol = np.einsum("ij,ij->i", a, np.cross(b, c)).sum() / 6.0
         if vol <= 0:
-            problems.append(f"{paint}: faces point inward (signed volume {vol:.3f})")
+            problems.append(f"{key}: faces point inward (signed volume {vol:.3f})")
         total += len(t)
         rgb = entry["rgb"] or (prop.get("paints") or {}).get(paint)
         if paint_kind(paint) != "Tint":
@@ -299,8 +312,8 @@ def build_prop(prop_id, prop):
             problems.append(f"{paint}: no default colour (SketchUp material or paints attribute)")
             rgb = "C8C8C8"
         collide = entry["collide"] if entry["collide"] is not None else bool(prop["solid"])
-        pieces[paint] = {"pos": p, "nrm": n, "tris": t, "rgb": rgb.upper(), "kind": paint_kind(paint),
-                         "collide": collide and paint_kind(paint) not in ("Neon", "Glass")}
+        pieces[key] = {"pos": p, "nrm": n, "tris": t, "rgb": rgb.upper(), "kind": paint_kind(paint), "paint": paint,
+                       "collide": collide and paint_kind(paint) not in ("Neon", "Glass")}
     if total > MAX_TRIS:
         problems.append(f"{total} triangles > {MAX_TRIS}")
     if not pieces:
@@ -410,8 +423,8 @@ def glb_bytes(built):
             materials.append(mat)
             mesh = add_mesh(f"{prop_id}.{paint}", piece["pos"], piece["nrm"], piece["tris"], len(materials) - 1)
             nodes.append({"name": f"{prop_id}.{paint}", "mesh": mesh,
-                          "extras": {"prop": prop_id, "paint": paint, "kind": piece["kind"], "rgb": piece["rgb"],
-                                     "collide": piece["collide"]}})
+                          "extras": {"prop": prop_id, "paint": piece["paint"], "kind": piece["kind"],
+                                     "rgb": piece["rgb"], "collide": piece["collide"]}})
             prop_node["children"].append(len(nodes) - 1)
         mesh = add_mesh(f"{prop_id}.Root", *root_geo, 0)
         nodes.append({"name": f"{prop_id}.Root", "mesh": mesh, "extras": {"prop": prop_id, "paint": "Root"}})
@@ -495,12 +508,16 @@ def luau_text(built):
         lines.append(f"\t\tFootprint = {fmt(b['footprint'])},")
         lines.append(f"\t\tCollide = {'true' if b['solid'] else 'false'},")
         lines.append(f"\t\tTris = {b['tris']},")
-        tints = [(paint, piece) for paint, piece in b["pieces"].items() if piece["kind"] == "Tint"]
+        tints = {}
+        for piece in b["pieces"].values():
+            if piece["kind"] == "Tint":
+                tints.setdefault(piece["paint"], piece)
+        tints = list(tints.items())
         lines.append("\t\tPaints = { " + ", ".join(f"{paint} = {c3(piece['rgb'])}" for paint, piece in tints) + " },")
         lines.append("\t\tPieces = {")
         for paint, piece in b["pieces"].items():
             lo, hi = piece["pos"].min(0), piece["pos"].max(0)
-            lines.append(f'\t\t\t{{ Name = "{prop_id}.{paint}", Paint = "{paint}", Kind = "{piece["kind"]}", '
+            lines.append(f'\t\t\t{{ Name = "{prop_id}.{paint}", Paint = "{piece["paint"]}", Kind = "{piece["kind"]}", '
                          f"Color = {c3(piece['rgb'])}, Center = {v3((lo + hi) / 2)}, Size = {v3(hi - lo)}, "
                          f"Collide = {'true' if piece['collide'] else 'false'}, Tris = {len(piece['tris'])} }},")
         lines.append("\t\t},")

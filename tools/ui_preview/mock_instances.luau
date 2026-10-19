@@ -211,7 +211,7 @@ local TEXT_PROPS = {
 	TextColor3 = DARK,
 	TextDirection = E.TextDirection.Auto,
 	TextScaled = false,
-	TextSize = 8,
+	TextSize = 14,
 	TextStrokeColor3 = BLACK,
 	TextStrokeTransparency = 1,
 	TextTransparency = 0,
@@ -250,8 +250,15 @@ end
 
 local BUTTON_PROPS = { AutoButtonColor = true, Modal = false, Selected = false, Style = E.ButtonStyle.Custom, Active = true, Selectable = true }
 
-class("TextLabel", "GuiObject", withText({}), { Computed = TEXT_COMPUTED })
-class("TextButton", "GuiObject", withText(table.clone(BUTTON_PROPS)), { Computed = TEXT_COMPUTED, Events = BUTTON_EVENTS })
+-- Roblox's abstract bases: TextLabel / ImageLabel are GuiLabels, TextButton / ImageButton are GuiButtons
+class("GuiLabel", "GuiObject", {}, { Abstract = true })
+class("GuiButton", "GuiObject", {}, { Abstract = true, Events = BUTTON_EVENTS })
+class("TextLabel", "GuiLabel", withText({}), { Computed = TEXT_COMPUTED })
+do
+	local props = withText(table.clone(BUTTON_PROPS))
+	props.Text = "Button"
+	class("TextButton", "GuiButton", props, { Computed = TEXT_COMPUTED, Events = BUTTON_EVENTS })
+end
 do
 	local props = withText({ Text = "", ClearTextOnFocus = true, CursorPosition = 1, MultiLine = false, PlaceholderColor3 = Color3.fromRGB(178, 178, 178), PlaceholderText = "", SelectionStart = -1, ShowNativeInput = true, TextEditable = true, Active = true, Selectable = true })
 	props.Text = "TextBox"
@@ -289,7 +296,7 @@ local IMAGE_COMPUTED = {
 		return rawget(self, "__props").BackgroundTransparency
 	end,
 }
-class("ImageLabel", "GuiObject", table.clone(IMAGE_PROPS), { Computed = IMAGE_COMPUTED })
+class("ImageLabel", "GuiLabel", table.clone(IMAGE_PROPS), { Computed = IMAGE_COMPUTED })
 do
 	local props = table.clone(IMAGE_PROPS)
 	for k, v in BUTTON_PROPS do
@@ -297,7 +304,7 @@ do
 	end
 	props.HoverImage = ""
 	props.PressedImage = ""
-	class("ImageButton", "GuiObject", props, { Computed = IMAGE_COMPUTED, Events = BUTTON_EVENTS })
+	class("ImageButton", "GuiButton", props, { Computed = IMAGE_COMPUTED, Events = BUTTON_EVENTS })
 end
 
 class("ScrollingFrame", "GuiObject", {
@@ -308,7 +315,7 @@ class("ScrollingFrame", "GuiObject", {
 	ElasticBehavior = E.ElasticBehavior.WhenScrollable,
 	HorizontalScrollBarInset = E.ScrollBarInset.None,
 	MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
-	ScrollBarImageColor3 = WHITE,
+	ScrollBarImageColor3 = BLACK,
 	ScrollBarImageTransparency = 0,
 	ScrollBarThickness = 12,
 	ScrollingDirection = E.ScrollingDirection.XY,
@@ -831,7 +838,8 @@ local function changed(object, key, value)
 	end
 	props[key] = value
 	local className = rawget(object, "__class")
-	if M.MarkLayoutDirty and (isA(className, "UIComponent") or (LAYOUT_KEYS[key] and isA(className, "GuiBase2d"))) then
+	-- only layout inputs dirty the layout (strokes, gradients and colours animate every frame)
+	if M.MarkLayoutDirty and ((M.LayoutComponents and M.LayoutComponents[className]) or (LAYOUT_KEYS[key] and isA(className, "GuiBase2d"))) then
 		M.MarkLayoutDirty()
 	end
 	local signal = rawget(object, "__propSignals")[key]

@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Draws the interface dumped by tools/preview_ui.py (see page.js). Opened by headless Chromium as
+     page.html?data=<url of the page json>; also works in a normal browser for poking at a preview. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>UI preview</title>
+<style>
+  @font-face { font-family: "Fredoka One"; src: url("../../assets/source/fonts/FredokaOne-Regular.ttf"); }
+  @font-face { font-family: "Luckiest Guy"; src: url("../../assets/source/fonts/LuckiestGuy-Regular.ttf"); }
+  /* Gotham stand-in: Montserrat (variable weight) */
+  @font-face { font-family: "Gotham Preview"; src: url("fonts/Montserrat-latin.woff2") format("woff2"); font-weight: 100 900; }
+  /* Fonts the repo doesn't ship (Source Sans, Arial, ...) */
+  @font-face { font-family: "Sans Preview"; src: local("Arimo"), local("Liberation Sans"), local("Arial"), local("DejaVu Sans"); font-weight: 400; }
+  @font-face { font-family: "Sans Preview"; src: local("Arimo Bold"), local("Liberation Sans Bold"), local("Arial Bold"), local("DejaVu Sans Bold"), local("DejaVuSans-Bold"); font-weight: 700; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow: hidden; background: #8FD3FF; }
+  body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  #screen { position: absolute; left: 0; top: 0; overflow: hidden; }
+  #backdrop { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  .gui { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .clip { position: absolute; overflow: hidden; }
+  .fill, .ring, .imgl, .tint, .txt, .bar, .vp { position: absolute; }
+  .txt { display: flex; flex-direction: column; pointer-events: none; }
+  .ln { white-space: pre; flex: none; overflow: visible; }
+  .core { position: absolute; border-radius: 12px; background: rgba(17, 18, 22, 0.5); display: flex; align-items: center; gap: 2px; padding: 0 4px; }
+  .core > b { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+  .chat { position: absolute; border-radius: 8px; background: rgba(25, 27, 29, 0.12); font: 500 15px "Gotham Preview", sans-serif; color: #fff;
+          padding: 8px 10px; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+  .chat .msg { margin-bottom: 4px; line-height: 19px; }
+  .chat .bar { left: 8px; right: 8px; bottom: 8px; height: 34px; border-radius: 6px; background: rgba(25, 27, 29, 0.2);
+               font-size: 13px; color: rgba(255,255,255,.7); display: flex; align-items: center; padding-left: 10px; }
+  .plist { position: absolute; right: 12px; width: 268px; border-radius: 10px; overflow: hidden; background: rgba(25, 27, 29, 0.55);
+           font: 600 14px "Gotham Preview", sans-serif; color: #fff; }
+  .plist > div { display: flex; height: 32px; align-items: center; padding: 0 12px; }
+  .plist > div > span:first-child { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .plist > div > span:not(:first-child) { width: 58px; text-align: right; }
+  .plist .ph { height: 28px; font-size: 12px; color: rgba(255,255,255,.7); background: rgba(0,0,0,.18); }
+  .plist .pr + .pr { border-top: 1px solid rgba(255,255,255,.08); }
+  .plist .me { background: rgba(255,255,255,.08); }
+  .jump { position: absolute; border-radius: 50%; background: rgba(255,255,255,.18); border: 3px solid rgba(255,255,255,.55);
+          display: flex; align-items: center; justify-content: center; }
+  .dbg { position: absolute; border: 1px solid rgba(255, 0, 140, .8); pointer-events: none; }
+  .dbg > span { position: absolute; left: 0; top: -11px; font: 9px monospace; color: #fff; background: rgba(255,0,140,.8); padding: 0 2px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="screen"><div id="backdrop"></div><div id="ui"></div><div id="core"></div></div>
+<script src="page.js"></script>
+</body>
+</html>

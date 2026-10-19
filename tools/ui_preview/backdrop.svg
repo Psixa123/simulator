@@ -1,0 +1,184 @@
+<!-- Sky-island backdrop for tools/preview_ui.py: the world stand-in from docs/ui_mockup.html (Sunny Plains, midday). -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="720" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="720" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#36A6FA"/>
+        <stop offset="0.36" stop-color="#7CCDFF"/>
+        <stop offset="0.62" stop-color="#C8EEFF"/>
+      </linearGradient>
+      <radialGradient id="sunglow" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#FFFBE6" stop-opacity="0.95"/>
+        <stop offset="0.3" stop-color="#FFF7D0" stop-opacity="0.5"/>
+        <stop offset="1" stop-color="#FFF7D0" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="grass" x1="0" y1="460" x2="0" y2="720" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#9BEE6A"/>
+        <stop offset="1" stop-color="#5FD34C"/>
+      </linearGradient>
+      <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#B8F58C"/>
+        <stop offset="1" stop-color="#9BEB6E"/>
+      </linearGradient>
+      <linearGradient id="rockA" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#F2C893"/>
+        <stop offset="1" stop-color="#DDA36D"/>
+      </linearGradient>
+      <linearGradient id="path" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#F1F2FF"/>
+        <stop offset="1" stop-color="#DDE2FB"/>
+      </linearGradient>
+
+      <!-- puffy sky cloud, 240 x 100, flat-ish bottom with a soft blue underside -->
+      <symbol id="cloud" viewBox="0 0 240 100" overflow="visible">
+        <g fill="#D3EBFF">
+          <circle cx="58" cy="66" r="32"/><circle cx="106" cy="50" r="44"/><circle cx="160" cy="60" r="36"/>
+          <circle cx="200" cy="74" r="24"/><rect x="28" y="66" width="196" height="32" rx="16"/>
+        </g>
+        <g fill="#FFFFFF">
+          <circle cx="58" cy="60" r="30"/><circle cx="106" cy="44" r="42"/><circle cx="160" cy="54" r="34"/>
+          <circle cx="200" cy="68" r="22"/><rect x="30" y="60" width="192" height="28" rx="14"/>
+        </g>
+        <ellipse cx="92" cy="22" rx="18" ry="8" fill="#FFFFFF" opacity="0.9"/>
+      </symbol>
+
+      <!-- round cartoon trees, trunk base at the symbol's (40, 100) -->
+      <symbol id="treeLime" viewBox="0 0 80 100" overflow="visible">
+        <ellipse cx="40" cy="99" rx="22" ry="5" fill="#2E9A3A" opacity="0.35"/>
+        <rect x="34" y="62" width="12" height="38" rx="6" fill="#B07A45"/>
+        <circle cx="40" cy="40" r="34" fill="#8EDB4E"/>
+        <circle cx="40" cy="46" r="28" fill="#7BCB41" opacity="0.5"/>
+        <circle cx="30" cy="28" r="13" fill="#C3F38A"/>
+      </symbol>
+      <symbol id="treePink" viewBox="0 0 80 100" overflow="visible">
+        <ellipse cx="40" cy="99" rx="22" ry="5" fill="#2E9A3A" opacity="0.35"/>
+        <rect x="34" y="62" width="12" height="38" rx="6" fill="#B07A45"/>
+        <circle cx="40" cy="40" r="34" fill="#FF9CCB"/>
+        <circle cx="40" cy="46" r="28" fill="#F27DB6" opacity="0.45"/>
+        <circle cx="30" cy="28" r="13" fill="#FFD3E8"/>
+      </symbol>
+      <symbol id="treeLilac" viewBox="0 0 80 100" overflow="visible">
+        <ellipse cx="40" cy="99" rx="22" ry="5" fill="#2E9A3A" opacity="0.35"/>
+        <rect x="34" y="62" width="12" height="38" rx="6" fill="#B07A45"/>
+        <circle cx="40" cy="40" r="34" fill="#C3A4FF"/>
+        <circle cx="40" cy="46" r="28" fill="#A985F2" opacity="0.45"/>
+        <circle cx="30" cy="28" r="13" fill="#E6DAFF"/>
+      </symbol>
+
+      <!-- catchable rain cloud (weather on a field), centred on (60, 50) -->
+      <symbol id="rainCloud" viewBox="0 0 120 110" overflow="visible">
+        <ellipse cx="60" cy="104" rx="38" ry="7" fill="#2E9A3A" opacity="0.3"/>
+        <g fill="#AFC3EA"><circle cx="36" cy="46" r="20"/><circle cx="62" cy="34" r="26"/><circle cx="88" cy="46" r="19"/><rect x="18" y="44" width="88" height="22" rx="11"/></g>
+        <g fill="#C9D8F5"><circle cx="36" cy="42" r="18"/><circle cx="62" cy="30" r="24"/><circle cx="88" cy="42" r="17"/><rect x="20" y="40" width="84" height="20" rx="10"/></g>
+        <circle cx="54" cy="20" r="8" fill="#E6EEFC"/>
+        <g fill="#5CC8FF"><path d="M38 70 q5 9 0 13 q-5 -4 0 -13z"/><path d="M60 78 q5 9 0 13 q-5 -4 0 -13z"/><path d="M82 70 q5 9 0 13 q-5 -4 0 -13z"/></g>
+      </symbol>
+      <!-- catchable thundercloud -->
+      <symbol id="thunderCloud" viewBox="0 0 120 110" overflow="visible">
+        <ellipse cx="60" cy="104" rx="38" ry="7" fill="#2E9A3A" opacity="0.3"/>
+        <g fill="#8C86D8"><circle cx="36" cy="46" r="20"/><circle cx="62" cy="34" r="26"/><circle cx="88" cy="46" r="19"/><rect x="18" y="44" width="88" height="22" rx="11"/></g>
+        <g fill="#A7A1EC"><circle cx="36" cy="42" r="18"/><circle cx="62" cy="30" r="24"/><circle cx="88" cy="42" r="17"/><rect x="20" y="40" width="84" height="20" rx="10"/></g>
+        <circle cx="54" cy="20" r="8" fill="#C8C3F7"/>
+        <path d="M64 58 L52 80 L62 80 L56 98 L76 72 L65 72 L72 58 Z" fill="#FFE15A" stroke="#F2A31F" stroke-width="2.5" stroke-linejoin="round"/>
+      </symbol>
+
+      <!-- small floating island, 200 wide, grass top centred on (100, 30) -->
+      <symbol id="islet" viewBox="0 0 200 170" overflow="visible">
+        <path d="M8 30 C 14 64, 48 92, 74 136 C 86 158, 112 158, 124 136 C 150 92, 186 64, 192 30 Z" fill="#D99E68"/>
+        <path d="M8 30 C 12 50, 30 64, 50 72 C 80 80, 120 80, 150 72 C 170 64, 188 50, 192 30 Z" fill="url(#rockA)"/>
+        <path d="M60 104 C 84 112, 116 112, 140 104" fill="none" stroke="#C88A57" stroke-width="6" stroke-linecap="round"/>
+        <ellipse cx="100" cy="34" rx="96" ry="22" fill="#4FBF42"/>
+        <ellipse cx="100" cy="28" rx="92" ry="18" fill="#94E862"/>
+      </symbol>
+    </defs>
+
+    <rect width="1280" height="720" fill="url(#sky)"/>
+    <circle cx="1060" cy="104" r="170" fill="url(#sunglow)"/>
+    <circle cx="1060" cy="104" r="40" fill="#FFF4B8"/>
+    <circle cx="1060" cy="104" r="30" fill="#FFFBE0"/>
+
+    <!-- sky clouds (kept clear of the HUD) -->
+    <use href="#cloud" x="34"  y="66"  width="230" height="96"/>
+    <use href="#cloud" x="286" y="112" width="140" height="58" opacity="0.92"/>
+    <use href="#cloud" x="878" y="20"  width="150" height="62" opacity="0.92"/>
+    <use href="#cloud" x="1030" y="236" width="150" height="62"/>
+
+    <!-- distant floating islands -->
+    <use href="#islet" x="1062" y="352" width="150" height="128"/>
+    <use href="#treePink"  x="1090" y="334" width="36" height="45"/>
+    <use href="#treeLime"  x="1120" y="328" width="42" height="52"/>
+
+    <!-- the sea of clouds at the horizon -->
+    <g fill="#E4F4FF">
+      <circle cx="0" cy="452" r="40"/><circle cx="76" cy="440" r="36"/><circle cx="150" cy="450" r="40"/><circle cx="232" cy="442" r="34"/>
+      <circle cx="310" cy="452" r="40"/><circle cx="392" cy="444" r="36"/><circle cx="476" cy="452" r="38"/><circle cx="560" cy="444" r="34"/>
+      <circle cx="640" cy="452" r="40"/><circle cx="722" cy="444" r="34"/><circle cx="806" cy="452" r="38"/><circle cx="890" cy="444" r="36"/>
+      <circle cx="972" cy="452" r="40"/><circle cx="1050" cy="442" r="34"/><circle cx="1128" cy="450" r="40"/><circle cx="1206" cy="440" r="36"/>
+      <circle cx="1284" cy="452" r="40"/>
+    </g>
+    <g fill="#FFFFFF">
+      <circle cx="30" cy="470" r="34"/><circle cx="112" cy="462" r="30"/><circle cx="192" cy="472" r="34"/><circle cx="272" cy="464" r="30"/>
+      <circle cx="352" cy="472" r="34"/><circle cx="432" cy="464" r="30"/><circle cx="512" cy="472" r="34"/><circle cx="592" cy="464" r="30"/>
+      <circle cx="672" cy="472" r="34"/><circle cx="752" cy="464" r="30"/><circle cx="832" cy="472" r="34"/><circle cx="912" cy="464" r="30"/>
+      <circle cx="992" cy="472" r="34"/><circle cx="1072" cy="464" r="30"/><circle cx="1152" cy="472" r="34"/><circle cx="1232" cy="464" r="30"/>
+      <rect x="-10" y="470" width="1300" height="250"/>
+    </g>
+
+    <!-- the island: rock bands under the edge, a darker grass lip, then the grass top -->
+    <path d="M-40 560 C 40 610, 96 664, 118 740 L 1162 740 C 1184 664, 1240 610, 1320 560 L 1320 740 L -40 740 Z" fill="#FFFFFF"/>
+    <path d="M-40 500 C 220 470, 420 462, 640 462 C 860 462, 1060 470, 1320 500
+             L 1320 604 C 1260 640, 1214 686, 1200 740 L 80 740 C 66 686, 20 640, -40 604 Z" fill="#C98A58"/>
+    <path d="M-40 500 C 220 470, 420 462, 640 462 C 860 462, 1060 470, 1320 500
+             L 1320 586 C 1254 624, 1204 676, 1186 740 L 94 740 C 76 676, 26 624, -40 586 Z" fill="url(#rockA)"/>
+    <path d="M-40 500 C 220 470, 420 462, 640 462 C 860 462, 1060 470, 1320 500
+             L 1320 556 C 1246 600, 1188 660, 1168 740 L 112 740 C 92 660, 34 600, -40 556 Z" fill="#46B843"/>
+    <path d="M-40 496 C 220 466, 420 458, 640 458 C 860 458, 1060 466, 1320 496
+             L 1320 540 C 1242 586, 1180 650, 1158 740 L 122 740 C 100 650, 38 586, -40 540 Z" fill="url(#grass)"/>
+    <!-- chunky rock seams on the cliff faces -->
+    <g fill="none" stroke="#C98A58" stroke-width="6" stroke-linecap="round">
+      <path d="M2 600 C 24 614, 44 632, 58 650"/>
+      <path d="M1278 600 C 1256 614, 1236 632, 1222 650"/>
+    </g>
+    <!-- cloud sea wrapping the island corners -->
+    <g fill="#FFFFFF">
+      <circle cx="-8" cy="690" r="42"/><circle cx="46" cy="724" r="34"/>
+      <circle cx="1290" cy="690" r="42"/><circle cx="1236" cy="724" r="34"/>
+    </g>
+
+    <!-- light paver path from the camera to the horizon -->
+    <path d="M614 458 L 666 458 L 750 740 L 530 740 Z" fill="url(#path)" stroke="#BCC5EC" stroke-width="3" stroke-linejoin="round"/>
+    <g stroke="#C9D0F2" stroke-width="2.5" stroke-linecap="round">
+      <line x1="610" y1="478" x2="670" y2="478"/><line x1="602" y1="504" x2="678" y2="504"/>
+      <line x1="592" y1="536" x2="688" y2="536"/><line x1="580" y1="576" x2="700" y2="576"/>
+      <line x1="565" y1="626" x2="715" y2="626"/><line x1="547" y1="686" x2="733" y2="686"/>
+      <line x1="640" y1="626" x2="640" y2="686"/><line x1="640" y1="536" x2="640" y2="576"/>
+    </g>
+
+    <!-- weather fields: raised lighter pads with a white dashed border -->
+    <path d="M60 584 L 330 572 L 352 664 L 26 680 Z" fill="#46B843"/>
+    <path d="M60 576 L 330 564 L 352 656 L 26 672 Z" fill="url(#field)"/>
+    <path d="M72 584 L 320 573 L 339 647 L 42 662 Z" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="13 9" stroke-linejoin="round"/>
+    <path d="M960 562 L 1220 574 L 1254 660 L 944 648 Z" fill="#46B843"/>
+    <path d="M960 554 L 1220 566 L 1254 652 L 944 640 Z" fill="url(#field)"/>
+    <path d="M971 562 L 1210 573 L 1240 643 L 958 632 Z" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="13 9" stroke-linejoin="round"/>
+
+    <!-- trees along the island edge -->
+    <use href="#treeLilac" x="1194" y="428" width="64" height="80"/>
+    <use href="#treeLime"  x="1144" y="446" width="56" height="70"/>
+    <use href="#treePink"  x="1032" y="452" width="58" height="72"/>
+    <use href="#treeLime"  x="206"  y="442" width="58" height="72"/>
+
+    <!-- flowers -->
+    <g>
+      <circle cx="256" cy="542" r="5" fill="#FFFFFF"/><circle cx="256" cy="542" r="2.2" fill="#FFD23F"/>
+      <circle cx="278" cy="552" r="5" fill="#FF9FCF"/><circle cx="278" cy="552" r="2.2" fill="#FFF3A0"/>
+      <circle cx="1000" cy="532" r="5" fill="#FFFFFF"/><circle cx="1000" cy="532" r="2.2" fill="#FFD23F"/>
+      <circle cx="1022" cy="540" r="5" fill="#C7A6FF"/><circle cx="1022" cy="540" r="2.2" fill="#FFF3A0"/>
+      <circle cx="404" cy="700" r="5" fill="#FFFFFF"/><circle cx="404" cy="700" r="2.2" fill="#FFD23F"/>
+      <circle cx="880" cy="706" r="5" fill="#FF9FCF"/><circle cx="880" cy="706" r="2.2" fill="#FFF3A0"/>
+      <circle cx="1004" cy="690" r="5" fill="#FFFFFF"/><circle cx="1004" cy="690" r="2.2" fill="#FFD23F"/>
+    </g>
+
+    <!-- catchable weather on the fields -->
+    <use href="#rainCloud"    x="120"  y="540" width="110" height="100"/>
+    <use href="#thunderCloud" x="1060" y="526" width="110" height="100"/>
+  </svg>

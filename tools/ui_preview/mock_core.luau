@@ -797,7 +797,22 @@ local ColorSequenceKeypoint = {
 		return makeColorKeypoint({ Time = t, Value = c })
 	end,
 }
+-- sequences are equal when their keypoints are
+local function sameKeypoints(a, b)
+	local ka, kb = rawget(a, "Keypoints"), rawget(b, "Keypoints")
+	if #ka ~= #kb then
+		return false
+	end
+	for i, point in ka do
+		local other = kb[i]
+		if point.Time ~= other.Time or point.Value ~= other.Value or rawget(point, "Envelope") ~= rawget(other, "Envelope") then
+			return false
+		end
+	end
+	return true
+end
 local makeColorSequence = simple("ColorSequence", {})
+getmetatable(makeColorSequence({ Keypoints = {} })).__eq = sameKeypoints
 local ColorSequence = {
 	new = function(a, b)
 		if kindOf(a) == "Color3" then
@@ -817,6 +832,7 @@ local NumberSequenceKeypoint = {
 	end,
 }
 local makeNumberSequence = simple("NumberSequence", {})
+getmetatable(makeNumberSequence({ Keypoints = {} })).__eq = sameKeypoints
 local NumberSequence = {
 	new = function(a, b)
 		if type(a) == "number" then
