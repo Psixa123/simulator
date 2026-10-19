@@ -1,12 +1,17 @@
-"""Runs the Luau mock tests for the pet mesh pack, the server's pack loaders and WorldProps outside Roblox.
+"""Runs the Luau mock tests for the pet mesh pack, the server's pack loaders, WorldProps and the map outside
+Roblox.
 
 Bundles tests/mock/RobloxMock.luau, the game modules under test and the spec into one script and runs
 it with the `luau` command line (https://github.com/luau-lang/luau/releases). Set LUAU=path/to/luau if
 it isn't on your PATH.
 
+The map contract test (MapContracts.luau) needs the whole game tree and a far bigger Roblox mock, so it
+runs through tools/preview_map.py (its mock runtime, no browser), once with the prop pack and once without.
+
     python tests/mock/run_mock_tests.py
 """
 
+import json
 import os
 import re
 import shutil
@@ -26,6 +31,7 @@ MODULES = {
 }
 OPTIONAL = {"WorldPropsData"}
 SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau", "WorldProps.spec.luau"]
+MAP_SPEC = "MapContracts.luau"
 
 
 def read(path):
@@ -49,6 +55,37 @@ def bundle(spec):
     return "\n".join(chunks)
 
 
+def run_map_test(luau, label, extra):
+    """MapService contract test in the preview tool's mock runtime; returns True when it passed."""
+    with tempfile.TemporaryDirectory() as out:
+        command = [sys.executable, os.path.join(ROOT, "tools", "preview_map.py"), "--script",
+                   os.path.join(MOCK, MAP_SPEC), "--dump-only", "--no-start", "--keep-going", "--luau", luau,
+                   "--out", out] + extra
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+        world_path = os.path.join(out, "world.json")
+        if result.returncode != 0 or not os.path.exists(world_path):
+            print(result.stdout + result.stderr)
+            print(f"Map contract test ({label}): the mock run failed")
+            return False
+        with open(world_path, encoding="utf-8") as handle:
+            world = json.load(handle)
+    prints = [str(line) for line in world.get("Prints", [])]
+    problems = [line for line in prints if line.startswith("MAPTEST FAIL")]
+    problems += [f"ERROR {error}" for error in world.get("Errors", [])]
+    problems += [f"MOCK GAP {gap['Message']}" for gap in world.get("Gaps", []) if not gap.get("Maybe")]
+    if world.get("Terrain", {}).get("Fills"):
+        problems.append(f"FAIL the map uses Roblox Terrain ({len(world['Terrain']['Fills'])} fills)")
+    done = [line for line in prints if line.startswith("MAPTEST DONE")]
+    parts = [line.split()[-1] for line in prints if line.startswith("MAPTEST PARTS")]
+    if not done:
+        problems.append("FAIL the contract checks did not finish")
+    for problem in problems:
+        print(problem)
+    summary = done[0][len("MAPTEST DONE "):] if done else "did not finish"
+    print(f"Map contract test ({label}): {summary}, {parts[0] if parts else '?'} parts")
+    return not problems
+
+
 def main():
     luau = os.environ.get("LUAU") or shutil.which("luau")
     if not luau:
@@ -61,6 +98,8 @@ def main():
                 handle.write(bundle(spec))
             result = subprocess.run([luau, path])
             failed = failed or result.returncode != 0
+    for label, extra in (("with the prop pack", []), ("part-built props only", ["--no-pack"])):
+        failed = not run_map_test(os.path.abspath(luau) if os.path.exists(luau) else luau, label, extra) or failed
     sys.exit(1 if failed else 0)
 
 

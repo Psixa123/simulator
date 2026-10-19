@@ -9,7 +9,7 @@
 # WindmillBlades, whose origin is its hub centre (it goes on the Windmill at WINDMILL_HUB). The props
 # sit side by side on the rows y = 64 and y = 120.
 
-# ===== chunk 1/9: helpers shared by the landmark props =====
+# ===== chunk 1/6: helpers shared by the landmark props =====
 L = session_state["L"]
 LM = session_state.setdefault("LM", {})
 v_add, v_sub, v_mul, v_dot, v_cross, v_norm, v_len = [L[k] for k in (
@@ -157,34 +157,33 @@ def stone(center, radius, z_bot, z_top, seed, sides=5, shoulders=3, soft=0.5, se
     return L["rock"](center, planes, soft, seg, stretch=(1.0, 1.0, squat), floor=floor)
 
 
-def puff(center, balls, blend=0.8, seg=7):
-    """One soft cloud of balls [[x, y, z, rx, ry, rz], ...] melted together (smooth union `blend` wide): a
-    cube sphere round `center` (which must see the whole surface) pushed out to the surface."""
-    def dist(p):
-        d = None
-        for b in balls:
-            q = [(p[0] - b[0]) / b[3], (p[1] - b[1]) / b[4], (p[2] - b[2]) / b[5]]
-            s = (math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]) - 1.0) * min(b[3], b[4], b[5])
-            if d is None:
-                d = s
-            else:
-                h = max(blend - abs(d - s), 0.0) / blend
-                d = min(d, s) - h * h * blend / 4.0
-        return d
-
-    far = max([v_len(v_sub(b[:3], center)) + max(b[3:]) for b in balls]) + blend
-    dirs, faces = L["sphere_grid"](seg)
-    verts = []
-    for d in dirs:
-        lo, hi = 0.0, far
-        for k in range(26):
-            mid = (lo + hi) / 2.0
-            if dist(v_add(center, v_mul(d, mid))) < 0:
-                lo = mid
-            else:
-                hi = mid
-        verts.append(v_add(center, v_mul(d, (lo + hi) / 2.0)))
-    return L["orient"]({"v": verts, "f": [list(f) for f in faces]})
+def lobes(balls, seg=6, hide=(), floor=None):
+    """A cartoon cloud: one round ball per lobe [x, y, z, rx, ry, rz] (+ its own seg). Faces buried inside
+    another lobe (or inside a ball of `hide`, e.g. the lobes of another paint) never show and are left
+    out, so a big cloud stays cheap. floor = flatten everything below this height."""
+    every = list(balls) + list(hide)
+    verts, faces = [], []
+    for i, b in enumerate(balls):
+        m = L["ball"](b[:3], b[3:6], b[6] if len(b) > 6 else seg)
+        if floor is not None:
+            m = floor_at(m, floor)
+        inside = []
+        for q in m["v"]:
+            inside.append([j for j, o in enumerate(every) if j != i and ((q[0] - o[0]) / o[3]) ** 2 +
+                           ((q[1] - o[1]) / o[4]) ** 2 + ((q[2] - o[2]) / o[5]) ** 2 < 0.98])
+        index = {}
+        for f in m["f"]:
+            shared = inside[f[0]]
+            for k in f[1:]:
+                shared = [j for j in shared if j in inside[k]]
+            if shared:
+                continue
+            for k in f:
+                if k not in index:
+                    index[k] = len(verts)
+                    verts.append(m["v"][k])
+            faces.append([index[k] for k in f])
+    return {"v": verts, "f": faces}
 
 
 def arch_poly(w, h, seg=8):
@@ -209,10 +208,10 @@ def turn_y(m):
 
 
 LM.update({"revolve": revolve, "loft": loft, "sweep": sweep, "band": band, "align": align, "floor_at": floor_at,
-           "stone": stone, "puff": puff, "arch_poly": arch_poly, "on_wall": on_wall, "turn_y": turn_y})
+           "stone": stone, "lobes": lobes, "arch_poly": arch_poly, "on_wall": on_wall, "turn_y": turn_y})
 result = {"chunk": 1, "helpers": sorted(LM.keys())}
 
-# ===== chunk 2/9: Windmill (tower), WindmillBlades, HayBale =====
+# ===== chunk 2/6: Windmill (tower), WindmillBlades, HayBale, TeslaTower, StormCloud, LightningRod =====
 L = session_state["L"]
 LM = session_state["LM"]
 CAT = "landmarks"
@@ -240,7 +239,7 @@ def windmill():
     prof.append((0.0, 21.8))
     L["piece"](p, body, L["lathe"](prof, n=8, phase=math.pi / 8), crease=30)
     # Trim rings: a plinth, a fat gallery ring at the waist and the rim under the cap
-    for z0, z1, out in ((-0.3, 1.3, 0.75), (10.6, 11.9, 1.05), (20.6, 22.2, 0.85)):
+    for z0, z1, out in ((-0.3, 1.3, 0.75), (10.6, 11.9, 0.9), (20.6, 22.2, 0.85)):
         r = mill_radius((z0 + z1) / 2.0)
         L["piece"](p, "Secondary", LM["band"](r - 0.35, r + out, z0, z1, n=8, phase=math.pi / 8), crease=30)
     # Cap: a big round hat with a rolled eave and a ball on top
@@ -273,10 +272,10 @@ def windmill_blades():
     # Four blades: a spar out to the tip and a sail panel on its trailing side with two battens
     sail = L["round_poly"]([[0.3, 2.3], [3.05, 2.9], [3.25, 10.5], [0.3, 10.7]], 0.55, seg=2)
     for k in range(4):
-        parts = [("Secondary", L["rounded_box"]([0.0, 0.25, 6.0], [0.98, 0.7, 9.8], 0.34, seg=1)),
-                 ("Primary", L["extrude"](sail, 0.42, bevel=0.15, seg=1, y=0.25))]
+        parts = [("Secondary", L["rounded_box"]([0.0, -0.35, 6.0], [0.98, 0.7, 9.8], 0.34, seg=1)),
+                 ("Primary", L["extrude"](sail, 0.42, bevel=0.15, seg=1, y=-0.35))]
         for z in (5.2, 8.4):
-            parts.append(("Secondary", L["rounded_box"]([1.75, 0.25, z], [3.5, 0.66, 0.66], 0.26, seg=1)))
+            parts.append(("Secondary", L["rounded_box"]([1.75, -0.35, z], [3.5, 0.66, 0.66], 0.26, seg=1)))
         for paint, m in parts:
             L["piece"](p, paint, L["rotate"](m, "y", 90 * k + 12), crease=45, collide=False)
     return p
@@ -303,12 +302,27 @@ def hay_bale():
     return p
 
 
-result = {"built": [L["report"](windmill()), L["report"](windmill_blades()), L["report"](hay_bale())]}
+def slab(poly, depth, bevel, radius, seg=2, y=0.0):
+    """Puffy slab facing -Y from a SHARP 2D outline [(x, z), ...] (counter-clockwise seen from the front),
+    `depth` thick: corners rounded by `radius`, front and back edges by `bevel`. Unlike extrude(), each
+    bevel ring is inset before its corners are rounded, so thin points and tight corners stay clean."""
+    steps = []
+    for k in range(seg + 1):
+        a = math.pi / 2 * k / seg
+        steps.append([bevel * (1 - math.sin(a)), -depth / 2 + bevel * (1 - math.cos(a))])
+    steps += [[st[0], -st[1]] for st in reversed(steps)]
+    verts, rings = [], []
+    for inset, yy in steps:
+        q = L["offset_poly"](poly, inset) if inset > 1e-9 else poly
+        ring = []
+        for pt in L["round_poly"](q, max(radius - inset, 0.06), seg=2):
+            ring.append(len(verts))
+            verts.append([pt[0], y + yy, pt[1]])
+        rings.append(ring)
+    return L["orient"]({"v": verts, "f": L["loft_faces"](rings)})
 
-# ===== chunk 3/9: TeslaTower, StormCloud, LightningRod =====
-L = session_state["L"]
-LM = session_state["LM"]
-CAT = "landmarks"
+
+LM["slab"] = slab
 
 
 def tesla_tower():
@@ -334,22 +348,23 @@ def tesla_tower():
 
 
 def storm_cloud():
-    p = L["new_prop"]("StormCloud", 56, 64, {"Primary": "6C70BE", "Secondary": "A2A8EC"}, category=CAT)
-    # The cloud: big round puffs melted together over a flat base
-    balls = [[0.5, 0.5, 5.75, 3.0, 2.8, 2.7], [-3.2, 0.3, 5.1, 2.5, 2.45, 2.2], [3.7, 0.2, 5.15, 2.45, 2.4, 2.1],
-             [-5.65, 0.4, 4.55, 1.5, 1.75, 1.4], [5.8, 0.4, 4.6, 1.45, 1.7, 1.3], [-1.4, -1.6, 4.8, 1.9, 1.6, 1.6],
-             [2.1, -1.5, 4.9, 1.8, 1.6, 1.6], [0.3, 2.5, 5.3, 2.5, 1.9, 1.9]]
-    cloud = LM["puff"]([0.0, 0.4, 5.0], balls, blend=0.4, seg=12)
-    L["piece"](p, "Primary", LM["floor_at"](cloud, 3.6), crease=55)
-    # Two lighter puffs on top catching the sun, part of the silhouette
-    tops = [[-1.45, -0.35, 7.55, 1.95, 1.8, 1.65], [2.25, -0.2, 7.15, 1.6, 1.5, 1.4]]
-    L["piece"](p, "Secondary", LM["puff"]([0.3, -0.3, 7.3], tops, blend=0.45, seg=8), crease=55)
-    # A fat lightning bolt hanging under it; the origin is its tip
-    bolt = L["round_poly"](L["bolt_poly"](5.8), 0.34, seg=2)
-    lo = min([q[1] for q in bolt])
-    tip = [q for q in bolt if q[1] < lo + 1e-6][0]
-    bolt = [[q[0] - tip[0], q[1] - lo] for q in bolt]
-    L["piece"](p, "Neon_FFE15A", L["extrude"](bolt, 1.1, bevel=0.34, seg=2), crease=40)
+    p = L["new_prop"]("StormCloud", 56, 64, {"Primary": "7479C8", "Secondary": "5155A3"}, category=CAT)
+    # A fat lightning bolt, its whole zigzag hanging below the cloud; the origin is its tip
+    # (its own outline: a low step so the zigzag shows, a wide top tucked into the cloud)
+    zig = [[0.0, 0.0], [0.62, 0.5], [0.3, 0.5], [0.55, 1.0], [0.0, 1.0], [-0.2, 0.38], [0.08, 0.38]]
+    bolt = slab([[6.6 * q[0], 6.6 * q[1]] for q in zig], 1.8, 0.45, 0.55)
+    lo = L["bounds"](bolt)[0][2]
+    L["piece"](p, "Neon_FFE15A", L["move"](bolt, [0.0, 0.0, -lo]), crease=40)
+    # The cloud: round lobes (a big crown, shoulders, front and back puffs) over a darker, flatter belly
+    cx, up = 1.4, 0.5
+    tops = [[cx + 0.3, 0.5, 7.7, 3.3, 3.0, 2.4, 6], [cx - 3.6, 0.3, 7.0, 2.6, 2.5, 2.1], [cx + 3.9, 0.4, 7.1, 2.7, 2.5, 2.1],
+            [cx - 6.0, 0.4, 6.3, 1.7, 1.9, 1.45, 4], [cx + 6.1, 0.5, 6.4, 1.6, 1.8, 1.4, 4], [cx - 1.7, -2.4, 6.6, 2.0, 1.7, 1.65],
+            [cx + 2.2, -2.2, 6.7, 1.9, 1.7, 1.6], [cx + 0.2, 2.8, 6.9, 2.6, 2.0, 1.85, 4], [cx - 1.8, -0.6, 8.6, 1.9, 1.8, 1.45]]
+    belly = [[cx - 3.4, 0.0, 5.45, 3.4, 3.0, 1.2], [cx + 0.4, -0.2, 5.3, 4.0, 3.4, 1.3], [cx + 4.1, 0.0, 5.45, 3.3, 2.9, 1.2]]
+    tops = [b[:2] + [b[2] + up] + b[3:] for b in tops]
+    belly = [b[:2] + [b[2] + up] + b[3:] for b in belly]
+    L["piece"](p, "Primary", LM["lobes"](tops, seg=5, hide=belly), crease=60)
+    L["piece"](p, "Secondary", LM["lobes"](belly, seg=5), crease=60)
     return p
 
 
@@ -369,9 +384,15 @@ def lightning_rod():
     return p
 
 
-result = {"built": [L["report"](tesla_tower()), L["report"](storm_cloud()), L["report"](lightning_rod())]}
+result = {"built": [
+    L["report"](windmill()),
+    L["report"](windmill_blades()),
+    L["report"](hay_bale()),
+    L["report"](tesla_tower()),
+    L["report"](storm_cloud()),
+    L["report"](lightning_rod())]}
 
-# ===== chunk 4/9: Cactus, Pyramid =====
+# ===== chunk 3/6: Cactus, Pyramid, SandArch, OasisPool =====
 L = session_state["L"]
 LM = session_state["LM"]
 CAT = "landmarks"
@@ -470,14 +491,6 @@ def pyramid():
     return p
 
 
-result = {"built": [L["report"](cactus()), L["report"](pyramid())]}
-
-# ===== chunk 5/9: SandArch, OasisPool =====
-L = session_state["L"]
-LM = session_state["LM"]
-CAT = "landmarks"
-
-
 def sand_arch():
     p = L["new_prop"]("SandArch", 134, 64, {"Primary": "EE9F5C", "Secondary": "F7C98A"}, solid=True, category=CAT)
     # Centre line: two chunky leaning legs and a squashed half-ellipse span between them (XZ plane)
@@ -500,16 +513,16 @@ def sand_arch():
         d = 2.9 + 0.75 * (1.0 - mid) + 0.4 * foot
         b = a + turns[i]
         c, sn = math.cos(b), math.sin(b)
-        box = 1.0 / (abs(c) ** 2.6 + abs(sn) ** 2.6) ** (1.0 / 2.6)
-        k = box * (1.0 + 0.16 * noise([path[i][0] + w * c, d * sn, path[i][2]]))
+        box = 1.0 / (abs(c) ** 3.2 + abs(sn) ** 3.2) ** (1.0 / 3.2)
+        k = box * (1.0 + 0.11 * noise([path[i][0] + w * c, d * sn, path[i][2]]))
         return [w * k, d * k]
 
-    rings = LM["sweep"](path, section, n=9, up=[0.0, 1.0, 0.0], rings_only=True)
+    rings = LM["sweep"](path, section, n=16, up=[0.0, 1.0, 0.0], rings_only=True)
     # Wind-worn layers: a lighter band round the middle of each leg
     last = m - 1
     for i0, i1, paint in ((0, 2, "Primary"), (2, 4, "Secondary"), (4, last - 4, "Primary"),
                           (last - 4, last - 2, "Secondary"), (last - 2, last, "Primary")):
-        L["piece"](p, paint, LM["loft"](rings[i0:i1 + 1]), crease=38)
+        L["piece"](p, paint, LM["loft"](rings[i0:i1 + 1]), crease=55)
     # Fallen rocks at the feet
     for c, r, z1, seed, paint in (((-10.6, -2.3, 0.3), 1.3, 1.55, 31, "Secondary"),
                                   ((10.4, 2.1, 0.3), 1.15, 1.35, 32, "Primary"),
@@ -521,8 +534,8 @@ def sand_arch():
 
 def kidney(t):
     """Point t (radians) round the pool's kidney-shaped outline (studs, XY)."""
-    x, y = 6.5 * math.cos(t), 4.6 * math.sin(t)
-    return [x, y - 2.3 * math.exp(-(x / 2.7) ** 2) * L["smoothstep"](0.0, 1.0, math.sin(t))]
+    x, y = 7.0 * math.cos(t), 5.2 * math.sin(t)
+    return [x, y - 2.6 * math.exp(-(x / 2.9) ** 2) * L["smoothstep"](0.0, 1.0, math.sin(t))]
 
 
 def flat_slab(poly, z0, z1, bevel=0.1):
@@ -556,16 +569,20 @@ def oasis_pool():
     # Two lily pads, one with a pink bud
     pad = [[0.78 * math.cos(math.radians(a)), 0.78 * math.sin(math.radians(a))] for a in range(25, 345, 20)]
     pad = [[0.0, 0.0]] + pad
-    for (x, y), turn in (((-2.3, -1.0), 30), ((2.6, -0.4), 200)):
+    for (x, y), turn in (((-2.6, -1.2), 30), ((2.9, -0.5), 200)):
         L["piece"](p, "Color_5BCB4C", L["move"](L["rotate"](flat_slab(pad, 0.58, 0.76, bevel=0.06), "z", turn),
                                                 [x, y, 0.0]), crease=40)
-    L["piece"](p, "Color_FF86B6", L["blob"]((-2.45, -1.05, 0.98), 0.32, squash=1.1, lump=0.0, seed=4, seg=3), crease=60)
+    L["piece"](p, "Color_FF86B6", L["blob"]((-2.75, -1.25, 0.98), 0.32, squash=1.1, lump=0.0, seed=4, seg=3), crease=60)
     return p
 
 
-result = {"built": [L["report"](sand_arch()), L["report"](oasis_pool())]}
+result = {"built": [
+    L["report"](cactus()),
+    L["report"](pyramid()),
+    L["report"](sand_arch()),
+    L["report"](oasis_pool())]}
 
-# ===== chunk 6/9: Igloo, Snowman, IceCastleTower =====
+# ===== chunk 4/6: Igloo, Snowman, IceCastleTower =====
 L = session_state["L"]
 LM = session_state["LM"]
 CAT = "landmarks"
@@ -699,7 +716,7 @@ def ice_castle_tower():
 
 result = {"built": [L["report"](igloo()), L["report"](snowman()), L["report"](ice_castle_tower())]}
 
-# ===== chunk 7/9: Volcano, LavaSpire, SteamVent =====
+# ===== chunk 5/6: Volcano, LavaSpire, SteamVent =====
 L = session_state["L"]
 LM = session_state["LM"]
 CAT = "landmarks"
@@ -732,7 +749,7 @@ def volcano():
     # The rock cone up to the ash line, then the scorched top with a rounded crater lip; the wavy
     # seam between them is closed by a point inside on both sides
     def seam(a):
-        z = 18.5 + 1.8 * math.sin(5 * a + 1.0) + 0.9 * math.sin(9 * a)
+        z = 21.0 + 1.0 * math.sin(3 * a + 1.0) + 0.45 * math.sin(7 * a)
         return cone_radius(z) * ridge(a, z), z
 
     def upper(i, a):
@@ -746,11 +763,11 @@ def volcano():
     # Glowing lava in the crater
     L["piece"](p, "Neon_FF7A2E", L["lathe"]([(0.0, 36.0), (6.3, 36.0), (6.25, 37.3), (4.0, 37.7), (0.0, 37.85)], n=24),
                crease=40)
-    # Three lava streaks running down from the lip
-    for a0, length, wob in ((-1.4, 24.0, 0.06), (-0.55, 17.0, -0.05), (2.35, 21.0, 0.05)):
+    # Three lava streaks spilling over the lip, widening downhill into rounded tongues
+    for a0, length, wob in ((-1.4, 23.0, 0.06), (-0.55, 16.0, -0.05), (2.35, 20.0, 0.05)):
         path, ups, wid = [], [], []
-        for k in range(14):
-            t = k / 13.0
+        for k in range(15):
+            t = 1.0 - (1.0 - k / 14.0) ** 1.35
             z = 39.2 - length * t
             a = a0 + wob * math.sin(3.0 * t * math.pi) + 0.04 * t
             r = cone_radius(z) * ridge(a, z) + 0.15
@@ -758,8 +775,8 @@ def volcano():
                 r = 9.0 - 0.4 * (z - 38.0)
             path.append([r * math.cos(a), r * math.sin(a), z])
             ups.append([math.cos(a), math.sin(a), 0.45])
-            wid.append((2.1 + 1.0 * t) * min(1.0, 4.0 * (1.0 - t)) ** 0.7 + 0.05)
-        wid[-1] = 0.0
+            end = max(0.0, (t - 0.8) / 0.2)
+            wid.append((1.55 + 1.6 * t) * math.sqrt(max(0.0, 1.0 - end * end)))
         L["piece"](p, "Neon_FF7A2E", LM["sweep"](path, lambda i, a: [wid[i], 0.6 * min(1.0, wid[i])], n=8, up=ups),
                    crease=50)
     # Boulders round the foot
@@ -781,27 +798,33 @@ def surface_r(m, az, z, around=0.3, band=0.9):
 
 def lava_spire():
     p = L["new_prop"]("LavaSpire", 70, 120, {"Primary": "5E4651"}, category=CAT)
-    # A tall tapering rock and a tipped top chunk; a glowing core shows in the seam between them
-    L["piece"](p, "Neon_FF7A2E", L["lathe"]([(0.0, 6.0), (1.55, 6.0), (1.35, 9.0), (0.0, 9.6)], n=10), crease=40)
-    base = LM["stone"]((0.0, 0.0, 3.0), 2.9, -0.5, 8.4, seed=81, sides=6, shoulders=3, soft=0.3, seg=8,
-                       lean=(0.12, -0.08), floor=-0.5, tilt=(0.3, 0.12))
-    L["piece"](p, "Primary", base, crease=30)
-    top = LM["stone"]((0.1, 0.1, 10.4), 1.6, 8.6, 13.9, seed=83, sides=5, shoulders=3, soft=0.26, seg=7,
-                      lean=(-0.4, 0.22), tilt=(0.36, 0.14))
-    L["piece"](p, "Primary", L["rotate"](top, [1.0, 0.4, 0.0], 9, (0.1, 0.1, 8.6)), crease=30)
-    # Glowing zigzag cracks running down the faces of the tall rock
-    for az, z0, z1 in ((-95, 7.2, 0.6), (30, 6.0, 0.8), (150, 6.8, 1.6)):
+    # Three chunky basalt blocks stacked a little off-true, smaller toward the rounded top; the glowing
+    # core shows in the bevelled seams between them
+    base = LM["stone"]((0.0, 0.0, 2.9), 2.75, -0.5, 6.5, seed=81, sides=6, shoulders=3, soft=0.42, seg=8,
+                       lean=(0.1, -0.06), floor=-0.5, tilt=(0.2, 0.1))
+    mid = LM["stone"]((0.25, 0.1, 8.5), 2.05, 6.3, 10.7, seed=82, sides=5, shoulders=3, soft=0.4, seg=7,
+                      lean=(-0.18, 0.12), tilt=(0.16, 0.1))
+    top = LM["stone"]((0.05, 0.3, 12.1), 1.5, 10.5, 14.0, seed=87, sides=5, shoulders=3, soft=0.55, seg=7,
+                      lean=(0.28, -0.12), tilt=(0.2, 0.12))
+    for m in (base, mid, top):
+        L["piece"](p, "Primary", m, crease=30)
+    for z0, z1, r, c in ((6.2, 6.85, 1.95, (0.12, 0.05)), (10.4, 10.95, 1.38, (0.15, 0.2))):
+        core = L["lathe"]([(0.0, z0), (r, z0), (r + 0.1, (z0 + z1) / 2.0), (r, z1), (0.0, z1)], n=12,
+                          center=(c[0], c[1], 0.0))
+        L["piece"](p, "Neon_FF7A2E", core, crease=50)
+    # Glowing zigzag cracks running down the faces of the bottom block
+    for az, z0, z1 in ((-100, 5.9, 0.7), (25, 5.6, 1.0), (145, 5.8, 1.6)):
         crack, rad = [], []
         for k in range(7):
             t = k / 6.0
             z = z0 + (z1 - z0) * t
-            a = math.radians(az + 10 * (1 if k % 2 else -1) * (0.4 + 0.6 * t))
-            r = surface_r(base, a, z) - 0.06
+            a = math.radians(az + 11 * (1 if k % 2 else -1) * (0.4 + 0.6 * t))
+            r = surface_r(base, a, z) - 0.05
             crack.append([r * math.cos(a), r * math.sin(a), z])
-            rad.append(0.26 * math.sin(math.pi * (0.15 + 0.7 * t)) + 0.08)
+            rad.append(0.25 * math.sin(math.pi * (0.15 + 0.7 * t)) + 0.08)
         L["piece"](p, "Neon_FF7A2E", L["tube"](crack, rad, n=6, caps="round", cap_seg=2), crease=50)
     # Two small rocks at its foot
-    for c, r, h, seed in (((2.9, -1.6, 0.3), 1.0, 1.4, 85), ((-2.6, 2.0, 0.2), 0.8, 1.05, 86)):
+    for c, r, h, seed in (((2.75, -1.55, 0.3), 0.95, 1.35, 85), ((-2.5, 1.9, 0.2), 0.8, 1.05, 86)):
         L["piece"](p, "Primary", LM["stone"](c, r, -0.5, h, seed=seed, seg=4, soft=0.25, floor=-0.5), crease=30)
     return p
 
@@ -831,7 +854,7 @@ def steam_vent():
 
 result = {"built": [L["report"](volcano()), L["report"](lava_spire()), L["report"](steam_vent())]}
 
-# ===== chunk 8/9: FloatingIsland, StarLamp, CloudBank =====
+# ===== chunk 6/6: FloatingIsland, StarLamp, CloudBank, CitadelTower, AuroraArch =====
 L = session_state["L"]
 LM = session_state["LM"]
 CAT = "landmarks"
@@ -859,14 +882,15 @@ def floating_island():
 
     L["piece"](p, "Primary", LM["revolve"](len(grass), 42, top), crease=50)
     # Rocky cone underneath, faceted, in two layers split along a wavy seam
-    rows = [8.95, 8.1, 7.0, 5.8, 4.6, 3.4, 2.2, 1.1, 0.35, 0.0]
+    rows = [8.95, 8.1, 7.0, 5.8, 4.6, 3.4, 2.4, 1.55, 0.85, 0.35, 0.0]
 
     def rock(i, a, zz=None):
         z = rows[i] if zz is None else zz
         if z <= 0.0:
             return 0.0, 0.0
-        ridge = 1.0 + 0.1 * math.cos(6 * a + 0.8) + 0.08 * noise([math.cos(a) * 6, math.sin(a) * 6, z])
-        return 0.93 * outline(a) * (z / 8.95) ** 0.72 * ridge, z
+        fade = 1.0 - 0.7 * L["smoothstep"](6.5, 8.95, z)
+        ridge = 1.0 + fade * (0.1 * math.cos(6 * a + 0.8) + 0.08 * noise([math.cos(a) * 6, math.sin(a) * 6, z]))
+        return 0.93 * outline(a) * (z / 8.95) ** 0.6 * ridge, z
 
     def seam(a):
         return 4.6 + 0.6 * math.sin(4 * a + 0.7) + 0.35 * math.sin(7 * a)
@@ -877,8 +901,8 @@ def floating_island():
     def lower(i, a):
         return (0.0, 4.9) if i == 0 else rock(i + 3, a, seam(a) if i == 1 else None)
 
-    L["piece"](p, "Secondary", LM["revolve"](6, 30, upper), crease=35)
-    L["piece"](p, "Tertiary", LM["revolve"](len(rows) - 3, 30, lower), crease=35)
+    L["piece"](p, "Secondary", LM["revolve"](6, 36, upper), crease=50)
+    L["piece"](p, "Tertiary", LM["revolve"](len(rows) - 3, 36, lower), crease=50)
     return p
 
 
@@ -898,25 +922,17 @@ def star_lamp():
 
 def cloud_bank():
     p = L["new_prop"]("CloudBank", 136, 120, {"Secondary": "D3DCFF"}, category=CAT)
-    balls = [[0.0, 0.5, 5.4, 4.5, 4.1, 3.9], [-5.8, 0.3, 4.3, 3.6, 3.4, 3.1], [5.9, 0.8, 4.4, 3.7, 3.5, 3.2],
-             [-9.5, 0.4, 3.0, 2.4, 2.6, 2.2], [9.7, 0.6, 3.1, 2.3, 2.5, 2.1], [-2.6, -3.0, 3.5, 2.8, 2.4, 2.5],
-             [2.9, -2.8, 3.7, 2.7, 2.3, 2.4], [-1.0, 3.6, 4.2, 3.2, 2.6, 2.8], [1.9, 0.0, 7.6, 2.6, 2.4, 2.2],
-             [-3.4, 0.6, 6.6, 2.4, 2.2, 2.0]]
-    cloud = LM["puff"]([0.0, 0.5, 4.4], balls, blend=0.6, seg=12)
-    L["piece"](p, "Color_FFFFFF", LM["floor_at"](cloud, 1.0), crease=55)
-    # The shaded underside: a flat layer of puffs bulging out round the bottom
-    belly = [[x, y, 1.75, rx * 0.98 + 0.4, ry * 0.98 + 0.4, 1.95] for x, y, z, rx, ry, rz in balls if z < 6.0]
-    L["piece"](p, "Secondary", LM["floor_at"](LM["puff"]([0.0, 0.5, 1.8], belly, blend=0.6, seg=9), -0.2),
-               crease=55)
+    # Big white lobes: a tall crown, two shoulders, small end puffs, front and back puffs
+    tops = [[0.0, 0.4, 5.9, 4.5, 4.0, 3.9, 6], [-6.0, 0.3, 4.9, 3.6, 3.4, 3.2, 6], [6.1, 0.7, 5.0, 3.7, 3.4, 3.2, 6],
+            [-10.0, 0.4, 3.5, 2.3, 2.6, 2.1, 4], [10.1, 0.6, 3.6, 2.2, 2.5, 2.0, 4], [-2.8, -3.4, 4.0, 2.8, 2.4, 2.5],
+            [3.1, -3.1, 4.2, 2.7, 2.4, 2.4], [-1.2, 3.7, 4.5, 3.1, 2.5, 2.7, 4], [-3.4, -0.6, 7.6, 2.5, 2.3, 2.1],
+            [2.6, -0.3, 8.4, 2.3, 2.2, 1.9]]
+    # The shaded underside: flatter lavender lobes peeking out round the bottom
+    belly = [[-6.3, 0.4, 1.8, 4.1, 3.6, 1.8], [0.2, 0.3, 1.7, 5.0, 4.6, 1.9], [6.5, 0.6, 1.8, 4.0, 3.6, 1.8],
+             [-10.4, 0.5, 1.4, 2.4, 2.5, 1.5], [10.5, 0.6, 1.4, 2.3, 2.4, 1.5]]
+    L["piece"](p, "Color_FFFFFF", LM["lobes"](tops, seg=5, hide=belly), crease=60)
+    L["piece"](p, "Secondary", LM["lobes"](belly, seg=4, hide=tops, floor=-0.2), crease=60)
     return p
-
-
-result = {"built": [L["report"](floating_island()), L["report"](star_lamp()), L["report"](cloud_bank())]}
-
-# ===== chunk 9/9: CitadelTower, AuroraArch =====
-L = session_state["L"]
-LM = session_state["LM"]
-CAT = "landmarks"
 
 
 def citadel_window(p, w, h, radius, az, z, seg=4, sill=True):
@@ -983,4 +999,9 @@ def aurora_arch():
     return p
 
 
-result = {"built": [L["report"](citadel_tower()), L["report"](aurora_arch())]}
+result = {"built": [
+    L["report"](floating_island()),
+    L["report"](star_lamp()),
+    L["report"](cloud_bank()),
+    L["report"](citadel_tower()),
+    L["report"](aurora_arch())]}

@@ -19,6 +19,8 @@
 --   tagged "ForecastGui", the arena BillboardGui tagged "ArenaGui", pylon caps tagged "ArenaPylon";
 --   Ashfall Volcano CoolingArea models at Hazards.CoolingSpots; MapService.Leaderboards[kind].
 -- The ground is at y = -0.5 and the weather fields' tops at y = 0 (lightning warnings are drawn at y = 0).
+-- tests/mock/MapContracts.luau checks these contracts, that spawns, sell pads, the main path and the fields
+-- stay clear, that every gate seals the width, and the 12,000-part budget (with and without the prop pack).
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -444,7 +446,7 @@ local function kit(target: Model, id: string, origin: CFrame, scale, solid: bool
 	local s = (v.X + v.Y + v.Z) / 3
 	-- Seed: a stable 0..1 number per placement, for stand-ins that vary a little from copy to copy
 	local p = origin.Position
-	local k = { Paints = paints, S = s, Seed = math.abs(math.sin(p.X * 12.9898 + p.Z * 78.233 + p.Y * 3.71) * 43758.5453) % 1 }
+	local k = { Paints = paints, S = s, V = v, Seed = math.abs(math.sin(p.X * 12.9898 + p.Z * 78.233 + p.Y * 3.71) * 43758.5453) % 1 }
 
 	local function make(shape, paint: string, size: Vector3, frame: CFrame): BasePart
 		local color, material, transparency = resolvePaint(paint, paints)
@@ -484,6 +486,24 @@ local function kit(target: Model, id: string, origin: CFrame, scale, solid: bool
 	-- cylinder along the prop's X (or the rotated X)
 	function k.rod(paint: string, offset: Vector3, length: number, diameter: number, rotation: CFrame?)
 		return make(Enum.PartType.Cylinder, paint, Vector3.new(length * s, diameter * s, diameter * s), at(offset, rotation))
+	end
+	-- a slab along X with a rounded (bullnose) front: a box `depth` deep reaching back (+Z) from the front
+	-- face at offset.Z, and a rod as tall as the slab along its front edge
+	function k.ledge(paint: string, offset: Vector3, length: number, height: number, depth: number)
+		local h = height * v.Y
+		make(Enum.PartType.Block, paint, Vector3.new(length * v.X, h, (depth - height / 2) * v.Z), at(offset + Vector3.new(0, 0, (depth + height / 2) / 2)))
+		return make(Enum.PartType.Cylinder, paint, Vector3.new(length * v.X, h, h), at(offset + Vector3.new(0, 0, height / 2)))
+	end
+	-- a box with rounded vertical edges (two crossed boxes and four corner cylinders)
+	function k.rbox(paint: string, offset: Vector3, size: Vector3, radius: number)
+		local r = radius
+		k.box(paint, offset, size - Vector3.new(r * 2, 0, 0))
+		k.box(paint, offset, size - Vector3.new(0, 0, r * 2))
+		for _, x in { -1, 1 } do
+			for _, z in { -1, 1 } do
+				k.cyl(paint, offset + Vector3.new(x * (size.X / 2 - r), 0, z * (size.Z / 2 - r)), size.Y, r * 2)
+			end
+		end
 	end
 	return k
 end
@@ -806,30 +826,56 @@ fallback("WeatherTower", { Size = 60, Solid = true, Paints = { Primary = SKY, Se
 	k.box("Primary", v3(0, 58.6, 0), v3(4.4, 1.4, 0.4))
 end)
 
+-- open front: walls on three sides, a rounded column at every corner, a striped awning over the opening
+local function shell(k, width: number, depth: number, height: number)
+	local hw, hd = width / 2, depth / 2
+	k.box("Color_EEF0FF", v3(0, height / 2 + 0.8, hd - 0.8), v3(width - 2.6, height, 1.6))
+	for _, x in { -1, 1 } do
+		k.box("Color_EEF0FF", v3(x * (hw - 0.8), height / 2 + 0.8, 0.5), v3(1.6, height, depth - 3.6))
+		for _, z in { -1, 1 } do
+			k.cyl("Color_EEF0FF", v3(x * (hw - 0.8), height / 2 + 0.8, z * (hd - 1.4)), height + 0.6, 3)
+		end
+	end
+end
+
+local function roof(k, y: number, width: number, depth: number)
+	k.box("Primary", v3(0, y, 0), v3(width - 1.6, 1.6, depth))
+	k.rod("Primary", v3(-(width / 2 - 0.8), y, 0), depth, 1.6, CFrame.Angles(0, math.rad(90), 0))
+	k.rod("Primary", v3(width / 2 - 0.8, y, 0), depth, 1.6, CFrame.Angles(0, math.rad(90), 0))
+	k.rod("Primary", v3(0, y, -depth / 2), width - 1.6, 1.6)
+end
+
 fallback("StationBooth", { Size = 20, Solid = true, Paints = { Primary = SKY, Secondary = SKY_DEEP } }, function(k)
-	k.box("Secondary", v3(0, 0.4, 0), v3(20, 0.8, 14))
-	k.box("Color_EEF0FF", v3(0, 6.4, 6.2), v3(20, 11.2, 1.6))
-	k.box("Color_EEF0FF", v3(-9.2, 6.4, 0), v3(1.6, 11.2, 14))
-	k.box("Color_EEF0FF", v3(9.2, 6.4, 0), v3(1.6, 11.2, 14))
-	k.box("Color_EEF0FF", v3(0, 13, -6.4), v3(20, 3.6, 1.2))
-	k.box("Secondary", v3(0, 14.9, 0), v3(21, 0.6, 15))
-	k.box("Primary", v3(0, 15.8, 0), v3(21.6, 1.6, 15.6))
-	k.box("Primary", v3(0, 2.2, -4), v3(12, 3.6, 2))
-	k.ball("Neon_FFF3B0", v3(-10, 7, 0), 2.2)
-	k.ball("Neon_FFF3B0", v3(10, 7, 0), 2.2)
+	k.rbox("Secondary", v3(0, 0.4, 0), v3(20, 0.8, 14), 2)
+	shell(k, 20, 14, 11.2)
+	k.box("Color_EEF0FF", v3(0, 13, -6.3), v3(17.4, 3.6, 1.4))
+	k.box("Secondary", v3(0, 14.9, 0.2), v3(20.4, 0.6, 14.4))
+	roof(k, 15.9, 21.6, 15.6)
+	k.ball("Secondary", v3(0, 17.3, 0), 2.6)
+	-- the awning: six stripes tilting out over the opening
+	for index = 0, 5 do
+		local x = -7.5 + index * 3
+		k.box(if index % 2 == 0 then "Primary" else "Color_FFFFFF", v3(x, 10.4, -8.3), v3(3, 0.5, 3.4), CFrame.Angles(-0.42, 0, 0))
+	end
+	k.box("Primary", v3(0, 2.4, -4), v3(12, 3.6, 2))
+	k.box("Color_FFFFFF", v3(0, 4.5, -4), v3(12.6, 0.6, 2.6))
+	k.ball("Neon_FFF3B0", v3(-10.1, 7.4, 0.5), 2.2)
+	k.ball("Neon_FFF3B0", v3(10.1, 7.4, 0.5), 2.2)
 end)
 
 fallback("WeatherLab", { Size = 22, Solid = true, Paints = { Primary = BOLT, Secondary = BOLT_DEEP } }, function(k)
-	k.box("Secondary", v3(0, 0.4, 0), v3(22, 0.8, 18))
-	k.box("Color_EEF0FF", v3(0, 6.4, 8.2), v3(22, 11.2, 1.6))
-	k.box("Color_EEF0FF", v3(-10.2, 6.4, 0), v3(1.6, 11.2, 18))
-	k.box("Color_EEF0FF", v3(10.2, 6.4, 0), v3(1.6, 11.2, 18))
-	k.box("Color_EEF0FF", v3(0, 11.2, -8.4), v3(22, 2, 1.2))
-	k.box("Primary", v3(0, 13, 0), v3(23.4, 1.6, 19.4))
-	k.cyl("Secondary", v3(-3, 14.2, 2), 1, 11)
+	k.rbox("Secondary", v3(0, 0.4, 0), v3(22, 0.8, 18), 2.4)
+	shell(k, 22, 18, 11.2)
+	k.box("Color_EEF0FF", v3(0, 11.2, -8.3), v3(19.4, 2, 1.4))
+	roof(k, 13, 23.4, 19.4)
+	-- the observatory dome and the radar dish
+	k.cyl("Secondary", v3(-3, 14.3, 2), 1.2, 11.4)
 	k.ball("Glass_9EE8FF", v3(-3, 15, 2), 10)
-	k.cyl("Color_EEF0FF", v3(6.5, 15.4, 3), 3, 0.8)
-	k.cyl("Secondary", v3(6.5, 17.2, 2.6), 0.6, 5, CFrame.Angles(-0.6, 0, 0))
+	k.cyl("Color_EEF0FF", v3(6.5, 15.4, 3), 3, 1)
+	k.cyl("Secondary", v3(6.5, 17.4, 2.6), 0.8, 5.4, CFrame.Angles(-0.6, 0, 0))
+	k.ball("Neon_9EE8FF", v3(6.5, 18.6, 1.8), 1.2)
+	k.ball("Neon_FFF3B0", v3(-11.1, 7.4, 2), 2.2)
+	k.ball("Neon_FFF3B0", v3(11.1, 7.4, 2), 2.2)
 end)
 
 fallback("RebirthShrine", { Size = 20, Solid = true, Paints = { Primary = hex("E2D8FF"), Secondary = STORM } }, function(k)
@@ -862,35 +908,53 @@ fallback("EggIncubator", { Size = 12, Solid = true, Paints = { Primary = hex("EE
 end)
 
 fallback("SellMachine", { Size = 12, Solid = true, Paints = { Primary = LEAF, Secondary = hex("33B24A") } }, function(k)
-	k.box("Secondary", v3(0, 0.8, 0), v3(10, 1.6, 8))
-	k.box("Primary", v3(0, 4.4, 0), v3(8.4, 5.8, 6.6))
-	k.cyl("Glass_54E0FF", v3(0, 9.6, 0), 4.6, 5.6)
-	k.cyl("Secondary", v3(0, 12.2, 0), 0.8, 6)
-	k.box("Neon_FFE15A", v3(-1.4, 4.6, -3.4), v3(1.6, 2.6, 0.5), CFrame.Angles(0, 0, 0.35))
-	k.box("Secondary", v3(2.4, 2.6, -3.8), v3(3, 1.6, 2))
+	local zAxis = CFrame.Angles(0, math.rad(90), 0)
+	k.rbox("Secondary", v3(0, 0.8, 0), v3(10, 1.6, 8), 2)
+	k.rbox("Primary", v3(0, 4.4, 0), v3(8.6, 5.6, 6.8), 1.8)
+	-- the storm jar: glass, glowing rain inside, a fat lid and knob
+	k.cyl("Secondary", v3(0, 7.6, 0), 1, 6.6)
+	k.cyl("Glass_54E0FF", v3(0, 10, 0), 4.6, 6)
+	k.cyl("Neon_54E0FF", v3(0, 9.2, 0), 2.8, 4.6)
+	k.cyl("Secondary", v3(0, 12.6, 0), 1.2, 6.8)
+	k.ball("Neon_FFE15A", v3(0, 13.6, 0), 2)
+	-- a bolt on the front, and the coin chute with a coin in its tray
+	k.box("Neon_FFE15A", v3(-1.6, 5.4, -3.45), v3(1.4, 2.4, 0.5), CFrame.Angles(0, 0, -0.45))
+	k.box("Neon_FFE15A", v3(-1.2, 3.6, -3.45), v3(1.2, 2.2, 0.5), CFrame.Angles(0, 0, 0.45))
+	k.box("Secondary", v3(2.2, 2.6, -3.9), v3(3.2, 1.6, 2))
+	k.rod("Color_FFE15A", v3(2.2, 3.9, -3.9), 0.6, 1.8, zAxis)
 end)
 
 -- spans X (pillars at x = +-16.5), front -Z; sign area 24 x 5 centred 24 up
 fallback("ZoneGate", { Size = 40, Solid = true, Paints = { Primary = BODY, Secondary = SKY, Tertiary = INK_SOFT } }, function(k)
+	local zAxis = CFrame.Angles(0, math.rad(90), 0)
 	for _, x in { -16.5, 16.5 } do
-		k.box("Tertiary", v3(x, 1, 0), v3(7.6, 2, 8))
-		k.box("Primary", v3(x, 11.5, 0), v3(6.4, 21, 7))
-		k.ball("Tertiary", v3(x, 29.4, 0), 4.6)
+		k.cyl("Tertiary", v3(x, 1.3, 0), 2.6, 8.4)
+		k.cyl("Primary", v3(x, 11.6, 0), 19, 6.6)
+		k.cyl("Tertiary", v3(x, 8, 0), 1.3, 7.6)
+		k.cyl("Tertiary", v3(x, 15.5, 0), 1.3, 7.6)
+		k.ball("Tertiary", v3(x, 29.2, 0), 5)
+		-- rounded beam ends over the pillars
+		k.rod("Secondary", v3(x, 24.4, 0), 7.2, 7, zAxis)
 	end
-	k.box("Secondary", v3(0, 24.4, 0), v3(40, 6.4, 7.6))
+	k.box("Secondary", v3(0, 24.4, 0), v3(33, 7, 7.2))
+	k.rod("Tertiary", v3(0, 21.2, 0), 33, 2)
+	-- a little cloud resting on the beam
+	k.ball("Color_FFFFFF", v3(-2.4, 29, 0.6), 5)
+	k.ball("Color_FFFFFF", v3(1.6, 29.6, 0.6), 6)
+	k.ball("Color_FFFFFF", v3(5, 28.6, 0.6), 4)
 end)
 
 -- one chunk of island edge: flat top at y = 0 along the playable side (+Z), layered rock down to -30,
 -- front (-Z) = the outside
 fallback("CliffSegment", { Size = 40, Paints = { Primary = hex("6EE05A"), Secondary = hex("D99A62"), Tertiary = hex("B8754A") } }, function(k)
 	local seed = k.Seed
-	k.box("Primary", v3(0, -1.2, 0.4), v3(40, 2.4, 17.2))
-	k.rod("Primary", v3(0, -1.3, -8.2), 40, 2.8)
-	k.box("Secondary", v3(0, -6.8, 1.2), v3(39, 9, 15))
-	k.box("Tertiary", v3(0, -15.2, 3), v3(35 - seed * 4, 8.4, 11.6))
-	k.ball("Secondary", v3(-9 + seed * 6, -23.5, 4.4), 11)
-	k.ball("Secondary", v3(8 - seed * 5, -24.5 - seed * 3, 4.6), 10)
-	k.ball("Tertiary", v3(-1 + seed * 3, -28.5 - seed * 2, 5.2), 7)
+	-- the lip, then rock bands with rounded fronts, each stepping in a little further, then boulders
+	k.ledge("Primary", v3(0, -1.4, -9), 40.4, 2.8, 18)
+	k.ledge("Secondary", v3(0, -7.2, -7.6), 40, 8.8, 16)
+	k.ledge("Tertiary", v3(0, -14.6, -5.2 + seed * 1.5), 38 - seed * 3, 6, 13)
+	k.ledge("Secondary", v3(-seed * 3, -20.4, -2.6 - seed), 31 - seed * 5, 5.6, 9)
+	k.ball("Tertiary", v3(-8 + seed * 6, -24.5, 2), 9)
+	k.ball("Secondary", v3(7 - seed * 5, -25 - seed * 2, 2.4), 8)
 end)
 
 fallback("CloudPuff", { Size = 30, Paints = { Secondary = hex("DCE6FA") } }, function(k)
@@ -1029,7 +1093,7 @@ local function buildIsland(parent: Instance, regionId: number)
 	local paints = cliffPaints(biome)
 	local function cliff(position: Vector3, outward: Vector3, width: number)
 		place("CliffSegment", cliffs, CFrame.new(position) * facing(outward.X, outward.Z), {
-			Scale = Vector3.new(width / 40 * 1.06, rng:NextNumber(0.85, 1.3), rng:NextNumber(1, 1.3)),
+			Scale = Vector3.new(width / 40 * 1.06, rng:NextNumber(0.95, 1.25), rng:NextNumber(1, 1.2)),
 			Paints = paints,
 			Collide = false,
 			CastShadow = false,
@@ -1524,11 +1588,12 @@ local function hills(d, x0: number, x1: number, step: number)
 	for _, side in { -1, 1 } do
 		local x = x0 + rng:NextNumber(4, step)
 		while x < x1 - 8 do
-			local radius = rng:NextNumber(14, 19)
-			local height = rng:NextNumber(5, 8.5)
+			local radius = rng:NextNumber(10.5, 14)
+			local height = rng:NextNumber(4.5, 7)
 			local foot = math.sqrt(radius ^ 2 - (radius - height) ^ 2)
 			local z = side * (MapLayout.HalfWidth + 3 + foot)
-			if math.abs(z) + radius < EDGE + 6 and d.Free(x, z, 2) then
+			-- the part of the ball under the ground stays behind the cliffs
+			if math.abs(z) + radius < EDGE - 1 and d.Free(x, z, 2) then
 				local y = GROUND_Y + height - radius
 				deco({
 					Name = "Hill",
@@ -1584,6 +1649,40 @@ local function tufts(d, count: number, x0: number, x1: number, zMin: number, zMa
 	local rng = d.Rng
 	d.Scatter(count, x0, x1, zMin, zMax, 1.2, function(position, side)
 		d.Prop("GrassTuft", position, side, { Scale = rng:NextNumber(1.2, 1.8), Paints = { Primary = color } }, math.pi)
+	end)
+end
+
+-- Soft round patches a shade lighter than the ground in the gaps left between props (placed last, so
+-- they only fill empty ground), so the flat biome colour has a little texture from above
+local function patches(d, count: number, x0: number, x1: number, zMin: number, zMax: number)
+	local rng = d.Rng
+	local color = d.Biome.Ground:Lerp(d.Biome.Field, 0.45)
+	d.Scatter(count, x0, x1, zMin, zMax, 7.5, function(position)
+		local diameter = rng:NextNumber(10, 17)
+		cylinder({
+			Name = "Patch",
+			Position = Vector3.new(position.X, GROUND_Y + 0.02, position.Z),
+			Height = 0.08,
+			Diameter = diameter,
+			Color = color,
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+			CastShadow = false,
+			Parent = d.Parent,
+		})
+		cylinder({
+			Name = "Patch",
+			Position = Vector3.new(position.X + diameter * 0.42, GROUND_Y + 0.02, position.Z + rng:NextNumber(-3, 3)),
+			Height = 0.08,
+			Diameter = diameter * 0.55,
+			Color = color,
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+			CastShadow = false,
+			Parent = d.Parent,
+		})
 	end)
 end
 
@@ -1782,9 +1881,22 @@ function Decor.Thunder(d, zoneId: number)
 		end
 		d.Take(x0 + spot[1], spot[2], 7 * spot[3])
 	end
-	-- storm clouds striking the island edges
-	for _, spot in { { 40, 134 }, { 150, -134 }, { 250, 132 }, { 282, -136 } } do
-		place("StormCloud", parent, CFrame.new(x0 + spot[1], GROUND_Y, spot[2]) * facing(0, -math.sign(spot[2])), { Scale = 2.3, Paints = { Primary = hex("8E87D9"), Secondary = hex("6F68C2") }, Collide = false })
+	-- storm clouds over the island edges, their bolts striking tall lightning rods
+	local ROD_SCALE, ROD_HEIGHT = 1.8, 10.3
+	for _, spot in { { 40, 134 }, { 150, -134 }, { 250, 132 }, { 282, -136 }, { 118, 138 } } do
+		local base = CFrame.new(x0 + spot[1], GROUND_Y, spot[2]) * facing(0, -math.sign(spot[2]))
+		local rod = place("LightningRod", parent, base, { Scale = ROD_SCALE, Paints = { Primary = hex("A3A9DE") }, Collide = true })
+		local cloud = place("StormCloud", parent, base * CFrame.new(0, ROD_HEIGHT * ROD_SCALE + 0.4, 0), {
+			Scale = 2.2,
+			Paints = { Primary = hex("8E87D9"), Secondary = hex("6F68C2") },
+			Collide = false,
+		})
+		for _, target in { rod, cloud } do
+			local glow = pieceOf(target, "Neon_")
+			if glow then
+				CollectionService:AddTag(glow, "Flicker")
+			end
+		end
 		d.Take(x0 + spot[1], spot[2], 6)
 	end
 
@@ -1989,15 +2101,36 @@ function Decor.Sky(d, zoneId: number)
 	for _, x in { x0 + 150, x0 + 250 } do
 		place("AuroraArch", parent, CFrame.new(x, FIELD_Y, 0) * facing(-1, 0), { Scale = 1.6, Collide = false })
 	end
-	-- small floating islands
-	for _ = 1, 8 do
-		local position = Vector3.new(rng:NextNumber(x0 + 20, x1 - 20), rng:NextNumber(26, 60), (if rng:NextNumber() < 0.5 then -1 else 1) * rng:NextNumber(60, 200))
+	-- small floating islands: low ones beside the main island, high ones drifting over the field
+	for index = 1, 9 do
+		local side = if index % 2 == 0 then -1 else 1
+		local outside = index <= 5
+		local position = Vector3.new(
+			rng:NextNumber(x0 + 20, x1 - 20),
+			if outside then rng:NextNumber(14, 44) else rng:NextNumber(58, 78),
+			side * (if outside then rng:NextNumber(170, 225) else rng:NextNumber(36, 105))
+		)
 		floatingIsland(parent, position, rng:NextNumber(0.8, 1.4), { Primary = biome.Field, Secondary = biome.Rock, Tertiary = biome.Band }, rng, function(island, top)
 			place("StarLamp", island, CFrame.new(top), { Scale = 0.8, Paints = { Primary = STORM_DEEP } })
 		end)
 	end
 	deco({ Name = "Moon", Shape = Enum.PartType.Ball, Size = Vector3.one * 130, CFrame = CFrame.new(x0 + 160, 260, -620), Color = hex("F4F0FF"), Material = M.Neon, Parent = parent })
-	deco({ Name = "Planet", Shape = Enum.PartType.Ball, Size = Vector3.one * 70, CFrame = CFrame.new(x0 + 40, 170, 560), Color = hex("FF9AD5"), Material = M.Neon, Transparency = 0.1, Parent = parent })
+	-- a ringed planet, so it reads as one from every zone
+	local planet = CFrame.new(x0 + 40, 170, 560) * CFrame.Angles(0.42, 0, 0.32)
+	deco({ Name = "Planet", Shape = Enum.PartType.Ball, Size = Vector3.one * 70, CFrame = planet, Color = hex("FF9AD5"), Material = M.Neon, Transparency = 0.1, Parent = parent })
+	local segments = 20
+	for index = 0, segments - 1 do
+		local angle = (index + 0.5) / segments * math.pi * 2
+		deco({
+			Name = "PlanetRing",
+			Size = Vector3.new(12, 1.6, 2 * 60 * math.sin(math.pi / segments) + 0.8),
+			CFrame = planet * CFrame.Angles(0, angle, 0) * CFrame.new(60, 0, 0),
+			Color = hex("FFE6A8"),
+			Material = M.Neon,
+			Transparency = 0.15,
+			Parent = parent,
+		})
+	end
 
 	edgeGreenery(d, x0, x1, {
 		Front = function(position, side)
@@ -2284,7 +2417,7 @@ local function buildHub(parent: Instance)
 	local rng = Random.new(77)
 	local planted = {
 		{ -206, -108 }, { -206, 108 }, { -14, -108 }, { -14, 108 }, { -132, -108 }, { -132, 108 }, { -76, -108 }, { -76, 108 },
-		{ -186, -50 }, { -186, 50 }, { -24, -36 }, { -24, 36 },
+		{ -168, -50 }, { -168, 50 }, { -24, -36 }, { -24, 36 },
 	}
 	for index, spot in planted do
 		local position = CFrame.new(spot[1], GROUND_Y, spot[2])
@@ -2413,6 +2546,7 @@ local function buildZone(parent: Instance, zoneId: number)
 			feature.Place(d, position, side, rng)
 		end)
 	end
+	patches(d, 16, x0 + 8, x1 - 8, 16, 116)
 end
 
 ---------------------------------------------------------------------------
