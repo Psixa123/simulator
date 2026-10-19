@@ -472,15 +472,33 @@ local function click(path)
 end
 
 local function snippetEnv()
-	local env = setmetatable({}, { __index = getfenv(1) })
+	-- UI and Theme are required on first use (a --before snippet may not need them)
+	local globals = getfenv(1)
+	local lazy = {
+		UI = function()
+			return M.require(client.UI.UI)
+		end,
+		Theme = function()
+			return M.require(client.UI.Theme)
+		end,
+	}
+	local env = setmetatable({}, {
+		__index = function(self, key)
+			if lazy[key] then
+				local value = lazy[key]()
+				rawset(self, key, value)
+				return value
+			end
+			return globals[key]
+		end,
+	})
 	env.Registry = Registry
 	env.Client = client
-	env.UI = M.require(client.UI.UI)
-	env.Theme = M.require(client.UI.Theme)
 	env.Data = Registry and Registry.DataController.Data
 	env.ServerData = serverData
 	env.PlayerGui = playerGui
 	env.Open = function(name, ...)
+		assert(Registry, "Open: the client isn't running (--blank or --before)")
 		Registry.InterfaceController.OpenPanel(name, ...)
 	end
 	env.Click = click
@@ -502,6 +520,9 @@ end
 
 local actionLog = {}
 local function runAction(action)
+	if (action.Kind == "panel" or action.Kind == "notify") and not Registry then
+		error("--" .. (if action.Kind == "panel" then "panel" else "notify") .. ": the game's client isn't running (--blank)", 0)
+	end
 	if action.Kind == "panel" then
 		Registry.InterfaceController.OpenPanel(action.Name, table.unpack(action.Args or {}))
 		table.insert(actionLog, "opened panel " .. action.Name)
@@ -538,15 +559,33 @@ local function runThread(fn, limit)
 	return done
 end
 
-local mainScript = M.NodeAt(Config.MainPath)
-local mainThread = coroutine.create(function()
-	M.RunScript(mainScript)
-end)
-M.Resume(mainThread)
-Scheduler.Run(Config.BootSeconds or 2)
-Registry = M.require(client.Registry)
-if coroutine.status(mainThread) ~= "dead" and not (Config.DataDelay and Config.DataDelay > 0) then
-	table.insert(M.Warnings, "Main.client.luau has not finished after " .. tostring(Config.BootSeconds) .. " simulated seconds (still waiting on something)")
+-- --before snippets: run before the client starts (patch a module, e.g. icon ids, or the data)
+for _, action in Config.Before or {} do
+	local finished = runThread(function()
+		local ok, err = pcall(runAction, action)
+		if not ok then
+			table.insert(M.Errors, { Message = tostring(err), Trace = "" })
+		end
+	end, action.Limit or 30)
+	if not finished then
+		table.insert(M.Warnings, "--before snippet " .. tostring(action.Name) .. " was still running after 30 simulated seconds")
+	end
+end
+
+if Config.Blank then
+	-- --blank: the game's client never starts; an empty PlayerGui for --run snippets (component tests)
+	Scheduler.Run(0.1)
+else
+	local mainScript = M.NodeAt(Config.MainPath)
+	local mainThread = coroutine.create(function()
+		M.RunScript(mainScript)
+	end)
+	M.Resume(mainThread)
+	Scheduler.Run(Config.BootSeconds or 2)
+	Registry = M.require(client.Registry)
+	if coroutine.status(mainThread) ~= "dead" and not (Config.DataDelay and Config.DataDelay > 0) then
+		table.insert(M.Warnings, "Main.client.luau has not finished after " .. tostring(Config.BootSeconds) .. " simulated seconds (still waiting on something)")
+	end
 end
 
 for _, action in Config.Actions or {} do

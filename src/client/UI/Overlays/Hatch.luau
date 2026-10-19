@@ -79,7 +79,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 	local disc = UI.Create("Frame", {
 		Name = "Disc",
 		BackgroundColor3 = rarity.Color,
-		BackgroundTransparency = 0.72,
+		BackgroundTransparency = 0.62,
 		Size = UDim2.fromOffset(210, 210),
 		Position = UDim2.fromScale(0.5, 0.5),
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -87,6 +87,63 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 		ZIndex = 32,
 		Parent = stage,
 		UI.Round(),
+		UI.Stroke(4, Color3.new(1, 1, 1), 0.35),
+	})
+	-- A little cloud platform the egg and the pet stand on
+	local platform = UI.Create("Frame", {
+		Name = "Platform",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(190, 46),
+		Position = UDim2.new(0.5, 0, 0.5, 104),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 32,
+		Parent = stage,
+	})
+	for index, spec in { { -52, 6, 50 }, { 0, -4, 66 }, { 50, 6, 50 } } do
+		UI.Create("Frame", {
+			Name = "Puff" .. index,
+			BackgroundColor3 = Theme.Ink,
+			Size = UDim2.fromOffset(spec[3], spec[3]),
+			Position = UDim2.new(0.5, spec[1], 0.5, spec[2]),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			ZIndex = 32,
+			Parent = platform,
+			UI.Round(),
+		})
+	end
+	UI.Create("Frame", {
+		Name = "Base",
+		BackgroundColor3 = Theme.Ink,
+		Size = UDim2.new(1, 0, 0, 40),
+		Position = UDim2.new(0.5, 0, 0.5, 8),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 32,
+		Parent = platform,
+		UI.Round(),
+	})
+	for index, spec in { { -52, 6, 44 }, { 0, -4, 60 }, { 50, 6, 44 } } do
+		UI.Create("Frame", {
+			Name = "PuffFace" .. index,
+			BackgroundColor3 = Theme.Cloud,
+			Size = UDim2.fromOffset(spec[3], spec[3]),
+			Position = UDim2.new(0.5, spec[1], 0.5, spec[2]),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			ZIndex = 32,
+			Parent = platform,
+			UI.Round(),
+			UI.Gradient(Theme.Cloud, Theme.Mist),
+		})
+	end
+	UI.Create("Frame", {
+		Name = "BaseFace",
+		BackgroundColor3 = Theme.Cloud,
+		Size = UDim2.new(1, -6, 0, 34),
+		Position = UDim2.new(0.5, 0, 0.5, 8),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 32,
+		Parent = platform,
+		UI.Round(),
+		UI.Gradient(Theme.Mist, Theme.Haze),
 	})
 
 	local eggView = nil
@@ -115,42 +172,83 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 		nameLabel.TextColor3 = Color3.new(1, 1, 1)
 		UI.Create("UIGradient", { Color = PetModels.RainbowSequence, Parent = nameLabel })
 	end
-	local rarityLabel = UI.Label({
+	-- Rarity pill, coloured like a tile pedestal
+	local colors = Theme.Rarity(rarity.Color)
+	local rarityPill = UI.Create("Frame", {
 		Name = "Rarity",
-		Text = string.upper(rarity.Name),
-		TextColor3 = rarity.Color,
-		Size = UDim2.new(1, 0, 0, 30),
-		Position = UDim2.fromOffset(0, 332),
-		Stroke = 3,
+		BackgroundColor3 = Theme.Ink,
+		Size = UDim2.fromOffset(156, 34),
+		Position = UDim2.new(0.5, 0, 0, 334),
+		AnchorPoint = Vector2.new(0.5, 0),
 		Visible = false,
 		ZIndex = 34,
 		Parent = slot,
+		UI.Round(),
+	})
+	UI.Create("Frame", {
+		Name = "Fill",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(3, 3),
+		Size = UDim2.new(1, -6, 1, -6),
+		ZIndex = 34,
+		Parent = rarityPill,
+		UI.Round(),
+		UI.Gradient(colors.Top, colors.Bottom),
+	})
+	UI.Text({
+		Name = "Text",
+		Text = string.upper(rarity.Name),
+		TextSize = 18,
+		Stroke = colors.Edge,
+		Position = UDim2.fromOffset(0, 1),
+		ZIndex = 35,
+		Parent = rarityPill,
 	})
 	local bonusLabel = UI.Label({
 		Name = "Bonus",
 		Text = Format.Bonus(Formulas.PetBonus(entry.Id, tier)) .. " Energy",
-		TextColor3 = Theme.Colors.Energy,
-		Size = UDim2.new(1, 0, 0, 28),
-		Position = UDim2.fromOffset(0, 366),
+		TextColor3 = Theme.Sets.Rain.Top,
+		Size = UDim2.new(1, 0, 0, 26),
+		Position = UDim2.fromOffset(0, 374),
 		Stroke = 3,
 		Visible = false,
 		ZIndex = 34,
 		Parent = slot,
 	})
+	-- "NEW!" candy tag
+	local coral = Theme.Sets.Coral
 	local newBadge = UI.Create("Frame", {
 		Name = "New",
-		BackgroundColor3 = Color3.fromRGB(255, 70, 110),
-		Size = UDim2.fromOffset(84, 36),
-		Position = UDim2.new(1, -20, 0, 20),
+		BackgroundColor3 = Theme.Ink,
+		Size = UDim2.fromOffset(86, 38),
+		Position = UDim2.new(1, -18, 0, 22),
 		AnchorPoint = Vector2.new(1, 0),
 		Rotation = 12,
 		Visible = false,
 		ZIndex = 35,
 		Parent = slot,
-		UI.Corner(10),
-		UI.Stroke(3),
+		UI.Round(),
 	})
-	UI.Label({ Text = "NEW!", Size = UDim2.fromScale(0.86, 0.74), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 36, Parent = newBadge })
+	UI.Create("Frame", {
+		Name = "Lip",
+		BackgroundColor3 = coral.Lip,
+		Position = UDim2.fromOffset(3, 3),
+		Size = UDim2.new(1, -6, 1, -6),
+		ZIndex = 35,
+		Parent = newBadge,
+		UI.Round(),
+	})
+	local newFace = UI.Create("Frame", {
+		Name = "Face",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(3, 3),
+		Size = UDim2.new(1, -6, 1, -10),
+		ZIndex = 35,
+		Parent = newBadge,
+		UI.Round(),
+		UI.Gradient(coral.Top, coral.Bottom),
+	})
+	UI.Text({ Name = "Text", Text = "NEW!", TextSize = 20, Stroke = coral.Stroke, Position = UDim2.fromOffset(0, 1), ZIndex = 36, Parent = newFace })
 
 	return {
 		Entry = entry,
@@ -162,7 +260,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 		Disc = disc,
 		EggView = eggView,
 		PetView = nil,
-		Labels = { nameLabel, rarityLabel, bonusLabel },
+		Labels = { nameLabel, rarityPill, bonusLabel },
 		NewBadge = newBadge,
 	}
 end
@@ -214,7 +312,7 @@ function Hatch.Play(result, options)
 		Name = "Hatch",
 		AutoButtonColor = false,
 		Text = "",
-		BackgroundColor3 = Color3.fromRGB(6, 8, 22),
+		BackgroundColor3 = Color3.fromRGB(16, 22, 52),
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 30,
@@ -235,7 +333,7 @@ function Hatch.Play(result, options)
 	UI.Label({
 		Name = "Title",
 		Text = title,
-		TextColor3 = Theme.Colors.Volts,
+		TextColor3 = Theme.Sets.Bolt.Top,
 		Size = UDim2.fromOffset(700, 54),
 		Position = UDim2.new(0.5, 0, 0.5, -226 + shift),
 		AnchorPoint = Vector2.new(0.5, 0.5),

@@ -1,9 +1,10 @@
 --!nonstrict
--- Yes / No confirmation dialog.
+-- Yes / No confirmation dialog: a small cloud window over a dim.
 
 local Registry = require(script.Parent.Parent.Parent.Registry)
 local UI = require(script.Parent.Parent.UI)
 local Theme = require(script.Parent.Parent.Theme)
+local Icons = require(script.Parent.Parent.Icons)
 
 local Confirm = {}
 
@@ -17,7 +18,14 @@ local function close()
 	end
 end
 
--- options: { Title, Text, ConfirmText, Color, OnConfirm }
+-- The weather badge icon for a dialog by its confirm colour
+local ICON_BY_COLOR = {
+	Coral = "Close",
+	Storm = "ClimateShift",
+	Leaf = "Check",
+}
+
+-- options: { Title, Text, ConfirmText, Color, Icon (Icons key), OnConfirm }
 function Confirm.Show(options)
 	close()
 	local root = Registry.InterfaceController.OverlayRoot
@@ -26,56 +34,65 @@ function Confirm.Show(options)
 		Name = "Confirm",
 		AutoButtonColor = false,
 		Text = "",
-		BackgroundColor3 = Color3.fromRGB(6, 8, 22),
-		BackgroundTransparency = 0.4,
+		BackgroundColor3 = Color3.fromRGB(16, 22, 52),
+		BackgroundTransparency = 0.45,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 50,
 		Parent = root,
 	})
 	holder = dim
+	dim.Activated:Connect(close)
 
-	local dialog = UI.Create("Frame", {
+	local color = options.Color or "Green"
+	local setName = Theme.SetAliases[color] or color
+	local window = UI.Window({
 		Name = "Dialog",
-		Size = UDim2.fromOffset(470, 250),
-		Position = UDim2.fromScale(0.5, 0.5),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		ZIndex = 51,
-		Parent = dim,
-		UI.Corner(18),
-		UI.Gradient(Theme.Colors.PanelTop, Theme.Colors.PanelBottom, 90),
-		UI.Stroke(4),
+		Title = options.Title or "Are you sure?",
+		Icon = if Icons.Has(options.Icon) then options.Icon else (ICON_BY_COLOR[setName] or "Check"),
+		Size = UDim2.fromOffset(480, 270),
+		Padding = { 22, 16, 18 },
 	})
-	UI.Label({ Text = options.Title or "Are you sure?", Size = UDim2.new(1, -40, 0, 40), Position = UDim2.fromOffset(20, 18), ZIndex = 52, MaxTextSize = 32, Parent = dialog })
-	UI.Label({
+	local dialog = window.Frame
+	dialog.Position = UDim2.new(0.5, 0, 0.5, 20 + Registry.InterfaceController.SafeTop / 2)
+	dialog.ZIndex = 51
+	dialog.Visible = true
+	dialog.Parent = dim
+	window.Close.Activated:Connect(close)
+
+	UI.Text({
+		Name = "Message",
 		Text = options.Text or "",
 		Font = Theme.BodyFont,
-		TextColor3 = Theme.Colors.SubText,
-		Size = UDim2.new(1, -50, 0, 80),
-		Position = UDim2.fromOffset(25, 66),
-		ZIndex = 52,
-		MaxTextSize = 20,
-		Stroke = 1.5,
-		Parent = dialog,
+		TextSize = 19,
+		Scaled = true,
+		Wrapped = true,
+		Color = Theme.InkSoft,
+		Size = UDim2.new(1, 0, 1, -72),
+		ZIndex = 2,
+		Parent = window.Content,
 	})
 	UI.Button({
+		Name = "Cancel",
 		Text = "Cancel",
 		Color = "Gray",
-		Size = UDim2.fromOffset(180, 56),
-		Position = UDim2.new(0.5, -10, 1, -20),
-		AnchorPoint = Vector2.new(1, 1),
-		ZIndex = 52,
-		Parent = dialog,
+		TextSize = 22,
+		Size = UDim2.new(0.5, -8, 0, 58),
+		Position = UDim2.fromScale(0, 1),
+		AnchorPoint = Vector2.new(0, 1),
+		ZIndex = 2,
+		Parent = window.Content,
 		OnClick = close,
 	})
 	UI.Button({
+		Name = "Confirm",
 		Text = options.ConfirmText or "Confirm",
-		Color = options.Color or "Green",
-		Size = UDim2.fromOffset(180, 56),
-		Position = UDim2.new(0.5, 10, 1, -20),
-		AnchorPoint = Vector2.new(0, 1),
-		ZIndex = 52,
-		Parent = dialog,
+		Color = color,
+		TextSize = 22,
+		Size = UDim2.new(0.5, -8, 0, 58),
+		Position = UDim2.fromScale(1, 1),
+		AnchorPoint = Vector2.new(1, 1),
+		ZIndex = 2,
+		Parent = window.Content,
 		OnClick = function()
 			close()
 			if options.OnConfirm then
@@ -84,10 +101,8 @@ function Confirm.Show(options)
 		end,
 	})
 
-	local scale = Instance.new("UIScale")
-	scale.Scale = 0.8
-	scale.Parent = dialog
-	UI.Tween(scale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	window.Scale.Scale = 0.8
+	UI.Tween(window.Scale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
 end
 
 return Confirm

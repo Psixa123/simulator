@@ -1408,7 +1408,7 @@ local function gradientOf(gradient)
 	return { Rot = gp.Rotation, Offset = { gp.Offset.X, gp.Offset.Y }, Keys = keys }
 end
 
-local function strokeOf(stroke, s, alpha)
+local function strokeOf(stroke, s, alpha, minSide)
 	if not stroke then
 		return nil
 	end
@@ -1424,7 +1424,8 @@ local function strokeOf(stroke, s, alpha)
 			break
 		end
 	end
-	local thickness = sp.Thickness * (if sp.StrokeSizingMode.Name == "ScaledSize" then 1 else s)
+	-- ScaledSize: Thickness is a fraction of the object's shorter side
+	local thickness = if sp.StrokeSizingMode.Name == "ScaledSize" then sp.Thickness * (minSide or 0) else sp.Thickness * s
 	return { T = thickness, Color = hex(sp.Color), A = a, Grad = gradient, Join = sp.LineJoinMode.Name, Pos = sp.BorderStrokePosition.Name }
 end
 
@@ -1509,7 +1510,7 @@ local function textItem(obj, g, comps, alpha)
 	}
 	local stroke = comps.TextStroke
 	if stroke then
-		item.Stroke = strokeOf(stroke, g.S, alpha)
+		item.Stroke = strokeOf(stroke, g.S, alpha, math.min(g.W, g.H))
 		if item.Stroke and P(stroke).Transparency > 0 and p.TextTransparency > 0 then
 			-- both fading: Roblox fades the outline with the text
 			item.Stroke.A = math.min(item.Stroke.A, a)
@@ -1563,7 +1564,7 @@ local function paint(obj, g, alpha)
 		item.Grad = gradient
 	end
 	if comps.BorderStroke or (comps.TextStroke and not isText(obj)) then
-		item.Stroke = strokeOf(comps.BorderStroke or comps.TextStroke, g.S, alpha)
+		item.Stroke = strokeOf(comps.BorderStroke or comps.TextStroke, g.S, alpha, minSide)
 	elseif p.BorderSizePixel > 0 and bgA > 0.001 and not comps.Corner then
 		item.Border = { T = p.BorderSizePixel * g.S, Color = hex(p.BorderColor3), A = bgA, Mode = p.BorderMode.Name }
 	end

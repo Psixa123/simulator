@@ -502,7 +502,7 @@
   if (opts.TopBar !== false) {
     const left = document.createElement("div");
     left.className = "core";
-    left.style.left = "12px";
+    left.style.left = px(12 + (screen.SafeLeft || 0));
     left.style.top = "12px";
     left.style.height = "44px";
     left.innerHTML = `<b><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="4" width="16" height="3" rx="1.5" fill="#fff"/><rect x="3" y="9.5" width="16" height="3" rx="1.5" fill="#fff"/><rect x="3" y="15" width="16" height="3" rx="1.5" fill="#fff"/></svg></b>` +
@@ -510,7 +510,7 @@
     core.appendChild(left);
     const right = document.createElement("div");
     right.className = "core";
-    right.style.right = "12px";
+    right.style.right = px(12 + (screen.SafeRight || 0));
     right.style.top = "12px";
     right.style.height = "44px";
     right.innerHTML = `<b><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="4" cy="11" r="2.2" fill="#fff"/><circle cx="11" cy="11" r="2.2" fill="#fff"/><circle cx="18" cy="11" r="2.2" fill="#fff"/></svg></b>`;
@@ -547,8 +547,8 @@
     const size = small ? 70 : 120;
     const jump = document.createElement("div");
     jump.className = "jump";
-    jump.style.left = px(screen.W - (small ? 95 : 170));
-    jump.style.top = px(screen.H - (small ? 90 : 210));
+    jump.style.left = px(screen.W - (screen.SafeRight || 0) - (small ? 95 : 170));
+    jump.style.top = px(screen.H - (screen.SafeBottom || 0) - (small ? 90 : 210));
     jump.style.width = jump.style.height = px(size);
     jump.innerHTML = `<svg viewBox="0 0 40 40" width="${size * 0.5}" height="${size * 0.5}"><path d="M8 25 L20 13 L32 25" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     core.appendChild(jump);

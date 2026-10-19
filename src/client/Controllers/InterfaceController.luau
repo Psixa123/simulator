@@ -66,12 +66,14 @@ local function makeGui(name: string, displayOrder: number, fullScreen: boolean)
 	return gui, root
 end
 
--- Screens are designed for 1280x740. Phones use a shorter reference and a higher minimum so
--- text stays readable (the HUD still fits at 0.6 on a 640x360 phone).
-local function baseScale(size: Vector2): number
+-- Screens are designed for 1280x720 (docs/ui_mockup.png: 1 px there = 1 offset px here, top bar
+-- included). `extraHeight` is the top bar height for guis that start below it, so every gui gets the
+-- same scale. Phones use a shorter reference and a higher minimum so text stays readable (the HUD
+-- still fits at 0.6 on a 640x360 phone).
+local function baseScale(size: Vector2, extraHeight: number): number
 	local phone = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-	local referenceHeight = if phone then 640 else 740
-	return math.clamp(math.min(size.X / 1280, size.Y / referenceHeight), if phone then 0.6 else 0.52, 1.25)
+	local referenceHeight = if phone then 698 else 720
+	return math.clamp(math.min(size.X / 1280, (size.Y + extraHeight) / referenceHeight), if phone then 0.6 else 0.52, 1.25)
 end
 
 -- Height of the Roblox top bar in pixels: how far below the full-screen guis the inset ones start.
@@ -103,10 +105,12 @@ local function fitPanels()
 	local offset = topInset() / 2 / scale
 	for name, panel in panels do
 		local frame = panel.Window.Frame
-		-- +16 for the close button that sticks out of the corner
-		local fit = math.min(1, (safe.X / scale - 24) / (frame.Size.X.Offset + 16), (safe.Y / scale - 20) / (frame.Size.Y.Offset + 16))
+		-- The weather badge (18) and the close button (16) stick out of the sides, the cloud puffs
+		-- (44) out of the top and the shadow (6) out of the bottom
+		local fit = math.min(1, (safe.X / scale - 24) / (frame.Size.X.Offset + 34), (safe.Y / scale - 16) / (frame.Size.Y.Offset + 50))
 		panel.Fit = math.max(fit, 0.3)
-		frame.Position = UDim2.new(0.5, 0, 0.5, offset)
+		-- a little lower than the centre, so the window and its puffs look centred together
+		frame.Position = UDim2.new(0.5, 0, 0.5, offset + 19 * panel.Fit)
 		if openName == name then
 			panel.Window.Scale.Scale = panel.Fit
 		end
@@ -139,10 +143,11 @@ local function placeNotifications()
 end
 
 local function updateScales()
+	local inset = topInset()
 	for name, entry in roots do
 		local size = entry.Gui.AbsoluteSize
 		if size.X > 0 and size.Y > 0 then
-			local scale = baseScale(size)
+			local scale = baseScale(size, if entry.Gui.IgnoreGuiInset then 0 else inset)
 			entry.Scale.Scale = scale
 			entry.Frame.Size = UDim2.fromScale(1 / scale, 1 / scale)
 			if name == "HUD" then
@@ -212,7 +217,7 @@ function InterfaceController.OpenPanel(name: string, ...)
 	window.Scale.Scale = panel.Fit * 0.8
 	UI.Tween(window.Scale, 0.3, { Scale = panel.Fit }, Enum.EasingStyle.Back)
 	dim.Visible = true
-	UI.Tween(dim, 0.2, { BackgroundTransparency = 0.45 })
+	UI.Tween(dim, 0.2, { BackgroundTransparency = 0.7 }) -- light: the HUD stays readable (docs/ui_mockup.png)
 
 	if panel.OnOpen then
 		task.spawn(panel.OnOpen, ...)
@@ -269,46 +274,21 @@ function InterfaceController.SetNotificationAnchor(anchor: GuiObject)
 	placeNotifications()
 end
 
-function InterfaceController.Notify(text: string, kind: string?)
+-- A toast under the currency capsules: a Cloud pill with a coloured icon disk (UI.Toast).
+-- kind: Info, Success, Error, Warning, Reward. icon: an Icons key for the disk (the kind's otherwise).
+-- The text may use rich text (<font color="#2F86F2">Sunny</font>).
+function InterfaceController.Notify(text: string, kind: string?, icon: string?)
 	kind = kind or "Info"
-	local color = Theme.NotificationColors[kind] or Theme.NotificationColors.Info
 	notificationOrder += 1
 
-	local toast = Instance.new("Frame")
-	toast.Name = "Toast"
-	toast.Size = UDim2.fromOffset(470, 46)
-	toast.BackgroundColor3 = Color3.fromRGB(20, 26, 58)
-	toast.BackgroundTransparency = 0.06
-	toast.LayoutOrder = notificationOrder
-	UI.Corner(12).Parent = toast
-	local stroke = UI.Stroke(2.5, color)
-	stroke.Parent = toast
-
-	local accent = Instance.new("Frame")
-	accent.Name = "Accent"
-	accent.Size = UDim2.new(0, 6, 1, -14)
-	accent.Position = UDim2.new(0, 8, 0.5, 0)
-	accent.AnchorPoint = Vector2.new(0, 0.5)
-	accent.BackgroundColor3 = color
-	UI.Round().Parent = accent
-	accent.Parent = toast
-
-	local label = UI.Label({
-		Name = "Text",
+	local toast = UI.Toast({
 		Text = text,
-		Size = UDim2.new(1, -36, 0.62, 0),
-		Position = UDim2.new(0, 22, 0.5, 0),
-		AnchorPoint = Vector2.new(0, 0.5),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		MaxTextSize = 22,
-		Parent = toast,
+		Kind = kind,
+		Icon = icon,
+		LayoutOrder = notificationOrder,
+		MaxWidth = 520,
+		Parent = notificationHolder,
 	})
-
-	local scale = Instance.new("UIScale")
-	scale.Scale = 0.6
-	scale.Parent = toast
-	toast.Parent = notificationHolder
-	UI.Tween(scale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
 
 	if kind == "Error" then
 		Registry.SoundController.Play("Error")
@@ -329,19 +309,12 @@ function InterfaceController.Notify(text: string, kind: string?)
 	end
 
 	task.delay(3.4, function()
-		if not toast.Parent then
+		if not toast.Frame.Parent then
 			return
 		end
-		UI.Tween(toast, 0.3, { BackgroundTransparency = 1 })
-		UI.Tween(stroke, 0.3, { Transparency = 1 })
-		UI.Tween(accent, 0.3, { BackgroundTransparency = 1 })
-		UI.Tween(label, 0.3, { TextTransparency = 1 })
-		local labelStroke = label:FindFirstChildOfClass("UIStroke")
-		if labelStroke then
-			UI.Tween(labelStroke, 0.3, { Transparency = 1 })
-		end
+		toast.Hide(0.3)
 		task.wait(0.32)
-		toast:Destroy()
+		toast.Frame:Destroy()
 	end)
 end
 
@@ -388,10 +361,13 @@ function InterfaceController.BigText(text: string, color: Color3?, subtitle: str
 		bigTextHolder:Destroy()
 		bigTextHolder = nil
 	end
+	-- As wide as fits the screen (the text scales down on narrow phones)
+	local overlay = roots.Overlay
+	local screenWidth = if overlay and overlay.Gui.AbsoluteSize.X > 0 then overlay.Gui.AbsoluteSize.X / overlay.Scale.Scale else 1280
 	local holder = Instance.new("Frame")
 	holder.Name = "BigText"
 	holder.BackgroundTransparency = 1
-	holder.Size = UDim2.fromOffset(900, 150)
+	holder.Size = UDim2.fromOffset(math.clamp(screenWidth - 40, 300, 900), 150)
 	holder.Position = UDim2.fromScale(0.5, 0.3)
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
 	holder.Parent = InterfaceController.OverlayRoot
@@ -461,7 +437,7 @@ function InterfaceController.Init()
 	dim.Name = "Dim"
 	dim.AutoButtonColor = false
 	dim.Text = ""
-	dim.BackgroundColor3 = Color3.fromRGB(6, 8, 22)
+	dim.BackgroundColor3 = Color3.fromRGB(16, 22, 52) -- deep Ink
 	dim.BackgroundTransparency = 1
 	dim.Size = UDim2.fromScale(1, 1)
 	dim.Visible = false
@@ -474,20 +450,20 @@ function InterfaceController.Init()
 	notificationHolder = UI.Create("Frame", {
 		Name = "Notifications",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(480, 260),
+		Size = UDim2.fromOffset(540, 300),
 		Position = UDim2.new(0.5, 0, 0, 80),
 		AnchorPoint = Vector2.new(0.5, 0),
 		Parent = toastRoot,
-		UI.List(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top),
+		UI.List(Enum.FillDirection.Vertical, 4, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top),
 	})
 
 	hintLabel = UI.Label({
 		Name = "Hint",
 		Text = "",
 		Visible = false,
-		TextColor3 = Color3.fromRGB(255, 235, 150),
+		TextColor3 = Theme.Sets.Bolt.Top,
 		Size = UDim2.fromOffset(620, 30),
-		Position = UDim2.new(0.5, 0, 1, -170), -- above the objective and the Storm Tank
+		Position = UDim2.new(0.5, 0, 1, -186), -- above the objective, the stats and the Storm Tank
 		AnchorPoint = Vector2.new(0.5, 1),
 		Stroke = 3,
 		MaxTextSize = 26,

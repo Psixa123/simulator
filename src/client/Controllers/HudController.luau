@@ -1,8 +1,12 @@
 --!nonstrict
--- The always-visible interface: Volts counter, menu buttons (with the Mega Storm tile), the
--- Storm Tank bar with the SELL and AUTO buttons, stat chips, active boosts, the objective
--- tracker and the Mega Storm boss bar with its live leaderboard.
--- Layout keeps clear of the Roblox top bar, the chat (top left) and the player list (top right).
+-- The always-visible interface, laid out like docs/ui_mockup.png (STYLE_GUIDE section 2, "HUD layout"):
+--   top centre  currency capsules (Volts with a "+", Climate Shifts); the Mega Storm boss bar and the
+--               tank-full offer stack under them, and toasts drop in below that
+--   left        round weather-badge menu buttons: two columns, one on narrow phones
+--   bottom      the objective, stat chips, AUTO, the storm jar (Storm Tank) and the big SELL button
+--   right       round timers: active boosts and the Mega Storm countdown (radar alerts sit above them)
+-- Nothing goes in the top-left / top-right corners (Roblox chat and player list): the menu moves below
+-- the desktop chat window, the timers stay low on the right, and SELL keeps clear of the phone jump button.
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -21,34 +25,72 @@ local Remotes = require(Shared.Remotes)
 local Registry = require(script.Parent.Parent.Registry)
 local UI = require(script.Parent.Parent.UI.UI)
 local Theme = require(script.Parent.Parent.UI.Theme)
+local Icons = require(script.Parent.Parent.UI.Icons)
 
 local HudController = {}
 HudController.MenuButtons = {}
 
-local COLORS = Theme.Colors
+local INK = Theme.Ink
+local SETS = Theme.Sets
 local MEDALS = { "🥇", "🥈", "🥉" }
 local OFFER_PASSES = { "MegaTank", "RemoteSell" } -- offered once per session when the tank fills up
 local OFFER_TIME = 15 -- seconds before the offer card hides itself
-local MENU_HEIGHT = 380
+
+-- Layout (HUD units = offset px at 1280x720)
+local BUTTON = 68 -- round menu buttons and timers
+local COLUMN_PITCH = 92
+local ROW_PITCH = 100
+local EDGE = 24 -- distance from the screen sides
+local BOTTOM = 16 -- distance of the SELL row from the bottom
+local ROW_HEIGHT = 64 -- the SELL row
+local STATS_HEIGHT = 30
+local OBJECTIVE_HEIGHT = 44
+local TIMERS_BOTTOM = 160 -- the right column ends this far above the bottom (clear of the phone jump button)
+
+local MENU = {
+	{ Key = "Pets", Icon = "Pets", Text = "Pets" },
+	{ Key = "Shop", Icon = "Shop", Text = "Shop" },
+	{ Key = "Upgrades", Icon = "Upgrades", Text = "Upgrades" },
+	{ Key = "Rewards", Icon = "Rewards", Text = "Rewards" },
+	{ Key = "Teleport", Icon = "Teleport", Text = "Teleport" },
+	{ Key = "Rebirth", Icon = "ClimateShift", Text = "Shift" }, -- Climate Shift
+	{ Key = "Settings", Icon = "Settings", Text = "Settings" },
+}
+
+local BOOSTS = {
+	Energy = { Icon = "Energy", Order = 2 },
+	Luck = { Icon = "Luck", Order = 1 },
+}
 
 local player = Players.LocalPlayer
 local root: Frame
 local topStack: Frame
 local menuFrame: Frame
+local menuOrder = {} -- buttons in menu order
+local voltsCapsule
 local voltsLabel: TextLabel
-local voltsFrame: Frame
+local voltsFrame: GuiObject
+local shiftsCapsule
 local displayedVolts = 0
 local voltsTarget = 0
-local tankBar
+local tankHolder: Frame
+local tankBar -- the storm jar (UI.Jar)
+local worthChip: Frame
 local worthLabel: TextLabel
 local sellButton: TextButton
 local autoButton: TextButton
 local wasFull = false
+local statsRow: Frame
+local statChips = {} -- [label] = its chip
 local statLabels = {}
-local boostHolder: Frame
-local boostChips = {}
+local timerColumn: Frame
+local boostTimers = {}
+local boostLongest = {} -- [boost] = the longest remaining time seen (the timer ring's full length)
+local stormTimer
 local objectiveFrame: Frame
 local objectiveLabel: TextLabel
+local objectiveText: string? = nil
+local objectiveMaxWidth = 560
 local stormWidget
 local stormBanner
 local leadersRaw = nil
@@ -56,128 +98,78 @@ local leaders = {}
 local offerCard: Frame? = nil
 local offerShown = false
 
+local function hudScale(): number
+	return Registry.InterfaceController.HudScale
+end
+
+local function isPhone(): boolean
+	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+local function textWidth(text: string, size: number, font: Enum.Font?): number
+	local ok, bounds = pcall(function()
+		return game:GetService("TextService"):GetTextSize(text, size, font or Theme.Font, Vector2.new(4096, 4096))
+	end)
+	return if ok then bounds.X else #text * size * 0.56
+end
+
 ---------------------------------------------------------------------------
 -- Builders
 ---------------------------------------------------------------------------
--- Top centre: Volts, the Mega Storm boss bar and the tank-full offer, stacked (toasts go below)
+-- Top centre: the currency capsules, the Mega Storm boss bar and the tank-full offer, stacked
+-- (toasts go below)
 local function buildTopStack()
 	topStack = UI.Create("Frame", {
 		Name = "TopCenter",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(400, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		Position = UDim2.new(0.5, 0, 0, 8),
+		Position = UDim2.new(0.5, 0, 0, 10),
 		AnchorPoint = Vector2.new(0.5, 0),
 		Parent = root,
-		UI.List(Enum.FillDirection.Vertical, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top),
+		UI.List(Enum.FillDirection.Vertical, 10, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top),
 	})
 end
 
-local function buildVolts()
-	voltsFrame = UI.Create("Frame", {
-		Name = "Volts",
-		Size = UDim2.fromOffset(300, 58),
-		BackgroundColor3 = Color3.new(1, 1, 1),
+local function buildCurrencies()
+	-- 18 px on the left for the Volts icon that sticks out of its capsule, so the pair looks centred
+	local row = UI.Create("Frame", {
+		Name = "Currencies",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(18 + 208 + 42 + 122, 50),
 		LayoutOrder = 1,
 		Parent = topStack,
-		UI.Corner(16),
-		UI.Gradient(Color3.fromRGB(46, 58, 118), Color3.fromRGB(24, 30, 70), 90),
-		UI.Stroke(3.5),
 	})
-	UI.Icon({
-		Text = "⚡",
-		Color = COLORS.Volts,
-		Size = UDim2.fromOffset(66, 66),
-		Position = UDim2.new(0, -14, 0.5, 0),
-		AnchorPoint = Vector2.new(0, 0.5),
-		Parent = voltsFrame,
-	})
-	voltsLabel = UI.Label({
-		Name = "Amount",
+	voltsCapsule = UI.Capsule({
+		Name = "Volts",
+		Icon = "Volts",
 		Text = "0",
-		TextColor3 = COLORS.Volts,
-		Size = UDim2.new(1, -120, 0.7, 0),
-		Position = UDim2.new(0, 60, 0.5, 0),
-		AnchorPoint = Vector2.new(0, 0.5),
-		Stroke = 3,
-		MaxTextSize = 38,
-		Parent = voltsFrame,
-	})
-	local addButton = UI.Button({
-		Name = "Add",
-		Text = "+",
-		Color = "Green",
-		Size = UDim2.fromOffset(44, 44),
-		Position = UDim2.new(1, -8, 0.5, 0),
-		AnchorPoint = Vector2.new(1, 0.5),
-		MaxTextSize = 34,
-		Parent = voltsFrame,
-		OnClick = function()
+		Size = UDim2.fromOffset(208, 44),
+		Position = UDim2.fromOffset(18, 0),
+		Plus = function()
 			Registry.InterfaceController.OpenPanel("Shop", "Volts")
+		end,
+		Parent = row,
+	})
+	voltsFrame = voltsCapsule.Frame
+	voltsLabel = voltsCapsule.Label
+	shiftsCapsule = UI.Capsule({
+		Name = "Shifts",
+		Icon = "ClimateShift",
+		Text = "0",
+		Size = UDim2.fromOffset(122, 44),
+		Position = UDim2.fromOffset(18 + 208 + 42, 0),
+		Parent = row,
+		OnClick = function()
+			Registry.InterfaceController.TogglePanel("Rebirth")
 		end,
 	})
 	-- Volts packs aren't sold where paid random items are restricted (the Shop hides them too)
 	local function applyPolicy()
-		addButton.Visible = not Registry.MonetizationController.IsRestricted("VoltsSmall")
+		voltsCapsule.Plus.Visible = not Registry.MonetizationController.IsRestricted("VoltsSmall")
 	end
 	player:GetAttributeChangedSignal("PaidRandomItemsRestricted"):Connect(applyPolicy)
 	applyPolicy()
-end
-
-local MENU = {
-	{ Key = "Shop", Icon = "🛒", Text = "Shop", Color = "Orange" },
-	{ Key = "Pets", Icon = "🐾", Text = "Pets", Color = "Pink" },
-	{ Key = "Upgrades", Icon = "⬆️", Text = "Upgrades", Color = "Blue" },
-	{ Key = "Rebirth", Icon = "🌀", Text = "Shift", Color = "Purple" }, -- Climate Shift
-	{ Key = "Rewards", Icon = "🎁", Text = "Rewards", Color = "Green" },
-	{ Key = "Teleport", Icon = "🗺️", Text = "Teleport", Color = "Teal" },
-	{ Key = "Settings", Icon = "⚙️", Text = "Settings", Color = "Gray" },
-}
-
-local function menuButton(parent: Instance, key: string, icon: string, text: string, color: string, order: number)
-	local button = UI.Create("TextButton", {
-		Name = key,
-		AutoButtonColor = false,
-		Text = "",
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		LayoutOrder = order,
-		Parent = parent,
-		UI.Corner(18),
-		UI.Stroke(3.5),
-	})
-	local palette = Theme.Buttons[color]
-	local gradient = UI.Gradient(palette[1], palette[2], 90)
-	gradient.Parent = button
-	UI.Create("Frame", {
-		Name = "Shine",
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.82,
-		Size = UDim2.new(1, -10, 0.38, 0),
-		Position = UDim2.fromOffset(5, 4),
-		Parent = button,
-		UI.Corner(14),
-	})
-	UI.Label({
-		Name = "Icon",
-		Text = icon,
-		Stroke = false,
-		Size = UDim2.fromScale(0.58, 0.58),
-		Position = UDim2.fromScale(0.5, 0.4),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Parent = button,
-	})
-	local caption = UI.Label({
-		Name = "Caption",
-		Text = text,
-		Size = UDim2.new(1, -8, 0.24, 0),
-		Position = UDim2.new(0.5, 0, 1, -6),
-		AnchorPoint = Vector2.new(0.5, 1),
-		MaxTextSize = 17,
-		Parent = button,
-	})
-	UI.Badge(button)
-	UI.Bounce(button, 1.08)
-	return button, caption, gradient
 end
 
 local function teleportToArena()
@@ -189,7 +181,7 @@ end
 
 -- How far down (in HUD pixels) the desktop chat window reaches; 0 when there's none to avoid
 local function chatBottom(): number
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+	if isPhone() then
 		return 0 -- phones and tablets keep the chat closed until it's tapped open
 	end
 	local config = TextChatService:FindFirstChildOfClass("ChatWindowConfiguration")
@@ -202,109 +194,153 @@ local function chatBottom(): number
 	return if ok and type(bottom) == "number" then math.max(0, bottom - root.AbsolutePosition.Y) else 0
 end
 
--- The menu sits a little below the middle of the left edge, and on desktop low enough that the
--- chat window (top left) never covers its top row
+-- The menu sits a little above the middle of the left edge in two columns; on narrow phones in one
+-- column when that fits; on desktop always below the chat window (top left)
 local function placeMenu()
-	local scale = Registry.InterfaceController.HudScale
-	local height = root.AbsoluteSize.Y / scale
-	if height <= 0 then
+	local scale = hudScale()
+	local width, height = root.AbsoluteSize.X / scale, root.AbsoluteSize.Y / scale
+	if height <= 0 or not menuFrame then
 		return
 	end
-	local top = (height - MENU_HEIGHT) / 2 + 30
-	local clear = chatBottom() / scale + 10
-	top = math.max(top, math.min(clear, height - MENU_HEIGHT - 12))
-	menuFrame.Position = UDim2.fromOffset(14, top)
+	local count = #menuOrder
+	local clear = chatBottom() / scale + 12
+	local bottomLimit = height - (BOTTOM + ROW_HEIGHT + 10 + STATS_HEIGHT + 10 + OBJECTIVE_HEIGHT + 16)
+	local function blockHeight(columns: number): number
+		return math.ceil(count / columns) * ROW_PITCH - ROW_PITCH + BUTTON + 18
+	end
+	local columns = 2
+	if width < 900 and math.max(clear, 70) + blockHeight(1) <= bottomLimit then
+		columns = 1
+	elseif math.max(clear, 10) + blockHeight(2) > height - 12 then
+		columns = 3
+	end
+	local block = blockHeight(columns)
+	local top = math.max((height - block) / 2 - 30, 10)
+	top = math.max(top, math.min(clear, height - block - 12))
+	menuFrame.Size = UDim2.fromOffset(columns * COLUMN_PITCH - (COLUMN_PITCH - BUTTON), block)
+	menuFrame.Position = UDim2.fromOffset(EDGE, top)
+	for index, button in menuOrder do
+		local column = (index - 1) % columns
+		local row = math.floor((index - 1) / columns)
+		button.Position = UDim2.fromOffset(column * COLUMN_PITCH - 8, row * ROW_PITCH)
+	end
 end
 
 local function buildMenu()
-	local menu = UI.Create("Frame", {
+	menuFrame = UI.Create("Frame", {
 		Name = "Menu",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(180, MENU_HEIGHT),
-		Position = UDim2.new(0, 14, 0.5, 30 - MENU_HEIGHT / 2), -- placeMenu fine-tunes this
+		Size = UDim2.fromOffset(2 * COLUMN_PITCH, 4 * ROW_PITCH),
+		Position = UDim2.fromOffset(EDGE, 110), -- placeMenu fine-tunes this
 		Parent = root,
-		UI.Grid(UDim2.fromOffset(84, 84), UDim2.fromOffset(10, 10)),
 	})
-	menu.UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	menuFrame = menu
-
 	for index, item in MENU do
-		local button = menuButton(menu, item.Key, item.Icon, item.Text, item.Color, index)
-		button.Activated:Connect(function()
-			Registry.SoundController.Play("Click")
-			Registry.InterfaceController.TogglePanel(item.Key)
-		end)
+		local button = UI.HudButton({
+			Name = item.Key,
+			Icon = item.Icon,
+			Text = item.Text,
+			-- the click area takes in the label and a little around the badge (fingers)
+			Size = UDim2.fromOffset(BUTTON + 16, BUTTON + 22),
+			LayoutOrder = index,
+			Parent = menuFrame,
+			OnClick = function()
+				Registry.InterfaceController.TogglePanel(item.Key)
+			end,
+		})
+		-- Bolt glow behind the badge for the objective tracker (HudController.Highlight)
+		UI.Create("Frame", {
+			Name = "Glow",
+			BackgroundColor3 = SETS.Bolt.Top,
+			BackgroundTransparency = 0.35,
+			Size = UDim2.fromOffset(BUTTON + 14, BUTTON + 14),
+			Position = UDim2.new(0.5, 0, 0, BUTTON / 2),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Visible = false,
+			ZIndex = 0,
+			Parent = button,
+			UI.Round(),
+		})
 		HudController.MenuButtons[item.Key] = button
+		table.insert(menuOrder, button)
 	end
-
-	-- Mega Storm tile in the free grid slot: countdown, then "GO!" to jump to the arena
-	local tile, caption, gradient = menuButton(menu, "MegaStorm", "🌪️", "--:--", "Dark", #MENU + 1)
-	caption.TextColor3 = COLORS.Volts
-	stormWidget = { Frame = tile, Gradient = gradient, Caption = caption, Badge = tile:FindFirstChild("Badge"), Phase = "Idle", Timer = "" }
-	tile.Activated:Connect(function()
-		Registry.SoundController.Play("Click")
-		if stormWidget.Phase == "Active" or stormWidget.Phase == "Warning" then
-			teleportToArena()
-		else
-			Registry.InterfaceController.Notify("🌪️ Next Mega Storm in " .. stormWidget.Timer .. "! Beat it together for Volts and exclusive pets.", "Info")
-		end
-	end)
 end
 
-local function chip(parent: Instance, name: string, order: number, color: Color3)
-	local frame = UI.Create("Frame", {
+-- Small Cloud capsule with an icon: Power, pet multiplier, Volts multiplier
+local function statChip(parent: Instance, name: string, icon: string, order: number)
+	local chip = UI.Create("Frame", {
 		Name = name,
-		Size = UDim2.fromOffset(150, 28),
-		BackgroundColor3 = Color3.fromRGB(20, 26, 58),
-		BackgroundTransparency = 0.15,
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(120, STATS_HEIGHT),
 		LayoutOrder = order,
 		Parent = parent,
-		UI.Round(),
-		UI.Stroke(2),
 	})
-	local label = UI.Label({
+	local body = UI.Create("Frame", {
+		Name = "Body",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(2, 2),
+		Size = UDim2.new(1, -4, 1, -4),
+		Parent = chip,
+		UI.Round(),
+		UI.Gradient(Theme.Cloud, Theme.Mist),
+		UI.Stroke(2, INK),
+	})
+	Icons.New(icon, { Name = "Icon", Size = UDim2.fromOffset(30, 30), Position = UDim2.new(0, 6, 0.5, 0), ZIndex = 2, Parent = chip })
+	local label = UI.Text({
 		Name = "Text",
 		Text = "",
-		TextColor3 = color,
-		Size = UDim2.new(1, -14, 0.72, 0),
-		Position = UDim2.fromScale(0.5, 0.5),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		MaxTextSize = 18,
-		Parent = frame,
+		TextSize = 16,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -30, 1, 0),
+		Position = UDim2.fromOffset(26, 1),
+		ZIndex = 2,
+		Parent = body,
 	})
+	statChips[label] = chip
 	return label
 end
 
+local function setStat(label: TextLabel, text: string)
+	if label.Text == text then
+		return
+	end
+	label.Text = text
+	statChips[label].Size = UDim2.fromOffset(math.ceil(textWidth(text, 16)) + 42, STATS_HEIGHT)
+end
+
 local function buildTank()
-	local holder = UI.Create("Frame", {
+	tankHolder = UI.Create("Frame", {
 		Name = "Tank",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(560, 104),
-		Position = UDim2.new(0.5, 0, 1, -10),
+		Size = UDim2.fromOffset(734, ROW_HEIGHT),
+		Position = UDim2.new(0.5, 0, 1, -BOTTOM),
 		AnchorPoint = Vector2.new(0.5, 1),
 		Parent = root,
 	})
 
-	local stats = UI.Create("Frame", {
+	statsRow = UI.Create("Frame", {
 		Name = "Stats",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 28),
-		Parent = holder,
-		UI.List(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
+		Size = UDim2.fromOffset(600, STATS_HEIGHT),
+		Position = UDim2.new(0.5, 0, 1, -(BOTTOM + ROW_HEIGHT + 10)),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Parent = root,
+		UI.List(Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
 	})
-	statLabels.Power = chip(stats, "Power", 1, COLORS.Power)
-	statLabels.Pets = chip(stats, "Pets", 2, Color3.fromRGB(255, 160, 220))
-	statLabels.Volts = chip(stats, "VoltsMultiplier", 3, COLORS.Volts)
+	statLabels.Power = statChip(statsRow, "Power", "Power", 1)
+	statLabels.Pets = statChip(statsRow, "Pets", "Pets", 2)
+	statLabels.Volts = statChip(statsRow, "VoltsMultiplier", "Volts", 3)
 
 	autoButton = UI.Button({
 		Name = "Auto",
-		Text = "🤖 AUTO",
+		Text = "AUTO",
+		Icon = "Lock",
+		IconSize = 26,
 		Color = "Gray",
-		Size = UDim2.fromOffset(104, 58),
-		Position = UDim2.new(0, 0, 1, 0),
-		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 20,
-		Parent = holder,
+		TextSize = 18,
+		Size = UDim2.fromOffset(100, 56),
+		Position = UDim2.new(0, 0, 0.5, 0),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Parent = tankHolder,
 		OnClick = function()
 			local data = Registry.DataController.Data
 			if not data then
@@ -318,37 +354,24 @@ local function buildTank()
 		end,
 	})
 
-	tankBar = UI.ProgressBar({
+	tankBar = UI.Jar({
 		Name = "TankBar",
-		Color = "Blue",
-		Size = UDim2.new(1, -244, 0, 50),
-		Position = UDim2.new(0.5, -6, 1, -4),
-		AnchorPoint = Vector2.new(0.5, 1),
-		StrokeThickness = 3.5,
-		MaxTextSize = 24,
-		Parent = holder,
-	})
-	worthLabel = UI.Label({
-		Name = "Worth",
-		Text = "",
-		TextColor3 = COLORS.Volts,
-		TextXAlignment = Enum.TextXAlignment.Right,
-		Size = UDim2.new(1, -244, 0, 20),
-		Position = UDim2.new(0.5, -6, 1, -58),
-		AnchorPoint = Vector2.new(0.5, 1),
-		MaxTextSize = 18,
-		Parent = holder,
+		Size = UDim2.fromOffset(440, 52),
+		Position = UDim2.new(0, 138, 0.5, 0),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Parent = tankHolder,
 	})
 
 	sellButton = UI.Button({
 		Name = "Sell",
-		Text = "⚡ SELL",
-		Color = "Yellow",
-		Size = UDim2.fromOffset(118, 58),
-		Position = UDim2.new(1, 0, 1, 0),
-		AnchorPoint = Vector2.new(1, 1),
-		MaxTextSize = 24,
-		Parent = holder,
+		Text = "SELL",
+		Icon = "Sell",
+		Color = "Leaf",
+		TextSize = 30,
+		Size = UDim2.fromOffset(136, ROW_HEIGHT),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Parent = tankHolder,
 		OnClick = function()
 			local result = Remotes.Sell:InvokeServer()
 			if result and not result.Ok then
@@ -356,130 +379,307 @@ local function buildTank()
 			end
 		end,
 	})
+
+	-- What the tank is worth: a Bolt price tag on top of the SELL button
+	worthChip = UI.Create("Frame", {
+		Name = "Worth",
+		BackgroundColor3 = INK,
+		Size = UDim2.fromOffset(96, 26),
+		Position = UDim2.new(1, 8, 0, 2),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Visible = false,
+		ZIndex = 8,
+		Parent = tankHolder,
+		UI.Round(),
+	})
+	UI.Create("Frame", {
+		Name = "Fill",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(2, 2),
+		Size = UDim2.new(1, -4, 1, -4),
+		ZIndex = 8,
+		Parent = worthChip,
+		UI.Round(),
+		UI.Gradient(SETS.Bolt.Top, SETS.Bolt.Bottom),
+	})
+	Icons.New("Volts", { Name = "Icon", Size = UDim2.fromOffset(28, 28), Position = UDim2.new(0, 8, 0.5, 0), ZIndex = 9, Parent = worthChip })
+	worthLabel = UI.Text({
+		Name = "Amount",
+		Text = "",
+		TextSize = 16,
+		Stroke = SETS.Bolt.Stroke,
+		StrokeThickness = 1.5,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -28, 1, 0),
+		Position = UDim2.fromOffset(25, 1),
+		ZIndex = 9,
+		Parent = worthChip,
+	})
 end
 
--- Tablets get Roblox's bigger jump button higher up the screen; keep the boost timers above it
-local function placeBoosts()
+-- The SELL row is centred under the screen, the jar shrinks on narrow screens, and on phones the row
+-- (with the stats and objective above it) moves left of Roblox's jump button
+local function placeBottom()
+	local scale = hudScale()
+	local width = root.AbsoluteSize.X / scale
+	if width <= 0 or not tankHolder then
+		return
+	end
+	local margin = 12
+	local right = width - margin
 	local camera = workspace.CurrentCamera
 	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
-	local bottom = 160
-	if UserInputService.TouchEnabled and math.min(viewport.X, viewport.Y) > 500 then
-		bottom = math.max(bottom, 220 / Registry.InterfaceController.HudScale + 10)
+	if UserInputService.TouchEnabled and math.min(viewport.X, viewport.Y) <= 500 then
+		local jumpLeft = viewport.X - 108 -- the jump button's left edge on small screens (px)
+		right = math.min(right, (jumpLeft - root.AbsolutePosition.X) / scale - 8)
 	end
-	boostHolder.Position = UDim2.new(1, -12, 1, -bottom)
+	-- AUTO, gap, the jar icon sticking out of the jar, the jar, gap, SELL
+	local autoWidth, autoGap, overhang, sellGap, sellWidth = 100, 14, 24, 18, 136
+	if right - margin < autoWidth + autoGap + overhang + sellGap + sellWidth + 300 then
+		autoWidth, autoGap, sellGap, sellWidth = 72, 10, 12, 116 -- narrow phones
+	end
+	local fixed = autoWidth + autoGap + overhang + sellGap + sellWidth
+	local jarWidth = math.clamp(right - margin - fixed, 200, 440)
+	local total = fixed + jarWidth
+	local left = math.max(margin, math.min((width - total) / 2, right - total))
+
+	tankHolder.AnchorPoint = Vector2.new(0, 1)
+	tankHolder.Position = UDim2.new(0, left, 1, -BOTTOM)
+	tankHolder.Size = UDim2.fromOffset(total, ROW_HEIGHT)
+	autoButton.Size = UDim2.fromOffset(autoWidth, 56)
+	sellButton.Size = UDim2.fromOffset(sellWidth, ROW_HEIGHT)
+	UI.SetButtonIcon(sellButton, if sellWidth >= 136 then "Sell" else nil) -- narrow: the word only
+	tankBar.Frame.Size = UDim2.fromOffset(jarWidth, 52)
+	tankBar.Frame.Position = UDim2.new(0, autoWidth + autoGap + overhang, 0.5, 0)
+
+	local centre = left + total / 2
+	statsRow.Position = UDim2.new(0, centre, 1, -(BOTTOM + ROW_HEIGHT + 12))
+	statsRow.Size = UDim2.fromOffset(total, STATS_HEIGHT)
+	objectiveFrame.Position = UDim2.new(0, centre, 1, -(BOTTOM + ROW_HEIGHT + 12 + STATS_HEIGHT + 10))
+	objectiveMaxWidth = math.min(560, total)
+	HudController.SetObjective(objectiveText)
+	-- The hint line (InterfaceController.Hint) sits over the objective, as wide as the row
+	local hint = root:FindFirstChild("Hint")
+	if hint and hint:IsA("GuiObject") then
+		hint.AnchorPoint = Vector2.new(0.5, 1)
+		hint.Position = UDim2.new(0, centre, 1, -(BOTTOM + ROW_HEIGHT + 12 + STATS_HEIGHT + 10 + OBJECTIVE_HEIGHT + 10))
+		hint.Size = UDim2.fromOffset(math.min(620, total), 30)
+	end
 end
 
-local function buildBoosts()
-	-- Bottom right, above the phone jump button and below where the player list reaches
-	boostHolder = UI.Create("Frame", {
+-- Right column: round timers for active boosts and the Mega Storm countdown, bottom up
+local function placeTimers()
+	local camera = workspace.CurrentCamera
+	local viewport = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+	local bottom = TIMERS_BOTTOM
+	if UserInputService.TouchEnabled and math.min(viewport.X, viewport.Y) > 500 then
+		-- Tablets get Roblox's bigger jump button higher up the screen; keep the timers above it
+		bottom = math.max(bottom, 220 / hudScale() + 10)
+	end
+	timerColumn.Position = UDim2.new(1, -EDGE, 1, -bottom)
+end
+
+local function buildTimers()
+	-- Named "Boosts": the radar alerts (RadarController) stack above this column
+	timerColumn = UI.Create("Frame", {
 		Name = "Boosts",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(190, 100),
-		Position = UDim2.new(1, -12, 1, -160),
+		Size = UDim2.fromOffset(BUTTON, BUTTON + 16),
+		Position = UDim2.new(1, -EDGE, 1, -TIMERS_BOTTOM),
 		AnchorPoint = Vector2.new(1, 1),
 		Parent = root,
-		UI.List(Enum.FillDirection.Vertical, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Bottom),
+		UI.List(Enum.FillDirection.Vertical, ROW_PITCH - BUTTON, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom),
 	})
-	for index, name in { "Energy", "Luck" } do
-		local boost = GameConfig.Boosts[name]
-		local frame = UI.Create("Frame", {
-			Name = name,
-			Size = UDim2.fromOffset(186, 46),
-			BackgroundColor3 = Color3.fromRGB(20, 26, 58),
-			BackgroundTransparency = 0.1,
-			LayoutOrder = index,
-			Visible = false,
-			Parent = boostHolder,
-			UI.Corner(14),
-			UI.Stroke(2.5, boost.Color),
-		})
-		UI.Icon({ Text = boost.Icon, Color = boost.Color, Size = UDim2.fromOffset(38, 38), Position = UDim2.new(0, 4, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = frame })
-		UI.Label({ Name = "Name", Text = boost.Name, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -54, 0.45, 0), Position = UDim2.fromOffset(48, 4), MaxTextSize = 18, Parent = frame })
-		local timer = UI.Label({ Name = "Timer", Text = "", TextColor3 = boost.Color, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -54, 0.42, 0), Position = UDim2.new(0, 48, 1, -4), AnchorPoint = Vector2.new(0, 1), MaxTextSize = 18, Parent = frame })
-		boostChips[name] = { Frame = frame, Timer = timer }
+	local layout = timerColumn:FindFirstChildOfClass("UIListLayout")
+	local function resize()
+		local count = 0
+		for _, child in timerColumn:GetChildren() do
+			if child:IsA("GuiObject") and child.Visible then
+				count += 1
+			end
+		end
+		-- the time labels hang 16 px under the last circle
+		timerColumn.Size = UDim2.fromOffset(BUTTON, math.max(count, 1) * ROW_PITCH - (ROW_PITCH - BUTTON) + 16)
 	end
+	layout.Padding = UDim.new(0, ROW_PITCH - BUTTON)
+
+	for name, info in BOOSTS do
+		local boost = GameConfig.Boosts[name]
+		local timer = UI.Timer({
+			Name = name,
+			Icon = info.Icon,
+			Color = "Sunset",
+			Chip = "x" .. tostring(boost.Multiplier or 2),
+			Text = "",
+			LayoutOrder = info.Order,
+			Parent = timerColumn,
+			OnClick = function()
+				Registry.InterfaceController.OpenPanel("Shop", "Boosts")
+			end,
+		})
+		timer.Frame.Visible = false
+		timer.Frame:GetPropertyChangedSignal("Visible"):Connect(resize)
+		boostTimers[name] = timer
+	end
+
+	-- Mega Storm countdown, then "GO!" to jump to the arena
+	stormTimer = UI.Timer({
+		Name = "MegaStorm",
+		Icon = "MegaStorm",
+		Color = "Storm",
+		Text = "--:--",
+		LayoutOrder = 3,
+		Parent = timerColumn,
+		OnClick = function()
+			if stormWidget.Phase == "Active" or stormWidget.Phase == "Warning" then
+				teleportToArena()
+			else
+				Registry.InterfaceController.Notify("Next Mega Storm in " .. stormWidget.Timer .. "! Beat it together for Volts and exclusive pets.", "Info", "MegaStorm")
+			end
+		end,
+	})
+	stormWidget = { Frame = stormTimer.Frame, Timer = "", Phase = "Idle", Caption = stormTimer.Caption, Badge = stormTimer.Badge }
+	resize()
 end
 
--- One line just above the Storm Tank (the chat covers the top left on desktop)
+-- One line just above the stats (the chat covers the top left on desktop)
 local function buildObjective()
 	objectiveFrame = UI.Create("Frame", {
 		Name = "Objective",
-		Size = UDim2.fromOffset(520, 40),
-		Position = UDim2.new(0.5, 0, 1, -122),
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(520, OBJECTIVE_HEIGHT),
+		Position = UDim2.new(0.5, 0, 1, -(BOTTOM + ROW_HEIGHT + 10 + STATS_HEIGHT + 10)),
 		AnchorPoint = Vector2.new(0.5, 1),
-		BackgroundColor3 = Color3.fromRGB(20, 26, 58),
-		BackgroundTransparency = 0.12,
 		Visible = false,
 		Parent = root,
-		UI.Round(),
-		UI.Stroke(2.5, Color3.fromRGB(255, 205, 90)),
 	})
-	UI.Label({
-		Name = "Header",
-		Text = "🎯",
-		Stroke = false,
-		Size = UDim2.fromOffset(28, 28),
-		Position = UDim2.new(0, 10, 0.5, 0),
-		AnchorPoint = Vector2.new(0, 0.5),
+	UI.Create("Frame", {
+		Name = "Shadow",
+		BackgroundColor3 = INK,
+		BackgroundTransparency = Theme.ShadeTransparency,
+		Position = UDim2.fromOffset(0, 4),
+		Size = UDim2.fromScale(1, 1),
 		Parent = objectiveFrame,
+		UI.Round(),
 	})
-	objectiveLabel = UI.Label({
+	UI.Create("Frame", {
+		Name = "Pill",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(2, 2),
+		Size = UDim2.new(1, -4, 1, -4),
+		Parent = objectiveFrame,
+		UI.Round(),
+		UI.Gradient(Theme.Cloud, Theme.Mist),
+		UI.Stroke(2, INK),
+	})
+	local disk = UI.Create("Frame", {
+		Name = "Header",
+		BackgroundColor3 = INK,
+		Size = UDim2.fromOffset(36, 36),
+		Position = UDim2.new(0, 4, 0.5, 0),
+		AnchorPoint = Vector2.new(0, 0.5),
+		ZIndex = 2,
+		Parent = objectiveFrame,
+		UI.Round(),
+	})
+	UI.Create("Frame", {
+		Name = "Fill",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(2, 2),
+		Size = UDim2.new(1, -4, 1, -4),
+		ZIndex = 2,
+		Parent = disk,
+		UI.Round(),
+		UI.Gradient(SETS.Coral.Tint, SETS.Coral.Tint2),
+	})
+	Icons.New("Range", { Name = "Icon", Size = UDim2.fromOffset(28, 28), ZIndex = 3, Parent = disk })
+	objectiveLabel = UI.Text({
 		Name = "Text",
 		Text = "",
-		Size = UDim2.new(1, -96, 0, 26),
-		Position = UDim2.fromScale(0.5, 0.5),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		MaxTextSize = 21,
+		TextSize = 19,
+		Scaled = true,
+		MinTextSize = 11,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -62, 0, 26),
+		Position = UDim2.new(0, 48, 0.5, 1),
+		AnchorPoint = Vector2.new(0, 0.5),
+		ZIndex = 3,
 		Parent = objectiveFrame,
 	})
 end
 
--- Boss bar under the Volts while a Mega Storm is active: health, your damage and the top 3
-local function buildStormBanner()
-	local banner = UI.Create("Frame", {
-		Name = "MegaStormBanner",
-		Size = UDim2.fromOffset(380, 166),
-		BackgroundColor3 = Color3.fromRGB(20, 24, 56),
-		BackgroundTransparency = 0.08,
-		LayoutOrder = 2,
+local function card(name: string, size: UDim2, order: number)
+	local holder = UI.Create("Frame", {
+		Name = name,
+		BackgroundTransparency = 1,
+		Size = size,
+		LayoutOrder = order,
 		Visible = false,
 		Parent = topStack,
-		UI.Corner(16),
-		UI.Stroke(3, Color3.fromRGB(255, 100, 120)),
 	})
-	local name = UI.Label({ Name = "Name", Text = "", Size = UDim2.new(1, -20, 0, 24), Position = UDim2.fromOffset(10, 6), MaxTextSize = 22, Parent = banner })
-	local health = UI.ProgressBar({ Name = "Health", Color = "Red", Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 34), MaxTextSize = 18, Parent = banner })
-	local info = UI.Label({ Name = "Info", Text = "", Font = Theme.BodyFont, TextColor3 = COLORS.SubText, Size = UDim2.new(1, -20, 0, 20), Position = UDim2.fromOffset(10, 66), MaxTextSize = 16, Parent = banner })
+	UI.Create("Frame", {
+		Name = "Shadow",
+		BackgroundColor3 = INK,
+		BackgroundTransparency = Theme.ShadeTransparency,
+		Position = UDim2.fromOffset(0, 5),
+		Size = UDim2.fromScale(1, 1),
+		Parent = holder,
+		UI.Corner(20),
+	})
+	UI.Create("Frame", {
+		Name = "Body",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(3, 3),
+		Size = UDim2.new(1, -6, 1, -6),
+		Parent = holder,
+		UI.Corner(17),
+		UI.Gradient(Theme.Cloud, Theme.Mist),
+		UI.Stroke(3, INK),
+	})
+	return holder
+end
+
+-- Boss bar under the capsules while a Mega Storm is active: health, your damage and the top 3
+local function buildStormBanner()
+	local banner = card("MegaStormBanner", UDim2.fromOffset(390, 172), 2)
+	local name = UI.Text({ Name = "Name", Text = "", TextSize = 22, Scaled = true, Size = UDim2.new(1, -90, 0, 26), Position = UDim2.new(0.5, 0, 0, 10), AnchorPoint = Vector2.new(0.5, 0), ZIndex = 2, Parent = banner })
+	Icons.New("MegaStorm", { Name = "Icon", Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(28, 22), ZIndex = 3, Parent = banner })
+	local health = UI.ProgressBar({ Name = "Health", Color = "Coral", Size = UDim2.new(1, -28, 0, 28), Position = UDim2.fromOffset(14, 40), MaxTextSize = 17, ZIndex = 2, Parent = banner })
+	local info = UI.Text({ Name = "Info", Text = "", Font = Theme.BodyFont, TextSize = 13, Scaled = true, Color = Theme.InkSoft, Size = UDim2.new(1, -28, 0, 16), Position = UDim2.fromOffset(14, 74), ZIndex = 2, Parent = banner })
 
 	local rows = {}
 	for rank = 1, #MEDALS do
 		local row = UI.Create("Frame", {
 			Name = "Leader" .. rank,
-			BackgroundColor3 = COLORS.Inset,
-			BackgroundTransparency = 0.35,
-			Size = UDim2.new(1, -20, 0, 20),
-			Position = UDim2.fromOffset(10, 70 + rank * 24),
+			BackgroundColor3 = Theme.Haze,
+			Size = UDim2.new(1, -28, 0, 22),
+			Position = UDim2.fromOffset(14, 70 + rank * 25),
+			ZIndex = 2,
 			Parent = banner,
-			UI.Corner(8),
+			UI.Round(),
 		})
-		local who = UI.Label({
+		local who = UI.Text({
 			Name = "Who",
 			Text = "",
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Size = UDim2.new(1, -100, 1, -2),
-			Position = UDim2.fromOffset(8, 1),
-			MaxTextSize = 16,
+			TextSize = 15,
+			Scaled = true,
+			X = Enum.TextXAlignment.Left,
+			Size = UDim2.new(1, -100, 1, -4),
+			Position = UDim2.fromOffset(10, 2),
+			ZIndex = 3,
 			Parent = row,
 		})
-		local damage = UI.Label({
+		local damage = UI.Text({
 			Name = "Damage",
 			Text = "",
-			TextColor3 = COLORS.Volts,
-			TextXAlignment = Enum.TextXAlignment.Right,
-			Size = UDim2.new(0, 86, 1, -2),
-			Position = UDim2.new(1, -8, 0, 1),
+			TextSize = 15,
+			Scaled = true,
+			Color = SETS.Sunset.Stroke,
+			X = Enum.TextXAlignment.Right,
+			Size = UDim2.new(0, 86, 1, -4),
+			Position = UDim2.new(1, -10, 0, 2),
 			AnchorPoint = Vector2.new(1, 0),
-			MaxTextSize = 16,
+			ZIndex = 3,
 			Parent = row,
 		})
 		rows[rank] = { Frame = row, Who = who, Damage = damage }
@@ -516,48 +716,42 @@ local function showOffer(data)
 	end
 	offerShown = true
 
-	local card = UI.Create("Frame", {
-		Name = "TankOffer",
-		Size = UDim2.fromOffset(400, 108),
-		BackgroundColor3 = Color3.fromRGB(20, 26, 58),
-		BackgroundTransparency = 0.06,
-		LayoutOrder = 3,
-		Parent = topStack,
-		UI.Corner(16),
-		UI.Stroke(3, COLORS.Energy),
-	})
-	offerCard = card
-	UI.Label({
+	local offer = card("TankOffer", UDim2.fromOffset(410, 120), 3)
+	offer.Visible = true
+	offerCard = offer
+	Icons.New("Tank", { Name = "Icon", Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(30, 27), ZIndex = 3, Parent = offer })
+	UI.Text({
 		Name = "Title",
-		Text = "🛢️ Tank full! Want more room?",
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Size = UDim2.new(1, -66, 0, 26),
-		Position = UDim2.fromOffset(12, 10),
-		MaxTextSize = 20,
-		Parent = card,
+		Text = "Tank full! Want more room?",
+		TextSize = 20,
+		Scaled = true,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -110, 0, 24),
+		Position = UDim2.fromOffset(50, 15),
+		ZIndex = 2,
+		Parent = offer,
 	})
-	UI.Button({
+	UI.CloseButton({
 		Name = "Close",
-		Text = "✕",
-		Color = "Gray",
-		Size = UDim2.fromOffset(40, 40),
-		Position = UDim2.new(1, -6, 0, 6),
+		Diameter = 34,
+		Position = UDim2.new(1, -10, 0, 9),
 		AnchorPoint = Vector2.new(1, 0),
-		MaxTextSize = 22,
-		Parent = card,
+		ZIndex = 3,
+		Parent = offer,
 		OnClick = hideOffer,
 	})
-	local width = if #passes == 1 then 240 else 184
+	local width = if #passes == 1 then 250 else 184
 	for index, pass in passes do
 		local button = UI.Button({
 			Name = pass.Key,
 			Text = pass.Icon .. " " .. pass.Name,
-			Color = if index == 1 then "Blue" else "Orange",
-			Size = UDim2.fromOffset(width, 52),
-			Position = UDim2.new(0.5, if #passes == 1 then 0 else (index - 1.5) * (width + 10), 1, -8),
-			AnchorPoint = Vector2.new(0.5, 1),
+			Color = if index == 1 then "Sky" else "Sunset",
 			MaxTextSize = 18,
-			Parent = card,
+			Size = UDim2.fromOffset(width, 58),
+			Position = UDim2.new(0.5, if #passes == 1 then 0 else (index - 1.5) * (width + 12), 1, -12),
+			AnchorPoint = Vector2.new(0.5, 1),
+			ZIndex = 3,
+			Parent = offer,
 			OnClick = function()
 				Registry.MonetizationController.PromptPass(pass.Key)
 			end,
@@ -567,9 +761,9 @@ local function showOffer(data)
 			UI.SetButtonText(button, pass.Icon .. " " .. pass.Name .. "\nR$ " .. Format.Commas(price))
 		end)
 	end
-	UI.Pop(card, 0.8)
+	UI.Pop(offer, 0.8)
 	task.delay(OFFER_TIME, function()
-		if offerCard == card then
+		if offerCard == offer then
 			hideOffer()
 		end
 	end)
@@ -586,11 +780,16 @@ local function refreshTank()
 	local capacity = Formulas.TankCapacity(data)
 	local fraction = data.Energy / capacity
 	local full = fraction >= 0.999
-	tankBar.Set(fraction, (if full then "FULL!  " else "🌪️ ") .. Format.Number(data.Energy) .. " / " .. Format.Number(capacity))
-	tankBar.SetColor(if full then "Red" elseif fraction > 0.75 then "Orange" else "Blue")
+	tankBar.Set(fraction, Format.Number(data.Energy) .. " / " .. Format.Number(capacity))
+	tankBar.SetFull(full)
 	local worth = data.TankValue * Formulas.VoltsMultiplier(data)
-	worthLabel.Text = if worth > 0 then "Worth ⚡ " .. Format.Number(worth) else ""
-	UI.SetButtonColor(sellButton, if data.Energy > 0 then "Yellow" else "Gray")
+	worthChip.Visible = worth > 0
+	if worth > 0 then
+		local text = Format.Number(worth)
+		worthLabel.Text = text
+		worthChip.Size = UDim2.fromOffset(math.ceil(textWidth(text, 16)) + 40, 26)
+	end
+	UI.SetButtonColor(sellButton, if data.Energy > 0 then "Leaf" else "Gray")
 	sellButton:SetAttribute("Full", full)
 	if wasFull and not full then
 		-- Stop the "full" pulse where it is (touch screens never send MouseLeave to reset it)
@@ -604,14 +803,21 @@ local function refreshTank()
 	wasFull = full
 end
 
+local function refreshShifts()
+	local data = Registry.DataController.Data
+	if data then
+		shiftsCapsule.Set(Format.Number(data.Rebirths or 0))
+	end
+end
+
 local function refreshStats()
 	local data = Registry.DataController.Data
 	if not data then
 		return
 	end
-	statLabels.Power.Text = "💨 " .. Format.Number(Formulas.Power(data)) .. " Power"
-	statLabels.Pets.Text = "🐾 " .. Format.Multiplier(Formulas.PetMultiplier(data)) .. " Energy"
-	statLabels.Volts.Text = "💰 " .. Format.Multiplier(Formulas.VoltsMultiplier(data)) .. " Volts"
+	setStat(statLabels.Power, Format.Number(Formulas.Power(data)) .. " Power")
+	setStat(statLabels.Pets, Format.Multiplier(Formulas.PetMultiplier(data)) .. " Energy")
+	setStat(statLabels.Volts, Format.Multiplier(Formulas.VoltsMultiplier(data)) .. " Volts")
 end
 
 local function refreshAuto()
@@ -621,12 +827,15 @@ local function refreshAuto()
 	end
 	if not Formulas.HasPass(data, "AutoCatch") then
 		UI.SetButtonColor(autoButton, "Gray")
-		UI.SetButtonText(autoButton, "🔒 AUTO")
+		UI.SetButtonIcon(autoButton, "Lock")
+		UI.SetButtonText(autoButton, "AUTO")
 	elseif data.Settings.AutoCatch then
-		UI.SetButtonColor(autoButton, "Teal")
+		UI.SetButtonColor(autoButton, "Rain")
+		UI.SetButtonIcon(autoButton, nil)
 		UI.SetButtonText(autoButton, "🤖 ON")
 	else
 		UI.SetButtonColor(autoButton, "Gray")
+		UI.SetButtonIcon(autoButton, nil)
 		UI.SetButtonText(autoButton, "🤖 OFF")
 	end
 	-- Bought one of the offered passes: the offer has done its job
@@ -646,12 +855,19 @@ local function refreshBoosts()
 		return
 	end
 	local now = Registry.DataController.Now()
-	for name, entry in boostChips do
+	for name, timer in boostTimers do
 		local endTime = data.Boosts and data.Boosts[name] or 0
 		local remaining = endTime - now
-		entry.Frame.Visible = remaining > 0
+		timer.Frame.Visible = remaining > 0
 		if remaining > 0 then
-			entry.Timer.Text = Format.Time(remaining)
+			-- The ring runs down from the longest time seen since the boost started (or was extended)
+			if not boostLongest[name] or remaining > boostLongest[name] then
+				boostLongest[name] = remaining
+			end
+			timer.SetText(Format.Time(remaining))
+			timer.SetProgress(remaining / boostLongest[name])
+		else
+			boostLongest[name] = nil
 		end
 	end
 end
@@ -701,12 +917,12 @@ local function refreshLeaders(timer: string, fallbackInfo: string?)
 		if entry then
 			row.Frame.Visible = true
 			row.Who.Text = MEDALS[rank] .. " " .. entry.Name
-			row.Who.TextColor3 = if entry.UserId == player.UserId then COLORS.Volts else COLORS.Text
+			row.Who.TextColor3 = if entry.UserId == player.UserId then SETS.Sky.Bottom else INK
 			row.Damage.Text = Format.Number(entry.Damage)
 		elseif rank == 1 then
 			row.Frame.Visible = true
 			row.Who.Text = "🌪️ Vacuum the storm to top the leaderboard!"
-			row.Who.TextColor3 = COLORS.SubText
+			row.Who.TextColor3 = Theme.InkSoft
 			row.Damage.Text = ""
 		else
 			row.Frame.Visible = false
@@ -714,18 +930,17 @@ local function refreshLeaders(timer: string, fallbackInfo: string?)
 	end
 end
 
--- Flying volts icons from the tank to the counter
+-- Flying Volts from the SELL button to the Volts capsule
 function HudController.PlaySell(volts: number)
+	local scale = hudScale() -- pixels -> HUD units
 	local start = sellButton.AbsolutePosition + sellButton.AbsoluteSize / 2 - root.AbsolutePosition
-	local finish = voltsFrame.AbsolutePosition + Vector2.new(30, voltsFrame.AbsoluteSize.Y / 2) - root.AbsolutePosition
-	local scale = Registry.InterfaceController.HudScale -- pixels -> HUD units
+	local target = voltsCapsule.Icon
+	local finish = target.AbsolutePosition + target.AbsoluteSize / 2 - root.AbsolutePosition
 	for index = 1, 8 do
-		local icon = UI.Label({
-			Text = "⚡",
-			Stroke = false,
+		local icon = Icons.New("Volts", {
+			Name = "FlyingVolt",
 			Size = UDim2.fromOffset(34, 34),
 			Position = UDim2.fromOffset(start.X / scale, start.Y / scale),
-			AnchorPoint = Vector2.new(0.5, 0.5),
 			ZIndex = 10,
 			Parent = root,
 		})
@@ -733,7 +948,7 @@ function HudController.PlaySell(volts: number)
 		task.delay(index * 0.03, function()
 			local mid = (start / scale) + spread
 			UI.Tween(icon, 0.22, { Position = UDim2.fromOffset(mid.X, mid.Y) }).Completed:Wait()
-			UI.Tween(icon, 0.35, { Position = UDim2.fromOffset(finish.X / scale, finish.Y / scale), Size = UDim2.fromOffset(18, 18) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In).Completed:Wait()
+			UI.Tween(icon, 0.35, { Position = UDim2.fromOffset(finish.X / scale, finish.Y / scale), Size = UDim2.fromOffset(20, 20) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In).Completed:Wait()
 			icon:Destroy()
 			if index == 8 then
 				UI.Pop(voltsFrame, 1.12)
@@ -741,34 +956,37 @@ function HudController.PlaySell(volts: number)
 		end)
 	end
 
-	local popup = UI.Label({
-		Text = "+⚡ " .. Format.Number(volts),
-		TextColor3 = COLORS.Volts,
-		Size = UDim2.fromOffset(260, 36),
-		Position = UDim2.new(0.5, 0, 0, 70),
+	local popup = UI.Text({
+		Name = "SellPopup",
+		Text = "+" .. Format.Number(volts) .. " Volts",
+		TextSize = 30,
+		Color = SETS.Bolt.Top,
+		Stroke = INK,
+		StrokeThickness = 3,
+		Size = UDim2.fromOffset(320, 36),
+		Position = UDim2.new(0.5, 0, 0, 64),
 		AnchorPoint = Vector2.new(0.5, 0),
-		Stroke = 3,
 		ZIndex = 10,
 		Parent = root,
 	})
 	UI.Pop(popup, 1.4)
-	UI.Tween(popup, 1.2, { Position = UDim2.new(0.5, 0, 0, 100) })
+	UI.Tween(popup, 1.2, { Position = UDim2.new(0.5, 0, 0, 92) })
 	task.delay(0.9, function()
-		UI.Tween(popup, 0.35, { TextTransparency = 1 })
-		local stroke = popup:FindFirstChildOfClass("UIStroke")
-		if stroke then
-			UI.Tween(stroke, 0.35, { Transparency = 1 })
-		end
+		UI.FadeOut(popup, 0.35)
 		task.wait(0.4)
 		popup:Destroy()
 	end)
 end
 
+-- The objective line above the stats; nil hides it. The pill fits its text.
 function HudController.SetObjective(text: string?)
+	objectiveText = text
 	if not text then
 		objectiveFrame.Visible = false
 		return
 	end
+	local width = math.clamp(textWidth(text, 19) + 66, math.min(220, objectiveMaxWidth), objectiveMaxWidth)
+	objectiveFrame.Size = UDim2.fromOffset(width, OBJECTIVE_HEIGHT)
 	if objectiveLabel.Text ~= text then
 		objectiveLabel.Text = text
 		if objectiveFrame.Visible then
@@ -787,10 +1005,9 @@ function HudController.Highlight(menuKey: string, enabled: boolean)
 		return
 	end
 	highlightedButtons[button] = if enabled then true else nil
-	local stroke = button:FindFirstChildOfClass("UIStroke")
-	if stroke and not enabled then
-		stroke.Color = COLORS.Stroke
-		stroke.Thickness = 3.5
+	local glow = button:FindFirstChild("Glow")
+	if glow then
+		glow.Visible = enabled
 	end
 end
 
@@ -800,11 +1017,27 @@ function HudController.SetBadge(menuKey: string, count: number?)
 	if not badge then
 		return
 	end
-	badge.Visible = (count or 0) > 0
-	local label = badge:FindFirstChild("Count")
-	if label then
-		label.Text = if count and count > 1 then tostring(count) else "!"
+	if (count or 0) <= 0 then
+		UI.SetBadge(badge, nil)
+	else
+		UI.SetBadge(badge, if count > 1 then count else "!")
 	end
+end
+
+-- How far along the Mega Storm countdown is (0 right after a storm, 1 when the next one starts)
+local function stormProgress(phase: string): number
+	local state = ReplicatedStorage:FindFirstChild("MegaStormState")
+	local now = Registry.DataController.Now()
+	local config = GameConfig.MegaStorm
+	if phase == "Warning" then
+		local nextTime = state and state:GetAttribute("NextTime")
+		return if type(nextTime) == "number" then 1 - math.clamp((nextTime - now) / config.WarningTime, 0, 1) else 1
+	end
+	local nextTime = state and state:GetAttribute("NextTime")
+	if type(nextTime) ~= "number" then
+		return 0
+	end
+	return 1 - math.clamp((nextTime - now) / config.Interval, 0, 1)
 end
 
 -- state = { Phase, Name, Timer, Health, MaxHealth, Info }
@@ -812,45 +1045,53 @@ function HudController.SetStorm(state)
 	local widget = stormWidget
 	widget.Phase = state.Phase
 	widget.Timer = state.Timer or ""
-	if widget.Badge then
-		widget.Badge.Visible = state.Phase == "Active" or state.Phase == "Warning"
+	if state.Phase == "Active" or state.Phase == "Warning" then
+		UI.SetBadge(widget.Badge, "!")
+	else
+		UI.SetBadge(widget.Badge, nil)
 	end
 	if state.Phase == "Active" then
-		widget.Caption.Text = "GO!"
-		widget.Gradient.Color = ColorSequence.new(Color3.fromRGB(230, 70, 90), Color3.fromRGB(120, 24, 48))
+		stormTimer.SetText("GO!")
+		stormTimer.SetColor("Coral")
+		stormTimer.SetProgress(state.Health / math.max(state.MaxHealth, 1))
 		stormBanner.Frame.Visible = true
 		hideOffer()
-		stormBanner.Name.Text = "🌪️ " .. string.upper(state.Name)
+		stormBanner.Name.Text = string.upper(state.Name)
 		stormBanner.Health.Set(state.Health / math.max(state.MaxHealth, 1), Format.Number(state.Health) .. " HP")
 		refreshLeaders(widget.Timer, state.Info)
 	elseif state.Phase == "Warning" then
 		local flash = math.floor(os.clock() * 3) % 2 == 0
-		widget.Caption.Text = if flash then "GO!" else widget.Timer
-		widget.Gradient.Color = if flash
-			then ColorSequence.new(Color3.fromRGB(255, 150, 60), Color3.fromRGB(200, 70, 30))
-			else ColorSequence.new(Color3.fromRGB(230, 70, 90), Color3.fromRGB(120, 24, 48))
+		stormTimer.SetText(if flash then "GO!" else widget.Timer)
+		stormTimer.SetColor(if flash then "Sunset" else "Coral")
+		stormTimer.SetProgress(stormProgress("Warning"))
 		stormBanner.Frame.Visible = false
 	else
-		widget.Caption.Text = widget.Timer
-		widget.Gradient.Color = ColorSequence.new(Color3.fromRGB(70, 84, 160), Color3.fromRGB(32, 38, 88))
+		stormTimer.SetText(widget.Timer)
+		stormTimer.SetColor("Storm")
+		stormTimer.SetProgress(stormProgress("Idle"))
 		stormBanner.Frame.Visible = false
 	end
+end
+
+local function placeAll()
+	placeMenu()
+	placeBottom()
+	placeTimers()
 end
 
 function HudController.Init()
 	root = Registry.InterfaceController.HudRoot
 	buildTopStack()
-	buildVolts()
+	buildCurrencies()
 	buildMenu()
-	buildTank()
-	buildBoosts()
 	buildObjective()
+	buildTank()
+	buildTimers()
 	buildStormBanner()
 	Registry.InterfaceController.SetNotificationAnchor(topStack)
-	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeMenu)
-	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeBoosts)
-	placeMenu()
-	placeBoosts()
+	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeAll)
+	root:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeBottom)
+	placeAll()
 end
 
 function HudController.Start()
@@ -864,7 +1105,7 @@ function HudController.Start()
 			chatConfig:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeMenu)
 		end)
 	end
-	placeMenu()
+	placeAll()
 
 	DataController.Observe("Volts", function(volts)
 		voltsTarget = volts or 0
@@ -877,9 +1118,10 @@ function HudController.Start()
 	DataController.ObserveMany({ "Energy", "TankValue", "Upgrades", "Passes", "Rebirths" }, refreshTank)
 	DataController.ObserveMany({ "Upgrades", "Pets", "Passes", "Rebirths", "Boosts" }, refreshStats)
 	DataController.ObserveMany({ "Passes", "Settings" }, refreshAuto)
+	DataController.Observe("Rebirths", refreshShifts)
 
-	-- Smooth Volts counter
 	RunService.RenderStepped:Connect(function(dt)
+		-- Smooth Volts counter
 		if displayedVolts ~= voltsTarget then
 			local difference = voltsTarget - displayedVolts
 			if math.abs(difference) < 1 then
@@ -889,6 +1131,8 @@ function HudController.Start()
 			end
 			voltsLabel.Text = Format.Number(math.floor(displayedVolts + 0.5))
 		end
+		-- Bubbles in the storm jar; it wobbles and glows when full
+		tankBar.Step(dt)
 		-- Pulse the sell button while the tank is full
 		if sellButton:GetAttribute("Full") then
 			local scale = sellButton:FindFirstChildOfClass("UIScale")
@@ -896,12 +1140,14 @@ function HudController.Start()
 				scale.Scale = 1 + math.abs(math.sin(os.clock() * 5)) * 0.08
 			end
 		end
-		-- Glow on menu buttons the objective points at
+		-- Glow behind the menu buttons the objective points at
+		local pulse = (math.sin(os.clock() * 6) + 1) / 2
 		for button in highlightedButtons do
-			local stroke = button:FindFirstChildOfClass("UIStroke")
-			if stroke then
-				stroke.Color = Color3.fromRGB(255, 220, 70)
-				stroke.Thickness = 3.5 + (math.sin(os.clock() * 6) + 1) * 1.6
+			local glow = button:FindFirstChild("Glow")
+			if glow then
+				local size = BUTTON + 10 + pulse * 12
+				glow.Size = UDim2.fromOffset(size, size)
+				glow.BackgroundTransparency = 0.2 + pulse * 0.35
 			end
 		end
 	end)

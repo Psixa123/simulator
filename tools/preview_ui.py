@@ -17,8 +17,9 @@ sky-island backdrop with Roblox's own top bar, chat window and player list, and 
 
 Usage (from the repo root):
     python3 tools/preview_ui.py                              HUD at 1280x720 -> build/ui_preview/hud.png
-    python3 tools/preview_ui.py --panel Upgrades             open a panel (Shop Pets Upgrades Rebirth Rewards
-                                                             Settings Teleport Egg) -> build/ui_preview/Upgrades.png
+    python3 tools/preview_ui.py --panel Upgrades             open a panel (a module in src/client/UI/Panels: Shop Pets
+                                                             Upgrades Rebirth Rewards Settings Teleport Egg)
+                                                             -> build/ui_preview/Upgrades.png
     python3 tools/preview_ui.py --panel Shop --tab Volts     the panel's OnOpen argument: Shop/Pets/Rewards tab,
                                                              an egg id for Egg (--panel Egg --tab FrostEgg)
     python3 tools/preview_ui.py --screen 390x844 --panel Pets          a phone (portrait)
@@ -32,13 +33,19 @@ Usage (from the repo root):
     python3 tools/preview_ui.py --data new                   a first-time player (also: mid (default), late)
     python3 tools/preview_ui.py --data-json '{"Volts": 5, "Boosts": {"Luck": "+600"}}'   tweak the data
     python3 tools/preview_ui.py --panel Upgrades --compare docs/ui_mockup.png      side by side with the mockup
+    python3 tools/preview_ui.py --blank --run-file tools/ui_preview/examples/skylab_kit.luau --bg none --no-core \
+        --name skylab_kit --compare docs/ui_components.png     a component test without the game's client
 
 Options:
     --screen S        WxH or a preset: desktop (1280x720), phone (390x844, portrait), phone-landscape (844x390),
                       tablet (1024x768); comma-separated for several. Screens under 600 px on the short side
                       and the presets phone/tablet are touch screens (TouchEnabled, no keyboard, no chat window,
-                      the game's phone HUD scale); --touch / --no-touch override.
+                      the game's phone HUD scale); --touch / --no-touch override. Note: Roblox runs phones in
+                      landscape unless StarterGui.ScreenOrientation says otherwise (the game doesn't), so
+                      phone-landscape is what phone players see; phone (portrait) is the worst case.
     --inset N         Roblox top bar height (default 58, the current top bar)
+    --safe-area L,R,B device safe-area insets in pixels (a notch: e.g. --screen 844x390 --safe-area 47,47,21);
+                      ScreenGuis with ScreenInsets CoreUISafeInsets / DeviceSafeInsets keep out of them
     --panel NAME      open a panel after loading (InterfaceController.OpenPanel); --tab ARG is its OnOpen argument
     --all             render the HUD and every panel (one PNG each: hud, panel_<Name>)
     --click PATH      fire a GuiButton's MouseButton1Down/Up/Click and Activated, after --panel (repeatable, in
@@ -49,6 +56,11 @@ Options:
                       Click(path), Wait(s), SetData(key, value) (server-side change + DataChanged), FireClient(remote,
                       ...) (a server -> client event, e.g. FireClient("Effect", "MegaWarning")), and the Roblox globals
     --run-file FILE   the same, from a file
+    --before CODE     Luau run before the client starts (repeatable; --before-file FILE): patch a module or the
+                      data the UI is built from, e.g. "require(Client.UI.Icons).Volts.Image = 'assets/ui/Volts.png'"
+                      to see an icon that isn't uploaded yet. Sees Client, ServerData, SetData, require, PlayerGui.
+    --blank           don't start the game's client: an empty PlayerGui for --run snippets (component tests;
+                      the game's modules can still be required, e.g. require(Client.UI.Viewport))
     --notify T|KIND   show a toast (Info, Success, Error, Warning, Reward)
     --data NAME       mid (default: zone 3, 12.4M Volts, 3 Climate Shifts, 15 pets incl. golden/rainbow, a boost,
                       a daily reward and a gift ready), new (DataService's defaults), late (all unlocked, maxed)
@@ -99,9 +111,14 @@ with tools/pets/viewer.html (the pet mesh pack assets/models/StormlingPets.glb, 
 Rainbow; needs three.js in tools/pets, tools/world or tools/preview node_modules) into build/ui_preview/pets/,
 else build/pets/<PetId>.png or docs/mockup/pets/<PetId>.png (tinted for Golden / Rainbow), else a cartoon
 stand-in in the pet's colours. Undiscovered pets are silhouettes, eggs are drawn as eggs.
-Images: rbxassetid://<id> is looked up in tools/ui_preview/asset_map.json ({"<id>": "assets/ui/Volts.png"}); an
-Image set to a repo path (assets/ui/Volts.png) is drawn directly (preview only: Roblox needs an asset id);
+Images: rbxassetid://<id> is looked up in tools/ui_preview/asset_map.json ({"<id>": "assets/ui/Volts.png"}), then
+in the game code: a line of src/**/*.luau holding the id and either a repo picture path or a key named like a
+picture in assets/ui (`Volts = { Image = "rbxassetid://123456" }` -> assets/ui/Volts.png). An Image set to a
+repo path (assets/ui/Volts.png) is drawn directly (preview only: Roblox needs an asset id, see --before);
 anything else is a hatched placeholder (listed in the output).
+Examples: tools/ui_preview/examples/skylab_kit.luau builds the Sky Lab kit (docs/ui_components.png) from plain
+instances - candy buttons with lip and shine, cloud window header, tiles with pet viewports, capsules, round
+HUD buttons, badges, toasts - and shows how a --run-file snippet is written.
 Fonts: Fredoka One and Luckiest Guy from assets/source/fonts, Gotham drawn with Montserrat (tools/ui_preview/
 fonts, the closest free face), other fonts with the system sans; emoji with the system emoji font.
 
@@ -138,7 +155,10 @@ PARTS = ["mock_core.luau", "mock_instances.luau", "mock_layout.luau", "mock_serv
 PROJECT = ROOT / "default.project.json"
 OUT = ROOT / "build" / "ui_preview"
 CLIENT = "StarterPlayer/StarterPlayerScripts/Client"
-PANELS = ["Shop", "Pets", "Upgrades", "Rebirth", "Rewards", "Settings", "Teleport", "Egg"]
+KNOWN_PANELS = ["Shop", "Pets", "Upgrades", "Rebirth", "Rewards", "Settings", "Teleport", "Egg"]
+# the panels are the modules in src/client/UI/Panels (new ones are picked up by --all)
+_found = sorted(f.name.split(".")[0] for f in (ROOT / "src" / "client" / "UI" / "Panels").glob("*.lua*"))
+PANELS = [n for n in KNOWN_PANELS if n in _found] + [n for n in _found if n not in KNOWN_PANELS] or KNOWN_PANELS
 DEFAULT_STUBS = ["EffectsController", "VacuumController", "PetController", "ZoneController", "HazardController", "WorldController"]
 PRESETS = {
     "desktop": (1280, 720, False),
@@ -398,6 +418,40 @@ def load_asset_map():
         return {}
 
 
+IMAGE_DIRS = [ROOT / "assets" / "ui", ROOT / "assets"]
+
+
+def auto_asset_map():
+    """Asset ids in the game code mapped to repo pictures, so uploaded icons draw without asset_map.json:
+    a line of src/**/*.luau with an id (6+ digits) and either a repo path to a .png/.jpg on the same line
+    (`Volts = { Id = 1234567 }, -- assets/ui/Volts.png`) or a key that names a picture in assets/ui
+    (`Volts = 1234567,` or `Volts = { Image = "rbxassetid://1234567", ... }` -> assets/ui/Volts.png)."""
+    pictures = {}
+    for directory in IMAGE_DIRS:
+        if directory.is_dir():
+            for path in directory.iterdir():
+                if path.suffix.lower() in (".png", ".jpg", ".jpeg"):
+                    pictures.setdefault(path.stem.lower(), path.relative_to(ROOT).as_posix())
+    found = {}
+    for source in (ROOT / "src").rglob("*.luau"):
+        try:
+            text = source.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for line in text.splitlines():
+            ids = re.findall(r"(?<![\w.])(\d{6,})(?![\w.])", line)
+            if not ids:
+                continue
+            path = re.search(r"((?:assets|docs|build)/[\w./-]+\.(?:png|jpe?g))", line)
+            key = re.match(r"\s*\[?[\"']?(\w+)[\"']?\]?\s*=", line)
+            target = path.group(1) if path and (ROOT / path.group(1)).is_file() else (
+                pictures.get(key.group(1).lower()) if key else None)
+            if target:
+                for asset_id in ids:
+                    found.setdefault(asset_id, target)
+    return found
+
+
 def resolve_image(src, asset_map):
     """Image property -> URL under the server root (or None)."""
     match = re.match(r"rbxassetid://(\d+)", src) or re.match(r"https?://www\.roblox\.com/asset/\?id=(\d+)", src)
@@ -508,6 +562,13 @@ def parse_screen(text, args):
 
 def screen_config(w, h, touch, args):
     screen = {"W": w, "H": h, "InsetTop": args.inset, "Touch": touch, "SafeLeft": 0, "SafeRight": 0, "SafeBottom": 0}
+    if args.safe_area:
+        values = [int(v) for v in re.findall(r"\d+", args.safe_area)]
+        if not values or len(values) > 3:
+            sys.exit("--safe-area: expected L,R[,B] in pixels, e.g. 47,47,21")
+        values += [values[0]] * (2 - len(values)) if len(values) < 2 else []
+        screen["SafeLeft"], screen["SafeRight"] = values[0], values[1]
+        screen["SafeBottom"] = values[2] if len(values) > 2 else 0
     if not touch and not (args.no_chat or args.no_core):
         # Roblox's chat window: top left, under the top bar
         screen["Chat"] = [8, args.inset + 6, min(400, round(w * 0.32)), min(222, round(h * 0.31))]
@@ -527,6 +588,8 @@ def make_config(job, args):
         actions.append({"Kind": "run", "Code": code, "Name": f"--run #{index + 1}"})
     for path in args.run_file or []:
         actions.append({"Kind": "run", "Code": Path(path).read_text(encoding="utf-8"), "Name": path})
+    before = [{"Kind": "run", "Code": code, "Name": f"--before #{i + 1}"} for i, code in enumerate(args.before or [])]
+    before += [{"Kind": "run", "Code": Path(path).read_text(encoding="utf-8"), "Name": path} for path in args.before_file or []]
     stubs = [] if args.stub.lower() == "none" else [s if s.endswith("Controller") else s + "Controller" for s in args.stub.split(",") if s]
     for name in args.real or []:
         name = name if name.endswith("Controller") else name + "Controller"
@@ -548,6 +611,8 @@ def make_config(job, args):
         "BootSeconds": 0.6 if args.loading else args.boot,
         "SettleSeconds": args.settle,
         "Actions": actions,
+        "Before": before,
+        "Blank": args.blank,
         "ClientPath": CLIENT,
         "MainPath": CLIENT + "/Main",
         "Tree": True,
@@ -707,6 +772,10 @@ def main():
     parser.add_argument("--click", action="append")
     parser.add_argument("--run", action="append")
     parser.add_argument("--run-file", action="append")
+    parser.add_argument("--before", action="append")
+    parser.add_argument("--before-file", action="append")
+    parser.add_argument("--blank", action="store_true")
+    parser.add_argument("--safe-area")
     parser.add_argument("--notify", action="append")
     parser.add_argument("--data", default="mid", choices=["new", "mid", "late"])
     parser.add_argument("--data-json")
@@ -765,7 +834,7 @@ def main():
     server = start_server()
     started = time.time()
     try:
-        ctx = {"luau": luau, "browser": browser, "port": server.server_address[1], "asset_map": load_asset_map(),
+        ctx = {"luau": luau, "browser": browser, "port": server.server_address[1], "asset_map": {**auto_asset_map(), **load_asset_map()},
                "no_pet_renders": args.no_pet_renders}
         ctx["metrics"] = font_metrics(browser, ctx["port"])
         with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:

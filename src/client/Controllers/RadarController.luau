@@ -28,7 +28,6 @@ local ALERT_TIME = 9 -- seconds an alert card stays on screen
 local MAX_ALERTS = 2
 local CLOSE_DISTANCE = 30 -- studs; the marker tells you to start vacuuming
 
-local COLORS = Theme.Colors
 local RARE_COLOR = Weather.Rarities.Rare.Color
 
 local player = Players.LocalPlayer
@@ -187,16 +186,17 @@ local function showAlert(typeId: string, zoneId: number)
 	local textWidth = if here then -84 else -200
 	alertOrder -= 1
 
-	local card = UI.Create("Frame", {
+	local card = UI.CloudCard({
 		Name = "RadarAlert",
 		Size = UDim2.new(1, 0, 0, 70),
-		BackgroundColor3 = Color3.fromRGB(20, 26, 58),
-		BackgroundTransparency = 0.06,
+		Top = Theme.Cloud,
+		Bottom = Theme.Mist,
+		StrokeColor = Theme.Ink,
+		CornerRadius = 20,
 		LayoutOrder = alertOrder, -- newest on top
-		UI.Corner(12),
-		UI.Stroke(2.5, pass.Color),
 	})
 	UI.Icon({
+		Key = "Radar",
 		Text = pass.Icon,
 		Color = pass.Color,
 		Size = UDim2.fromOffset(50, 50),
@@ -218,12 +218,12 @@ local function showAlert(typeId: string, zoneId: number)
 		Name = "Zone",
 		Text = (if here then "📍 Right here in " else "📡 Spotted in ") .. zone.Icon .. " " .. zone.Name,
 		Font = Theme.BodyFont,
-		TextColor3 = COLORS.SubText,
+		TextColor3 = Theme.InkSoft,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Size = UDim2.new(1, textWidth, 0, 18),
 		Position = UDim2.fromOffset(70, 40),
 		MaxTextSize = 15,
-		Stroke = 1.5,
+		Stroke = false,
 		Parent = card,
 	})
 	if not here then
@@ -314,19 +314,21 @@ function RadarController.Init()
 		UI.List(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Bottom),
 	})
 
-	-- Sit just above the boost timers (which move up on tablets) and, on narrow phones, stay
-	-- right of the centred notification column (470 wide)
+	-- Sit just above the HUD's timer column (which moves up on tablets) and, on narrow phones, stay
+	-- right of the centred notification column (520 wide)
 	local hud = Registry.InterfaceController.HudRoot
 	local boosts = hud:FindFirstChild("Boosts")
 	local function place()
 		local bottom = if boosts then -boosts.Position.Y.Offset else 160
+		local height = if boosts then boosts.Size.Y.Offset else 100
 		local width = hud.AbsoluteSize.X / Registry.InterfaceController.HudScale
-		holder.Size = UDim2.fromOffset(math.clamp(width / 2 - 235 - 24, 280, 350), 150)
-		holder.Position = UDim2.new(1, -12, 1, -(bottom + 110))
+		holder.Size = UDim2.fromOffset(math.clamp(width / 2 - 260 - 24, 280, 350), 150)
+		holder.Position = UDim2.new(1, -12, 1, -(bottom + height + 12))
 	end
 	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
 	if boosts then
 		boosts:GetPropertyChangedSignal("Position"):Connect(place)
+		boosts:GetPropertyChangedSignal("Size"):Connect(place)
 	end
 	place()
 end
