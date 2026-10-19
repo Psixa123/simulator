@@ -10,7 +10,7 @@
 # made of leaf groups named by paint - fixed colours Color_RRGGBB (and Glass_RRGGBB for see-through
 # glass). Units: studs (piece() writes inches, 12 in = 1 stud), Z up, the icon's FRONT faces -Y, its
 # origin at the centre of its base. An icon is about 4-5 studs across. The renderer picks a 3/4 hero
-# angle per icon (tools/icons/render_icons.py, VIEWS), so model the readable face towards -Y.
+# angle per icon (tools/icons/render_icons.py, ICONS), so model the readable face towards -Y.
 #
 # Sandbox rules (checked by `python3 tools/icons/import_icons.py check`): no imports (math is
 # pre-loaded), no eval/exec/open/type/setattr, no dunders, no classes, no any()/all().

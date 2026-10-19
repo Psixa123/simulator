@@ -1327,7 +1327,8 @@ end
 
 -- Item tile with a rarity pedestal. props: Name, Title, Rarity (a Config/Pets rarity, or a Color3),
 -- RarityText, Size (112 x 140), Position, LayoutOrder, ZIndex, Parent, OnClick.
--- Returns { Frame, Art (put the picture here), Title, Pedestal, RarityLabel, SetSelected(bool), SetRarity(color, text) }
+-- Returns { Frame, Art (put the picture here), Title, Pedestal, RarityLabel, Body, Outline, Lift,
+-- SetSelected(bool), SetRarity(color, text) }
 function UI.Tile(props)
 	local z = props.ZIndex or 1
 	local button = Instance.new("TextButton")
@@ -1394,6 +1395,7 @@ function UI.Tile(props)
 		Parent = pedestalFace,
 		UI.Round(),
 	})
+	-- The pedestal's label sits over the art (the pet stands on the pedestal and may overlap it)
 	local rarityLabel = UI.Text({
 		Name = "Rarity",
 		Text = props.RarityText or "",
@@ -1401,11 +1403,11 @@ function UI.Tile(props)
 		Scaled = true,
 		Stroke = INK,
 		StrokeThickness = 1.5,
-		Size = UDim2.new(1, -8, 0, 15),
-		Position = UDim2.new(0.5, 0, 1, -4),
+		Size = UDim2.new(1, -24, 0, 15),
+		Position = UDim2.new(0.5, 0, 1, -12),
 		AnchorPoint = Vector2.new(0.5, 1),
 		ZIndex = z + 5,
-		Parent = pedestal,
+		Parent = lift,
 	})
 	local art = frame("Art", {
 		BackgroundTransparency = 1,
@@ -1419,7 +1421,17 @@ function UI.Tile(props)
 	ratio.AspectRatio = 1
 	ratio.Parent = art
 
-	local tile = { Frame = button, Art = art, Title = titleLabel, Pedestal = pedestal, RarityLabel = rarityLabel, Selected = false }
+	local tile = {
+		Frame = button,
+		Art = art,
+		Title = titleLabel,
+		Pedestal = pedestal,
+		RarityLabel = rarityLabel,
+		Body = body, -- Cloud face (a panel can tint it, e.g. golden pets)
+		Outline = outline, -- its UIStroke (SetSelected recolours it)
+		Lift = lift, -- everything that lifts when selected (badges go here)
+		Selected = false,
+	}
 	function tile.SetRarity(rarity, text: string?)
 		local color = if typeof(rarity) == "Color3" then rarity elseif type(rarity) == "table" then rarity.Color else Theme.Sets.Off.Bottom
 		local colors = Theme.Rarity(color)
@@ -1747,11 +1759,14 @@ function UI.Jar(props)
 	local fullBadge = UI.Badge(root, UDim2.new(1, 10, 0, -12))
 	fullBadge.Name = "FullBadge"
 
+	-- The icon hides the jar's left end, so the liquid fills the part to its right (a little energy
+	-- still shows); `cover` px of liquid sit under the icon
+	local cover = math.max(0, iconSize - 24 - t - 6) -- the icon's right edge, less its rounded side
 	local jar = { Frame = root, Track = track, Liquid = liquid, Label = label, Icon = icon, Fraction = 0, Full = false }
 	function jar.Set(fraction: number, text: string?, animate: boolean?)
 		fraction = math.clamp(fraction, 0, 1)
 		jar.Fraction = fraction
-		local size = UDim2.fromScale(fraction, 1)
+		local size = UDim2.new(fraction, (1 - fraction) * cover, 1, 0)
 		if animate then
 			UI.Tween(liquid, 0.25, { Size = size })
 		else
@@ -1798,6 +1813,7 @@ function UI.Jar(props)
 			haze.BackgroundTransparency = 0.62 + pulse * 0.2
 		end
 	end
+	jar.Set(0)
 	jar.Step(0)
 	if props.Parent then
 		root.Parent = props.Parent

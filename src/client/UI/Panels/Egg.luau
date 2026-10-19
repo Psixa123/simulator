@@ -1,6 +1,8 @@
 --!nonstrict
 -- Egg panel: shows what an egg can hatch (with live chances) and handles
 -- single, triple and automatic hatching.
+-- Sky Lab look: the egg's pets on rarity pedestals with their chance under each, the cost and luck
+-- in pills at the top, and candy hatch buttons with a price tag hanging over their corner.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,12 +18,18 @@ local Remotes = require(Shared.Remotes)
 local Registry = require(script.Parent.Parent.Parent.Registry)
 local UI = require(script.Parent.Parent.UI)
 local Theme = require(script.Parent.Parent.Theme)
+local Icons = require(script.Parent.Parent.Icons)
 local Viewport = require(script.Parent.Parent.Viewport)
 
 local EggPanel = {}
 
-local COLORS = Theme.Colors
+local INK = Theme.Ink
+local WHITE = Color3.new(1, 1, 1)
+local SETS = Theme.Sets
 local player = Players.LocalPlayer
+
+local TILE_WIDTH, TILE_HEIGHT = 112, 140
+local COLUMN_HEIGHT = 196
 
 local function nearEgg(eggId: string): boolean
 	local egg = Pets.Eggs[eggId]
@@ -33,30 +41,98 @@ local function nearEgg(eggId: string): boolean
 	return (root.Position - MapLayout.EggStation(egg.Zone)).Magnitude <= GameConfig.Pets.HatchDistance
 end
 
+local function frame(props)
+	local object = Instance.new("Frame")
+	object.BorderSizePixel = 0
+	object.BackgroundColor3 = WHITE
+	for key, value in props do
+		if type(key) == "number" then
+			value.Parent = object
+		elseif key ~= "Parent" then
+			object[key] = value
+		end
+	end
+	object.Parent = props.Parent
+	return object
+end
+
+-- A white pill with a Haze outline, an icon over its left end and Fredoka text (rich text allowed)
+local function infoPill(parent: Instance, name: string, order: number, icon: string)
+	local pill = frame({
+		Name = name,
+		BackgroundColor3 = Theme.Cloud,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 36),
+		LayoutOrder = order,
+		Parent = parent,
+		UI.Round(),
+		UI.Stroke(2, Theme.Haze),
+		UI.Padding(0, 16, 0, 42),
+	})
+	Icons.New(icon, { Name = "Icon", Size = UDim2.fromOffset(38, 38), Position = UDim2.new(0, -42 + 1, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 2, Parent = pill })
+	local label = UI.Text({ Name = "Text", Text = "", Rich = true, TextSize = 19, Size = UDim2.fromOffset(0, 36), Position = UDim2.fromOffset(0, 1), Parent = pill })
+	label.AutomaticSize = Enum.AutomaticSize.X
+	return label
+end
+
+-- A Bolt price tag (Volts icon + amount) hanging over a button's top-right corner
+local function priceTag(button: GuiObject)
+	local z = button.ZIndex + 6
+	local tag = frame({
+		Name = "Price",
+		BackgroundColor3 = INK,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 28),
+		Position = UDim2.new(1, 8, 0, -14),
+		AnchorPoint = Vector2.new(1, 0),
+		ZIndex = z,
+		Parent = button,
+		UI.Round(),
+		UI.Padding(0, 10, 0, 30),
+	})
+	frame({
+		Name = "Fill",
+		Size = UDim2.new(1, 36, 1, -4),
+		Position = UDim2.new(0, -28, 0, 2),
+		ZIndex = z,
+		Parent = tag,
+		UI.Round(),
+		UI.Gradient(SETS.Bolt.Top, SETS.Bolt.Bottom),
+	})
+	Icons.New("Volts", { Name = "Icon", Size = UDim2.fromOffset(26, 26), Position = UDim2.new(0, -28, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), ZIndex = z + 1, Parent = tag })
+	local label = UI.Text({ Name = "Text", Text = "", TextSize = 16, Stroke = SETS.Bolt.Stroke, Size = UDim2.fromOffset(0, 28), Position = UDim2.fromOffset(0, 1), ZIndex = z + 1, Parent = tag })
+	label.AutomaticSize = Enum.AutomaticSize.X
+	return tag, label
+end
+
 function EggPanel.Build()
 	local window = UI.Window({
 		Name = "Egg",
 		Title = "Egg",
-		Icon = "🥚",
-		Color = "Yellow",
-		Size = UDim2.fromOffset(730, 500),
+		IconKey = "Eggs",
+		Size = UDim2.fromOffset(680, 474),
+		Padding = { 20, 16, 18 },
 	})
 	local content = window.Content
 
-	local infoLabel = UI.Label({
+	-- Cost and luck pills
+	local info = frame({
 		Name = "Info",
-		Text = "",
-		Size = UDim2.new(1, 0, 0, 26),
-		MaxTextSize = 20,
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 38),
 		Parent = content,
+		UI.List(Enum.FillDirection.Horizontal, 22, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
 	})
-	local grid = UI.Create("Frame", {
+	local costLabel = infoPill(info, "Cost", 1, "Volts")
+	local luckLabel = infoPill(info, "Luck", 2, "Luck")
+
+	local grid = frame({
 		Name = "Pets",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 246),
-		Position = UDim2.fromOffset(0, 36),
+		Size = UDim2.new(1, 0, 0, COLUMN_HEIGHT),
+		Position = UDim2.fromOffset(0, 50),
 		Parent = content,
-		UI.Grid(UDim2.fromOffset(128, 240), UDim2.fromOffset(10, 10)),
+		UI.List(Enum.FillDirection.Horizontal, 14, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top),
 	})
 
 	local currentEgg: string? = nil
@@ -64,6 +140,7 @@ function EggPanel.Build()
 	local busy = false
 	local auto = false
 	local hatchOne, hatchThree, autoButton
+	local oneTagLabel, threeTag, threeTagLabel
 	local stopButton: TextButton? = nil
 
 	local function setAuto(enabled: boolean)
@@ -71,13 +148,14 @@ function EggPanel.Build()
 		if enabled and not stopButton then
 			stopButton = UI.Button({
 				Name = "StopAutoHatch",
-				Text = "⏹ STOP AUTO HATCH",
-				Color = "Red",
+				Text = "Stop Auto Hatch",
+				Icon = "Close",
+				Color = "Coral",
+				TextSize = 24,
 				Size = UDim2.fromOffset(300, 60),
 				Position = UDim2.new(0.5, 0, 1, -40),
 				AnchorPoint = Vector2.new(0.5, 1),
 				ZIndex = 45,
-				MaxTextSize = 24,
 				Parent = Registry.InterfaceController.OverlayRoot,
 				OnClick = function()
 					setAuto(false)
@@ -97,7 +175,8 @@ function EggPanel.Build()
 			return
 		end
 		local luck = Formulas.LuckMultiplier(data, Registry.DataController.Now())
-		infoLabel.Text = string.format("⚡ %s Volts each   •   🍀 Luck %s", Format.Number(egg.Cost), Format.Multiplier(luck))
+		costLabel.Text = Format.Number(egg.Cost) .. ' <font color="#5B6A9E">each</font>'
+		luckLabel.Text = '<font color="#5B6A9E">Luck</font> ' .. Format.Multiplier(luck)
 
 		for _, entry in Formulas.HatchChances(eggId, luck) do
 			local card = cards[entry.Id]
@@ -106,19 +185,23 @@ function EggPanel.Build()
 			end
 		end
 
-		UI.SetButtonText(hatchOne, "Hatch x1  •  ⚡" .. Format.Number(egg.Cost))
-		UI.SetButtonColor(hatchOne, if data.Volts >= egg.Cost then "Green" else "Gray")
+		oneTagLabel.Text = Format.Number(egg.Cost)
+		UI.SetButtonColor(hatchOne, if data.Volts >= egg.Cost then "Leaf" else "Off")
 
 		if Formulas.HasPass(data, "TripleHatch") then
-			UI.SetButtonText(hatchThree, "Hatch x3  •  ⚡" .. Format.Number(egg.Cost * 3))
-			UI.SetButtonColor(hatchThree, if data.Volts >= egg.Cost * 3 then "Blue" else "Gray")
+			threeTag.Visible = true
+			threeTagLabel.Text = Format.Number(egg.Cost * 3)
+			UI.SetButtonIcon(hatchThree, nil)
+			UI.SetButtonColor(hatchThree, if data.Volts >= egg.Cost * 3 then "Sky" else "Off")
 		else
-			UI.SetButtonText(hatchThree, "🔒 Hatch x3")
-			UI.SetButtonColor(hatchThree, "Gray")
+			threeTag.Visible = false
+			UI.SetButtonIcon(hatchThree, "Lock")
+			UI.SetButtonColor(hatchThree, "Off")
 		end
 
-		UI.SetButtonText(autoButton, if Formulas.HasPass(data, "AutoHatch") then "🔁 Auto Hatch" else "🔒 Auto Hatch")
-		UI.SetButtonColor(autoButton, if Formulas.HasPass(data, "AutoHatch") then "Purple" else "Gray")
+		local hasAuto = Formulas.HasPass(data, "AutoHatch")
+		UI.SetButtonIcon(autoButton, if hasAuto then nil else "Lock")
+		UI.SetButtonColor(autoButton, if hasAuto then "Storm" else "Off")
 	end
 
 	local function rebuild(eggId: string)
@@ -127,7 +210,7 @@ function EggPanel.Build()
 			return
 		end
 		currentEgg = eggId
-		window.Title.Text = "🥚  " .. egg.Name
+		window.SetTitle(egg.Name)
 		for _, child in grid:GetChildren() do
 			if child:IsA("Frame") then
 				child:Destroy()
@@ -138,23 +221,49 @@ function EggPanel.Build()
 		for index, entry in egg.Pets do
 			local def = Pets.Pets[entry.Id]
 			local rarity = Pets.Rarities[def.Rarity]
-			local card = UI.Card({
+			local column = frame({
 				Name = entry.Id,
+				BackgroundTransparency = 1,
+				Size = UDim2.fromOffset(TILE_WIDTH, COLUMN_HEIGHT),
 				LayoutOrder = index,
-				StrokeColor = rarity.Color,
-				StrokeThickness = 3,
-				StrokeTransparency = 0,
 				Parent = grid,
 			})
-			Viewport.Pet(entry.Id, false, {
-				Size = UDim2.new(1, -8, 0, 118),
-				Position = UDim2.fromOffset(4, 4),
-				Parent = card,
+			local tile = UI.Tile({
+				Name = "Tile",
+				Title = def.Name,
+				Rarity = rarity,
+				RarityText = rarity.Name,
+				Size = UDim2.fromOffset(TILE_WIDTH, TILE_HEIGHT),
+				Parent = column,
 			})
-			UI.Label({ Text = def.Name, Size = UDim2.new(1, -8, 0, 24), Position = UDim2.fromOffset(4, 124), MaxTextSize = 18, ZIndex = 3, Parent = card })
-			UI.Label({ Text = rarity.Name, TextColor3 = rarity.Color, Size = UDim2.new(1, -8, 0, 20), Position = UDim2.fromOffset(4, 150), MaxTextSize = 16, ZIndex = 3, Parent = card })
-			local chance = UI.Label({ Text = "", TextColor3 = COLORS.Volts, Size = UDim2.new(1, -8, 0, 26), Position = UDim2.fromOffset(4, 174), MaxTextSize = 22, ZIndex = 3, Parent = card })
-			UI.Label({ Text = Format.Bonus(def.Bonus) .. " Energy", TextColor3 = COLORS.Energy, Size = UDim2.new(1, -8, 0, 20), Position = UDim2.fromOffset(4, 206), MaxTextSize = 15, ZIndex = 3, Parent = card })
+			Viewport.Pet(entry.Id, false, {
+				Parent = tile.Art,
+				Size = UDim2.fromScale(1.1, 1.1),
+				Position = UDim2.fromScale(0.5, 0.52),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				ZIndex = tile.Frame.ZIndex + 3,
+			})
+			-- Chance pill and the pet's bonus under the tile
+			local pill = frame({
+				Name = "ChancePill",
+				BackgroundColor3 = Theme.Cloud,
+				Size = UDim2.new(1, -4, 0, 30),
+				Position = UDim2.fromOffset(2, TILE_HEIGHT + 8),
+				Parent = column,
+				UI.Round(),
+				UI.Stroke(2, Theme.Haze),
+			})
+			local chance = UI.Text({ Name = "Chance", Text = "", TextSize = 20, Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, 1), Parent = pill })
+			UI.Text({
+				Name = "Bonus",
+				Text = Format.Bonus(def.Bonus) .. " Energy",
+				Font = Theme.BodyFont,
+				TextSize = 12,
+				Color = Theme.Up,
+				Size = UDim2.new(1, 0, 0, 14),
+				Position = UDim2.fromOffset(0, TILE_HEIGHT + 44),
+				Parent = column,
+			})
 			cards[entry.Id] = { Chance = chance }
 		end
 		refresh()
@@ -188,14 +297,42 @@ function EggPanel.Build()
 		end
 	end
 
+	-- Tip: crafting tiers
+	local tip = frame({
+		Name = "Tip",
+		BackgroundColor3 = SETS.Bolt.Tint,
+		Size = UDim2.new(1, -4, 0, 46),
+		Position = UDim2.fromOffset(2, 50 + COLUMN_HEIGHT + 10),
+		Parent = content,
+		UI.Corner(14),
+		UI.Stroke(2, SETS.Bolt.Tint2),
+	})
+	Icons.New("Star", { Name = "Icon", Size = UDim2.fromOffset(32, 32), Position = UDim2.new(0, 10, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = tip })
+	UI.Text({
+		Name = "Text",
+		Text = "Pets catch weather for you and multiply your energy! Craft 5 of a pet into a Golden one, and 5 Golden into a Rainbow one.",
+		Font = Theme.BodyFont,
+		TextSize = 13,
+		Scaled = true,
+		MinTextSize = 9,
+		Wrapped = true,
+		Color = Theme.InkSoft,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -62, 1, -8),
+		Position = UDim2.new(0, 50, 0.5, 0),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Parent = tip,
+	})
+
+	local buttonWidth = UDim2.new(1 / 3, -8, 0, 58)
 	hatchOne = UI.Button({
 		Name = "HatchOne",
 		Text = "Hatch x1",
-		Color = "Green",
-		Size = UDim2.new(1 / 3, -8, 0, 62),
+		Color = "Leaf",
+		TextSize = 24,
+		Size = buttonWidth,
 		Position = UDim2.fromScale(0, 1),
 		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 20,
 		Parent = content,
 		OnClick = function()
 			hatch(1)
@@ -204,11 +341,12 @@ function EggPanel.Build()
 	hatchThree = UI.Button({
 		Name = "HatchThree",
 		Text = "Hatch x3",
-		Color = "Blue",
-		Size = UDim2.new(1 / 3, -8, 0, 62),
+		Icon = "Lock",
+		Color = "Sky",
+		TextSize = 24,
+		Size = buttonWidth,
 		Position = UDim2.fromScale(0.5, 1),
 		AnchorPoint = Vector2.new(0.5, 1),
-		MaxTextSize = 20,
 		Parent = content,
 		OnClick = function()
 			local data = Registry.DataController.Data
@@ -222,11 +360,12 @@ function EggPanel.Build()
 	autoButton = UI.Button({
 		Name = "Auto",
 		Text = "Auto Hatch",
-		Color = "Purple",
-		Size = UDim2.new(1 / 3, -8, 0, 62),
+		Icon = "Lock",
+		Color = "Storm",
+		TextSize = 24,
+		Size = buttonWidth,
 		Position = UDim2.fromScale(1, 1),
 		AnchorPoint = Vector2.new(1, 1),
-		MaxTextSize = 20,
 		Parent = content,
 		OnClick = function()
 			local data = Registry.DataController.Data
@@ -241,19 +380,8 @@ function EggPanel.Build()
 			hatch(if Formulas.HasPass(data, "TripleHatch") then 3 else 1)
 		end,
 	})
-
-	UI.Label({
-		Name = "Tip",
-		Text = "Pets catch weather for you and multiply your energy! Craft 5 of a pet into a Golden one, and 5 Golden into a Rainbow one 🌈",
-		Font = Theme.BodyFont,
-		TextColor3 = COLORS.SubText,
-		Size = UDim2.new(1, 0, 0, 34),
-		Position = UDim2.new(0, 0, 1, -72),
-		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 15,
-		Stroke = 1.5,
-		Parent = content,
-	})
+	_, oneTagLabel = priceTag(hatchOne)
+	threeTag, threeTagLabel = priceTag(hatchThree)
 
 	Registry.DataController.ObserveMany({ "Volts", "Passes", "Boosts" }, refresh)
 

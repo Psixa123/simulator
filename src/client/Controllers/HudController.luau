@@ -17,7 +17,9 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(Shared.Config.GameConfig)
+local MapLayout = require(Shared.Config.MapLayout)
 local Monetization = require(Shared.Config.Monetization)
+local Pets = require(Shared.Config.Pets)
 local Formulas = require(Shared.Formulas)
 local Format = require(Shared.Util.Format)
 local Remotes = require(Shared.Remotes)
@@ -47,8 +49,10 @@ local STATS_HEIGHT = 30
 local OBJECTIVE_HEIGHT = 44
 local TIMERS_BOTTOM = 160 -- the right column ends this far above the bottom (clear of the phone jump button)
 
+-- Key = the panel it opens (InterfaceController.OpenPanel), also the key for Highlight / SetBadge
 local MENU = {
 	{ Key = "Pets", Icon = "Pets", Text = "Pets" },
+	{ Key = "Egg", Icon = "Eggs", Text = "Eggs" }, -- the nearest unlocked incubator's egg
 	{ Key = "Shop", Icon = "Shop", Text = "Shop" },
 	{ Key = "Upgrades", Icon = "Upgrades", Text = "Upgrades" },
 	{ Key = "Rewards", Icon = "Rewards", Text = "Rewards" },
@@ -226,6 +230,33 @@ local function placeMenu()
 	end
 end
 
+-- The egg of the closest incubator the player has unlocked (hatching still needs them next to it)
+local function nearestEgg(): string?
+	local data = Registry.DataController.Data
+	local character = player.Character
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	local best, bestDistance = nil, math.huge
+	for _, eggId in Pets.EggOrder do
+		local egg = Pets.Eggs[eggId]
+		if egg and (not data or egg.Zone <= (data.Zone or 1)) then
+			local distance = if rootPart then (rootPart.Position - MapLayout.EggStation(egg.Zone)).Magnitude else -egg.Zone
+			if distance < bestDistance then
+				best, bestDistance = eggId, distance
+			end
+		end
+	end
+	return best
+end
+
+local function openMenu(key: string)
+	local interface = Registry.InterfaceController
+	if key == "Egg" and not interface.IsOpen("Egg") then
+		interface.OpenPanel("Egg", nearestEgg())
+	else
+		interface.TogglePanel(key)
+	end
+end
+
 local function buildMenu()
 	menuFrame = UI.Create("Frame", {
 		Name = "Menu",
@@ -244,7 +275,7 @@ local function buildMenu()
 			LayoutOrder = index,
 			Parent = menuFrame,
 			OnClick = function()
-				Registry.InterfaceController.TogglePanel(item.Key)
+				openMenu(item.Key)
 			end,
 		})
 		-- Bolt glow behind the badge for the objective tracker (HudController.Highlight)

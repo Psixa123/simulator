@@ -9,7 +9,7 @@ assets/source/world/icons.json by tools/icons/import_icons.py. This script
      piece's crease angle) and writes a small GLB (build/icons/StormIcons.glb; three.js axes: Y up,
      the icon's front towards +Z),
   2. renders each icon with tools/icons/viewer.html in headless Chromium at 2x (1024 px) from its own
-     3/4 hero angle (VIEWS below): soft toon shading with a cool shadow tint, a glossy highlight and a
+     3/4 hero angle (ICONS below): soft toon shading with a cool shadow tint, a glossy highlight and a
      bright rim, plus a paint-id/depth pass,
   3. finishes the image in numpy: Ink (#233066) lines between parts (from the id/depth pass), a 7 px
      Ink outline around the silhouette, a soft Ink drop shadow inside the canvas, then 512 px RGBA:

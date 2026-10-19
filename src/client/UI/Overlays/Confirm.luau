@@ -74,7 +74,7 @@ function Confirm.Show(options)
 	UI.Button({
 		Name = "Cancel",
 		Text = "Cancel",
-		Color = "Gray",
+		Color = "Sky", -- grey is the "can't" look (docs/ui_components.png); cancelling is always possible
 		TextSize = 22,
 		Size = UDim2.new(0.5, -8, 0, 58),
 		Position = UDim2.fromScale(0, 1),

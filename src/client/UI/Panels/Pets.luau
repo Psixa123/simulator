@@ -1,5 +1,7 @@
 --!nonstrict
 -- Pets panel: inventory (equip, golden/rainbow crafting, delete) and the pet index.
+-- Sky Lab look: pets sit on rarity pedestals in white tiles (UI.Tile), the selected pet turns on a
+-- pedestal in the detail pane, and every action is a candy button.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -15,18 +17,24 @@ local PetModels = require(Shared.Models.PetModels)
 local Registry = require(script.Parent.Parent.Parent.Registry)
 local UI = require(script.Parent.Parent.UI)
 local Theme = require(script.Parent.Parent.Theme)
+local Icons = require(script.Parent.Parent.Icons)
 local Viewport = require(script.Parent.Parent.Viewport)
 local Confirm = require(script.Parent.Parent.Overlays.Confirm)
 
 local PetsPanel = {}
 
-local COLORS = Theme.Colors
-local RAINBOW_CARD = Color3.fromRGB(96, 66, 150)
+local INK = Theme.Ink
+local WHITE = Color3.new(1, 1, 1)
+local SETS = Theme.Sets
 local MAX_MULTI_DELETE = 100 -- the server refuses bigger "DeleteMany" requests
 
-local function rainbowGradient(parent: Instance): UIGradient
-	return UI.Create("UIGradient", { Name = "Rainbow", Color = PetModels.RainbowSequence, Parent = parent })
-end
+-- Layout (offset px in the window's content box, 640 x 486)
+local TOP_BAR = 46 -- tabs + summary
+local PAGE_Y = TOP_BAR + 12
+local GRID_WIDTH = 420
+local DETAIL_WIDTH = 208
+local TILE = UDim2.fromOffset(94, 116)
+local INDEX_TILE = UDim2.fromOffset(112, 140)
 
 local function petAction(action: string, argument: any?)
 	local result = Remotes.PetAction:InvokeServer(action, argument)
@@ -36,41 +44,162 @@ local function petAction(action: string, argument: any?)
 	return result
 end
 
+local function frame(props)
+	local object = Instance.new("Frame")
+	object.BorderSizePixel = 0
+	object.BackgroundColor3 = WHITE
+	for key, value in props do
+		if type(key) == "number" then
+			value.Parent = object
+		elseif key ~= "Parent" then
+			object[key] = value
+		end
+	end
+	object.Parent = props.Parent
+	return object
+end
+
+local function rainbowGradient(parent: Instance): UIGradient
+	return UI.Create("UIGradient", { Name = "Rainbow", Color = PetModels.RainbowSequence, Parent = parent })
+end
+
+-- A pill in a colour set (or rarity colours) with white text and a darker stroke
+local function chip(parent: Instance, name: string, order: number)
+	local holder = frame({
+		Name = name,
+		BackgroundColor3 = INK,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 24),
+		LayoutOrder = order,
+		ZIndex = 3,
+		Parent = parent,
+		UI.Round(),
+		UI.Padding(0, 10, 0, 10),
+	})
+	local fill = frame({ Name = "Fill", Size = UDim2.new(1, 16, 1, -4), Position = UDim2.new(0, -8, 0, 2), ZIndex = 3, Parent = holder, UI.Round() })
+	local gradient = UI.Gradient(WHITE, WHITE)
+	gradient.Parent = fill
+	local label = UI.Text({ Name = "Text", Text = "", TextSize = 14, Stroke = INK, StrokeThickness = 1.5, Size = UDim2.fromOffset(0, 24), Position = UDim2.fromOffset(0, 1), ZIndex = 4, Parent = holder })
+	label.AutomaticSize = Enum.AutomaticSize.X
+	local function set(text: string, top: Color3, bottom: Color3, edge: Color3)
+		label.Text = text
+		holder.BackgroundColor3 = edge
+		gradient.Color = ColorSequence.new(top, bottom)
+		label.TextStroke.Color = edge
+	end
+	return holder, set
+end
+
+-- Mini stat box (Mist, Haze outline): a small caption over a Fredoka value
+local function statBox(parent: Instance, name: string, caption: string, position: UDim2, size: UDim2)
+	local box = frame({
+		Name = name,
+		BackgroundColor3 = Theme.Mist,
+		Size = size,
+		Position = position,
+		ZIndex = 2,
+		Parent = parent,
+		UI.Corner(12),
+		UI.Stroke(2, Theme.Haze),
+	})
+	UI.Text({
+		Name = "Caption",
+		Text = caption,
+		Font = Theme.BodyFont,
+		TextSize = 10,
+		Color = Theme.InkSoft,
+		Size = UDim2.new(1, -6, 0, 12),
+		Position = UDim2.new(0.5, 0, 0, 4),
+		AnchorPoint = Vector2.new(0.5, 0),
+		ZIndex = 3,
+		Parent = box,
+	})
+	local value = UI.Text({
+		Name = "Value",
+		Text = "",
+		TextSize = 20,
+		Scaled = true,
+		Rich = true,
+		Size = UDim2.new(1, -8, 0, 22),
+		Position = UDim2.new(0.5, 0, 0, 18),
+		AnchorPoint = Vector2.new(0.5, 0),
+		ZIndex = 3,
+		Parent = box,
+	})
+	return box, value
+end
+
+-- A pale info box with an icon on the left and wrapped body text
+local function infoBox(parent: Instance, name: string, setName: string, icon: string, position: UDim2, size: UDim2)
+	local set = Theme.Set(setName)
+	local box = frame({
+		Name = name,
+		BackgroundColor3 = set.Tint,
+		Size = size,
+		Position = position,
+		ZIndex = 2,
+		Parent = parent,
+		UI.Corner(14),
+		UI.Stroke(2, set.Tint2),
+	})
+	Icons.New(icon, { Name = "Icon", Size = UDim2.fromOffset(34, 34), Position = UDim2.new(0, 8, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 3, Parent = box })
+	local label = UI.Text({
+		Name = "Text",
+		Text = "",
+		Font = Theme.BodyFont,
+		TextSize = 13,
+		Scaled = true,
+		MinTextSize = 9,
+		Wrapped = true,
+		Color = Theme.InkSoft,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -56, 1, -12),
+		Position = UDim2.new(0, 48, 0.5, 0),
+		AnchorPoint = Vector2.new(0, 0.5),
+		ZIndex = 3,
+		Parent = box,
+	})
+	return box, label
+end
+
 function PetsPanel.Build()
 	local window = UI.Window({
 		Name = "Pets",
 		Title = "Pets",
 		Icon = "🐾",
-		Color = "Pink",
-		Size = UDim2.fromOffset(850, 570),
+		Size = UDim2.fromOffset(680, 580),
+		Padding = { 20, 16, 18 },
 	})
 	local content = window.Content
 
-	local inventoryPage = UI.Create("Frame", {
+	local inventoryPage = frame({
 		Name = "Inventory",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 1, -52),
-		Position = UDim2.fromOffset(0, 52),
+		Size = UDim2.new(1, 0, 1, -PAGE_Y),
+		Position = UDim2.fromOffset(0, PAGE_Y),
 		Parent = content,
 	})
-	local indexPage = UI.Create("Frame", {
+	local indexPage = frame({
 		Name = "Index",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 1, -52),
-		Position = UDim2.fromOffset(0, 52),
+		Size = UDim2.new(1, 0, 1, -PAGE_Y),
+		Position = UDim2.fromOffset(0, PAGE_Y),
 		Visible = false,
 		Parent = content,
 	})
 
-	local summary = UI.Label({
+	-- "Equipped 4/4 • Storage 15/60 • x8 Energy" on the right of the tabs
+	local summary = UI.Text({
 		Name = "Summary",
 		Text = "",
-		TextColor3 = COLORS.SubText,
-		TextXAlignment = Enum.TextXAlignment.Right,
-		Size = UDim2.new(1, -330, 0, 24),
-		Position = UDim2.new(1, -4, 0, 9),
-		AnchorPoint = Vector2.new(1, 0),
-		MaxTextSize = 18,
+		Rich = true,
+		TextSize = 17,
+		Scaled = true,
+		Color = Theme.InkSoft,
+		X = Enum.TextXAlignment.Right,
+		Size = UDim2.new(1, -300, 0, 24),
+		Position = UDim2.new(1, -4, 0, TOP_BAR / 2 + 1),
+		AnchorPoint = Vector2.new(1, 0.5),
 		Parent = content,
 	})
 
@@ -79,143 +208,209 @@ function PetsPanel.Build()
 	---------------------------------------------------------------------
 	local grid = UI.Scroll({
 		Name = "Grid",
-		Size = UDim2.new(1, -264, 1, -56),
+		Size = UDim2.new(0, GRID_WIDTH, 1, -58),
 		Parent = inventoryPage,
-		UI.Grid(UDim2.fromOffset(98, 118), UDim2.fromOffset(8, 8)),
-		UI.Padding(4, 8, 8, 4),
+		UI.Grid(TILE, UDim2.fromOffset(8, 8)),
+		UI.Padding(10, 10, 8, 8), -- room for the lifted tile and the badges over its corners
 	})
 	grid.UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 
-	local emptyHint = UI.Label({
+	-- Empty inventory: a faded paw and a hint where the tiles would be
+	local emptyHint = frame({
 		Name = "Empty",
-		Text = "You don't have any pets yet!\nHatch an egg in any zone to get your first Stormling. Pets catch weather for you! 🌪️",
-		Font = Theme.BodyFont,
-		TextColor3 = COLORS.SubText,
-		Size = UDim2.new(1, -330, 0, 60),
-		Position = UDim2.new(0, 30, 0.4, 0),
-		MaxTextSize = 20,
-		Stroke = 1.5,
+		BackgroundTransparency = 1,
+		Size = UDim2.new(0, GRID_WIDTH - 40, 0, 200),
+		Position = UDim2.new(0, GRID_WIDTH / 2, 0.42, 0),
+		AnchorPoint = Vector2.new(0.5, 0.5),
 		Visible = false,
 		Parent = inventoryPage,
 	})
+	Icons.New("Pets", { Name = "Icon", Size = UDim2.fromOffset(84, 84), Position = UDim2.new(0.5, 0, 0, 42), Transparency = 0.35, Parent = emptyHint })
+	UI.Text({ Name = "Title", Text = "No pets yet!", TextSize = 26, Size = UDim2.new(1, 0, 0, 30), Position = UDim2.fromOffset(0, 94), Parent = emptyHint })
+	UI.Text({
+		Name = "Text",
+		Text = "Hatch an egg in any zone to get your first Stormling. Pets catch weather for you!",
+		Font = Theme.BodyFont,
+		TextSize = 15,
+		Wrapped = true,
+		Color = Theme.InkSoft,
+		Size = UDim2.new(1, 0, 0, 44),
+		Position = UDim2.fromOffset(0, 130),
+		Parent = emptyHint,
+	})
 
-	UI.Button({
+	-- Bottom row under the grid
+	local function rowButton(props)
+		props.Size = UDim2.fromOffset(props.Width, 46)
+		props.Position = UDim2.new(0, props.X, 1, 0)
+		props.AnchorPoint = Vector2.new(0, 1)
+		props.TextSize = 18
+		props.Parent = inventoryPage
+		return UI.Button(props)
+	end
+	rowButton({
 		Name = "EquipBest",
-		Text = "⭐ Equip Best",
-		Color = "Green",
-		Size = UDim2.fromOffset(180, 46),
-		Position = UDim2.new(0, 2, 1, 0),
-		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 20,
-		Parent = inventoryPage,
+		Text = "Equip Best",
+		Icon = "Star",
+		Color = "Leaf",
+		Width = 144,
+		X = 0,
 		OnClick = function()
 			petAction("EquipBest")
 		end,
 	})
-	UI.Button({
+	rowButton({
 		Name = "UnequipAll",
 		Text = "Unequip All",
-		Color = "Gray",
-		Size = UDim2.fromOffset(160, 46),
-		Position = UDim2.new(0, 192, 1, 0),
-		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 20,
-		Parent = inventoryPage,
+		Color = "Sky",
+		Width = 132,
+		X = 152,
 		OnClick = function()
 			petAction("UnequipAll")
 		end,
 	})
-	local multiButton = UI.Button({
-		Name = "DeleteMany",
-		Text = "🗑️ Delete Many",
-		Color = "Red",
-		Size = UDim2.fromOffset(180, 46),
-		Position = UDim2.new(0, 362, 1, 0),
-		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 20,
-		Parent = inventoryPage,
-	})
+	local multiButton = rowButton({ Name = "DeleteMany", Text = "Delete Many", Color = "Coral", Width = 128, X = GRID_WIDTH - 128 })
 
-	local detail = UI.Card({
+	-- Detail pane
+	local detail = UI.CloudCard({
 		Name = "Detail",
-		Size = UDim2.new(0, 252, 1, 0),
-		Position = UDim2.fromScale(1, 0),
+		Size = UDim2.new(0, DETAIL_WIDTH - 4, 1, -4),
+		Position = UDim2.new(1, -2, 0, 2),
 		AnchorPoint = Vector2.new(1, 0),
 		Parent = inventoryPage,
 	})
-	local viewHolder = UI.Create("Frame", {
+	local innerWidth = DETAIL_WIDTH - 4
+
+	-- Stage: a soft rarity-tinted backdrop with the pet turning on a pedestal
+	local stage = frame({
+		Name = "Stage",
+		Size = UDim2.new(1, -14, 0, 150),
+		Position = UDim2.fromOffset(7, 7),
+		ZIndex = 2,
+		Parent = detail,
+		UI.Corner(14),
+	})
+	local stageGradient = UI.Gradient(Theme.Mist, Theme.Haze)
+	stageGradient.Parent = stage
+	local pedestal = frame({
+		Name = "Pedestal",
+		Size = UDim2.fromOffset(132, 32),
+		Position = UDim2.new(0.5, 0, 1, -8),
+		AnchorPoint = Vector2.new(0.5, 1),
+		ZIndex = 3,
+		Parent = stage,
+		UI.Round(),
+	})
+	local pedestalFace = frame({ Name = "Face", Size = UDim2.new(1, -4, 1, -4), Position = UDim2.fromOffset(2, 2), ZIndex = 3, Parent = pedestal, UI.Round() })
+	local pedestalGradient = UI.Gradient(WHITE, WHITE)
+	pedestalGradient.Parent = pedestalFace
+	frame({ Name = "Gloss", BackgroundTransparency = 0.5, Size = UDim2.new(1, -30, 0, 9), Position = UDim2.fromOffset(15, 2), ZIndex = 3, Parent = pedestalFace, UI.Round() })
+	local viewHolder = frame({
 		Name = "View",
-		BackgroundColor3 = COLORS.Inset,
-		Size = UDim2.new(1, -20, 0, 148),
-		Position = UDim2.fromOffset(10, 10),
-		Parent = detail,
-		UI.Corner(12),
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(142, 142),
+		Position = UDim2.new(0.5, 0, 0, 8),
+		AnchorPoint = Vector2.new(0.5, 0),
+		ZIndex = 4,
+		Parent = stage,
 	})
-	local nameLabel = UI.Label({ Name = "PetName", Text = "", Size = UDim2.new(1, -16, 0, 30), Position = UDim2.fromOffset(8, 164), MaxTextSize = 24, Parent = detail })
-	local nameGradient = rainbowGradient(nameLabel)
-	local rarityLabel = UI.Label({ Name = "Rarity", Text = "", Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 194), MaxTextSize = 18, Parent = detail })
-	local bonusLabel = UI.Label({ Name = "Bonus", Text = "", TextColor3 = COLORS.Energy, Size = UDim2.new(1, -16, 0, 24), Position = UDim2.fromOffset(8, 218), MaxTextSize = 20, Parent = detail })
-	local catchLabel = UI.Label({
-		Name = "Catch",
+	local placeholder = Icons.New("Pets", { Name = "Placeholder", Size = UDim2.fromOffset(70, 70), Position = UDim2.new(0.5, 0, 0, 62), Transparency = 0.45, ZIndex = 4, Parent = stage })
+
+	local nameLabel = UI.Text({
+		Name = "PetName",
 		Text = "",
-		Font = Theme.BodyFont,
-		TextColor3 = COLORS.Power,
-		Size = UDim2.new(1, -16, 0, 22),
-		Position = UDim2.fromOffset(8, 244),
-		MaxTextSize = 15,
-		Stroke = 1.5,
+		TextSize = 22,
+		Scaled = true,
+		MinTextSize = 12,
+		Size = UDim2.new(1, -16, 0, 26),
+		Position = UDim2.fromOffset(8, 163),
+		ZIndex = 3,
 		Parent = detail,
 	})
-	local selectHint = UI.Label({
+	local nameStroke = UI.TextStroke(2, INK)
+	nameStroke.Parent = nameLabel
+	local nameGradient = rainbowGradient(nameLabel)
+
+	local chips = frame({
+		Name = "Chips",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, -12, 0, 24),
+		Position = UDim2.fromOffset(6, 192),
+		ZIndex = 3,
+		Parent = detail,
+		UI.List(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
+	})
+	local _, setRarityChip = chip(chips, "Rarity", 1)
+	local tierChip, setTierChip = chip(chips, "Tier", 2)
+
+	local half = math.floor((innerWidth - 14 - 6) / 2)
+	local bonusBox, bonusValue = statBox(detail, "Bonus", "ENERGY", UDim2.fromOffset(7, 224), UDim2.fromOffset(half, 46))
+	local catchBox, catchValue = statBox(detail, "Catch", "AUTO-CATCH", UDim2.fromOffset(7 + half + 6, 224), UDim2.fromOffset(half, 46))
+
+	local selectHint = UI.Text({
 		Name = "SelectHint",
 		Text = "Select a pet to see its details",
-		Font = Theme.BodyFont,
-		TextColor3 = COLORS.SubText,
-		Size = UDim2.new(1, -30, 0, 50),
-		Position = UDim2.new(0, 15, 0, 200),
-		MaxTextSize = 18,
-		Stroke = 1.5,
+		TextSize = 19,
+		Wrapped = true,
+		Size = UDim2.new(1, -24, 0, 50),
+		Position = UDim2.fromOffset(12, 196),
+		ZIndex = 3,
 		Parent = detail,
 	})
-	local catchTip = UI.Label({
-		Name = "CatchTip",
-		Text = "",
-		Font = Theme.BodyFont,
-		TextColor3 = COLORS.Power,
-		Size = UDim2.new(1, -30, 0, 60),
-		Position = UDim2.new(0, 15, 0, 262),
-		MaxTextSize = 17,
-		Stroke = 1.5,
-		Parent = detail,
-	})
+	local catchTipBox, catchTip = infoBox(detail, "CatchTip", "Sky", "MegaStorm", UDim2.new(0, 9, 1, -9), UDim2.new(1, -18, 0, 84))
+	catchTipBox.AnchorPoint = Vector2.new(0, 1)
 
 	-- Multi-delete mode: tap several unequipped pets, then delete them with one confirm
-	local multiPanel = UI.Create("Frame", {
+	local multiPanel = frame({
 		Name = "Multi",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
+		ZIndex = 2,
 		Parent = detail,
 	})
-	UI.Label({ Name = "Title", Text = "🗑️ Delete Many", Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 14), MaxTextSize = 24, Parent = multiPanel })
-	UI.Label({
+	UI.Text({ Name = "Title", Text = "Delete Many", TextSize = 24, Size = UDim2.new(1, -16, 0, 28), Position = UDim2.fromOffset(8, 12), ZIndex = 3, Parent = multiPanel })
+	UI.Text({
 		Name = "Help",
-		Text = "Tap the pets you want to delete.\nEquipped and exclusive pets are kept safe.",
+		Text = "Tap the pets you want to delete. Equipped and exclusive pets are kept safe.",
 		Font = Theme.BodyFont,
-		TextColor3 = COLORS.SubText,
-		Size = UDim2.new(1, -24, 0, 64),
-		Position = UDim2.fromOffset(12, 52),
-		MaxTextSize = 17,
-		Stroke = 1.5,
+		TextSize = 13,
+		Wrapped = true,
+		Color = Theme.InkSoft,
+		Size = UDim2.new(1, -24, 0, 54),
+		Position = UDim2.fromOffset(12, 44),
+		ZIndex = 3,
 		Parent = multiPanel,
 	})
-	local multiCount = UI.Label({ Name = "Count", Text = "", TextColor3 = COLORS.Volts, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 124), MaxTextSize = 24, Parent = multiPanel })
+	local countBox = frame({
+		Name = "CountBox",
+		BackgroundColor3 = SETS.Coral.Tint,
+		Size = UDim2.new(1, -18, 0, 58),
+		Position = UDim2.fromOffset(9, 104),
+		ZIndex = 3,
+		Parent = multiPanel,
+		UI.Corner(14),
+		UI.Stroke(2, SETS.Coral.Tint2),
+	})
+	local multiCount = UI.Text({ Name = "Count", Text = "0", TextSize = 30, Color = SETS.Coral.Lip, Size = UDim2.new(1, 0, 0, 30), Position = UDim2.fromOffset(0, 5), ZIndex = 4, Parent = countBox })
+	local multiCaption = UI.Text({
+		Name = "Caption",
+		Text = "pets selected",
+		Font = Theme.BodyFont,
+		TextSize = 12,
+		Color = SETS.Coral.Stroke,
+		Size = UDim2.new(1, 0, 0, 14),
+		Position = UDim2.fromOffset(0, 36),
+		ZIndex = 4,
+		Parent = countBox,
+	})
 
 	local slots = {} -- [uid] = slot
 	local selectedUid: string? = nil
 	local detailView = nil
 	local detailKey = nil
 	local equipButton, goldenButton, rainbowButton, deleteButton
+	local topTier
 	local multiMode = false
 	local marked = {} -- [uid] = true, pets picked for deletion
 	local markedCount = 0
@@ -258,41 +453,61 @@ function PetsPanel.Build()
 		return nil
 	end
 
+	-- Tile outline / cover for the slot's state (selected, picked for deletion, rainbow shimmer)
+	local function paintSlot(slot, selected: boolean, isMarked: boolean)
+		slot.Tile.SetSelected(selected or isMarked)
+		local outline = slot.Tile.Outline
+		if isMarked then
+			outline.Color = SETS.Coral.Bottom
+		elseif slot.Shimmer and not selected then
+			outline.Color = WHITE
+			outline.Thickness = 3
+		end
+		if slot.Shimmer then
+			slot.Shimmer.Enabled = not selected and not isMarked
+		end
+		slot.Mark.Visible = isMarked
+	end
+
 	local function refreshDetail()
 		local pet = if multiMode then nil else findPet(selectedUid)
 		local hasPet = pet ~= nil
 		local tier = if pet then Pets.TierOf(pet) else "Normal"
 		nameLabel.Visible = hasPet
-		rarityLabel.Visible = hasPet
-		bonusLabel.Visible = hasPet
-		catchLabel.Visible = hasPet
+		chips.Visible = hasPet
+		bonusBox.Visible = hasPet
+		catchBox.Visible = hasPet
 		equipButton.Visible = hasPet
 		goldenButton.Visible = hasPet and tier == "Normal"
 		rainbowButton.Visible = hasPet and tier == "Golden"
+		if topTier then
+			topTier.Visible = hasPet and tier == "Rainbow"
+		end
 		deleteButton.Visible = hasPet
 		selectHint.Visible = not hasPet and not multiMode
-		catchTip.Visible = not hasPet and not multiMode
-		viewHolder.Visible = not multiMode
+		catchTipBox.Visible = not hasPet and not multiMode
+		stage.Visible = not multiMode
+		placeholder.Visible = not hasPet
+		pedestal.Visible = hasPet
 		multiPanel.Visible = multiMode
 
 		markedCount = 0
 		for uid, slot in slots do
-			local selected = not multiMode and uid == selectedUid
 			local isMarked = multiMode and marked[uid] == true
 			if isMarked then
 				markedCount += 1
 			end
-			slot.Stroke.Thickness = if selected or isMarked then 5 else 3
-			slot.Stroke.Color = if isMarked then COLORS.Danger elseif selected then Color3.new(1, 1, 1) else slot.RarityColor
-			slot.Mark.Visible = isMarked
+			paintSlot(slot, not multiMode and uid == selectedUid, isMarked)
 		end
 		if multiMode then
-			multiCount.Text = markedCount .. (if markedCount == 1 then " pet" else " pets") .. " selected"
-			UI.SetButtonText(multiDeleteButton, "🗑️ Delete " .. markedCount)
-			UI.SetButtonColor(multiDeleteButton, if markedCount > 0 then "Red" else "Gray")
+			multiCount.Text = tostring(markedCount)
+			multiCaption.Text = if markedCount == 1 then "pet selected" else "pets selected"
+			UI.SetButtonText(multiDeleteButton, "Delete " .. markedCount)
+			UI.SetButtonColor(multiDeleteButton, if markedCount > 0 then "Coral" else "Off")
 		end
 
 		if not pet then
+			stageGradient.Color = ColorSequence.new(Theme.Mist, Theme.Haze)
 			if detailView then
 				detailView.Destroy()
 				detailView = nil
@@ -303,35 +518,61 @@ function PetsPanel.Build()
 
 		local def = Pets.Pets[pet.Id]
 		local rarity = Pets.Rarities[def.Rarity]
+		local colors = Theme.Rarity(rarity.Color)
 		local key = pet.Id .. ":" .. tier
 		if key ~= detailKey then
 			if detailView then
 				detailView.Destroy()
 			end
-			detailView = Viewport.Pet(pet.Id, tier, { Parent = viewHolder, Zoom = 1.2 })
+			detailView = Viewport.Pet(pet.Id, tier, { Parent = viewHolder, Zoom = 1.2, ZIndex = 4 })
 			detailKey = key
 		end
 
+		-- Stage and pedestal in the pet's rarity colours
+		stageGradient.Color = ColorSequence.new(colors.Top:Lerp(WHITE, 0.75), colors.Top:Lerp(WHITE, 0.35))
+		pedestal.BackgroundColor3 = colors.Edge
+		pedestalGradient.Color = ColorSequence.new(colors.Top, colors.Bottom)
+
 		nameLabel.Text = Pets.DisplayName(pet.Id, tier)
-		nameLabel.TextColor3 = if tier == "Golden" then COLORS.Volts elseif tier == "Rainbow" then Color3.new(1, 1, 1) else COLORS.Text
 		nameGradient.Enabled = tier == "Rainbow"
-		rarityLabel.Text = rarity.Name
-		rarityLabel.TextColor3 = rarity.Color
-		bonusLabel.Text = Format.Bonus(Formulas.PetBonus(pet.Id, tier)) .. " Energy"
-		catchLabel.Text = "🌪️ Auto-catches with " .. Format.Chance(Formulas.PetCatchShare(tier)) .. " of your Power"
+		if tier == "Golden" then
+			nameLabel.TextColor3 = SETS.Bolt.Top
+			nameStroke.Color = SETS.Bolt.Stroke
+			nameStroke.Enabled = true
+		elseif tier == "Rainbow" then
+			nameLabel.TextColor3 = WHITE
+			nameStroke.Color = INK
+			nameStroke.Enabled = true
+		else
+			nameLabel.TextColor3 = INK
+			nameStroke.Enabled = false
+		end
+		setRarityChip(rarity.Name, colors.Top, colors.Bottom, colors.Edge)
+		tierChip.Visible = tier ~= "Normal"
+		if tier == "Golden" then
+			setTierChip("Golden", SETS.Bolt.Top, SETS.Bolt.Bottom, SETS.Bolt.Stroke)
+		elseif tier == "Rainbow" then
+			setTierChip("Rainbow", SETS.Pink.Top, SETS.Storm.Bottom, SETS.Storm.Stroke)
+		end
+		bonusValue.Text = Format.Bonus(Formulas.PetBonus(pet.Id, tier))
+		bonusValue.TextColor3 = Theme.Up
+		catchValue.Text = Format.Chance(Formulas.PetCatchShare(tier)) .. ' <font face="GothamBold" size="11" color="#5B6A9E">Power</font>'
 
 		UI.SetButtonText(equipButton, if pet.Equipped then "Unequip" else "Equip")
-		UI.SetButtonColor(equipButton, if pet.Equipped then "Gray" else "Green")
+		UI.SetButtonColor(equipButton, if pet.Equipped then "Off" else "Leaf")
+		UI.SetButtonIcon(equipButton, if pet.Equipped then nil else "Check")
 
 		local copies = countCopies(pet.Id, "Normal")
 		local required = GameConfig.Pets.GoldenRequirement
-		UI.SetButtonText(goldenButton, string.format("⭐ Make Golden (%d/%d)", math.min(copies, required), required))
-		UI.SetButtonColor(goldenButton, if copies >= required then "Yellow" else "Gray")
+		UI.SetButtonText(goldenButton, string.format("Golden %d/%d", math.min(copies, required), required))
+		UI.SetButtonColor(goldenButton, if copies >= required then "Bolt" else "Off")
+		UI.SetButtonIcon(goldenButton, if copies >= required then "Star" else "Lock")
 
 		local goldenCopies = countCopies(pet.Id, "Golden")
 		local rainbowRequired = GameConfig.Pets.RainbowRequirement
-		UI.SetButtonText(rainbowButton, string.format("🌈 Make Rainbow (%d/%d)", math.min(goldenCopies, rainbowRequired), rainbowRequired))
-		UI.SetButtonColor(rainbowButton, if goldenCopies >= rainbowRequired then "Pink" else "Gray")
+		UI.SetButtonText(rainbowButton, string.format("Rainbow %d/%d", math.min(goldenCopies, rainbowRequired), rainbowRequired))
+		UI.SetButtonColor(rainbowButton, if goldenCopies >= rainbowRequired then "Pink" else "Off")
+		UI.SetButtonIcon(rainbowButton, if goldenCopies >= rainbowRequired then "Rainbow" else "Lock")
 	end
 
 	local function select(uid: string?)
@@ -342,8 +583,8 @@ function PetsPanel.Build()
 	local function setMultiMode(enabled: boolean)
 		multiMode = enabled
 		table.clear(marked)
-		UI.SetButtonText(multiButton, if enabled then "✕ Cancel" else "🗑️ Delete Many")
-		UI.SetButtonColor(multiButton, if enabled then "Gray" else "Red")
+		UI.SetButtonText(multiButton, if enabled then "Cancel" else "Delete Many")
+		UI.SetButtonColor(multiButton, if enabled then "Off" else "Coral")
 		refreshDetail()
 	end
 
@@ -376,11 +617,12 @@ function PetsPanel.Build()
 
 	UI.Button({
 		Name = "PickCommons",
-		Text = "Pick Commons & Uncommons",
-		Color = "Blue",
-		Size = UDim2.new(1, -20, 0, 44),
-		Position = UDim2.fromOffset(10, 166),
-		MaxTextSize = 17,
+		Text = "Pick Commons\n& Uncommons",
+		Color = "Sky",
+		TextSize = 17,
+		Size = UDim2.new(1, -18, 0, 54),
+		Position = UDim2.fromOffset(9, 172),
+		ZIndex = 3,
 		Parent = multiPanel,
 		OnClick = function()
 			local data = Registry.DataController.Data
@@ -405,10 +647,11 @@ function PetsPanel.Build()
 	UI.Button({
 		Name = "Clear",
 		Text = "Clear Selection",
-		Color = "Gray",
-		Size = UDim2.new(1, -20, 0, 40),
-		Position = UDim2.fromOffset(10, 218),
-		MaxTextSize = 17,
+		Color = "Off",
+		TextSize = 17,
+		Size = UDim2.new(1, -18, 0, 42),
+		Position = UDim2.fromOffset(9, 234),
+		ZIndex = 3,
 		Parent = multiPanel,
 		OnClick = function()
 			table.clear(marked)
@@ -417,12 +660,13 @@ function PetsPanel.Build()
 	})
 	multiDeleteButton = UI.Button({
 		Name = "DeleteSelected",
-		Text = "🗑️ Delete 0",
-		Color = "Gray",
-		Size = UDim2.new(1, -20, 0, 48),
-		Position = UDim2.new(0, 10, 1, -10),
+		Text = "Delete 0",
+		Color = "Off",
+		TextSize = 22,
+		Size = UDim2.new(1, -18, 0, 50),
+		Position = UDim2.new(0, 9, 1, -9),
 		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 22,
+		ZIndex = 3,
 		Parent = multiPanel,
 		OnClick = function()
 			local uids = {}
@@ -453,10 +697,12 @@ function PetsPanel.Build()
 	equipButton = UI.Button({
 		Name = "Equip",
 		Text = "Equip",
-		Color = "Green",
-		Size = UDim2.new(1, -20, 0, 46),
-		Position = UDim2.fromOffset(10, 272),
-		MaxTextSize = 22,
+		Icon = "Check", -- hidden while it says "Unequip"
+		Color = "Leaf",
+		TextSize = 22,
+		Size = UDim2.new(1, -14, 0, 48),
+		Position = UDim2.fromOffset(7, 278),
+		ZIndex = 3,
 		Parent = detail,
 		OnClick = function()
 			local pet = findPet(selectedUid)
@@ -499,11 +745,13 @@ function PetsPanel.Build()
 
 	goldenButton = UI.Button({
 		Name = "Golden",
-		Text = "⭐ Make Golden",
-		Color = "Yellow",
-		Size = UDim2.new(1, -20, 0, 46),
-		Position = UDim2.fromOffset(10, 324),
-		MaxTextSize = 18,
+		Text = "Golden",
+		Icon = "Star",
+		Color = "Bolt",
+		TextSize = 18,
+		Size = UDim2.new(1, -14, 0, 44),
+		Position = UDim2.fromOffset(7, 332),
+		ZIndex = 3,
 		Parent = detail,
 		OnClick = function()
 			craft("Golden")
@@ -511,23 +759,56 @@ function PetsPanel.Build()
 	})
 	rainbowButton = UI.Button({
 		Name = "Rainbow",
-		Text = "🌈 Make Rainbow",
+		Text = "Rainbow",
+		Icon = "Rainbow",
 		Color = "Pink",
-		Size = UDim2.new(1, -20, 0, 46),
-		Position = UDim2.fromOffset(10, 324),
-		MaxTextSize = 18,
+		TextSize = 18,
+		Size = UDim2.new(1, -14, 0, 44),
+		Position = UDim2.fromOffset(7, 332),
+		ZIndex = 3,
 		Parent = detail,
 		OnClick = function()
 			craft("Rainbow")
 		end,
 	})
+	-- Rainbow is the top tier: a note where the craft button would be
+	topTier = frame({
+		Name = "TopTier",
+		BackgroundColor3 = SETS.Pink.Tint,
+		Size = UDim2.new(1, -14, 0, 44),
+		Position = UDim2.fromOffset(7, 332),
+		Visible = false,
+		ZIndex = 3,
+		Parent = detail,
+		UI.Corner(14),
+		UI.Stroke(2, SETS.Pink.Tint2),
+	})
+	Icons.New("Rainbow", { Name = "Icon", Size = UDim2.fromOffset(34, 34), Position = UDim2.new(0, 8, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), ZIndex = 4, Parent = topTier })
+	UI.Text({
+		Name = "Text",
+		Text = "Top tier reached!",
+		TextSize = 16,
+		Scaled = true,
+		MinTextSize = 10,
+		Color = SETS.Pink.Lip,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -56, 1, -8),
+		Position = UDim2.new(0, 48, 0.5, 1),
+		AnchorPoint = Vector2.new(0, 0.5),
+		ZIndex = 4,
+		Parent = topTier,
+	})
+
 	deleteButton = UI.Button({
 		Name = "Delete",
-		Text = "🗑️ Delete",
-		Color = "Red",
-		Size = UDim2.new(1, -20, 0, 40),
-		Position = UDim2.fromOffset(10, 376),
-		MaxTextSize = 18,
+		Text = "Delete",
+		Color = "Coral",
+		Small = true,
+		TextSize = 17,
+		Size = UDim2.new(1, -14, 0, 36),
+		Position = UDim2.new(0, 7, 1, -8),
+		AnchorPoint = Vector2.new(0, 1),
+		ZIndex = 3,
 		Parent = detail,
 		OnClick = function()
 			local pet = findPet(selectedUid)
@@ -550,77 +831,72 @@ function PetsPanel.Build()
 		local def = Pets.Pets[pet.Id] or Pets.Pets.Puffling
 		local rarity = Pets.Rarities[def.Rarity]
 		local tier = Pets.TierOf(pet)
-		local rainbow = tier == "Rainbow"
-		local button = UI.Create("TextButton", {
+		local tile = UI.Tile({
 			Name = pet.Uid,
-			AutoButtonColor = false,
-			Text = "",
-			BackgroundColor3 = Color3.new(1, 1, 1),
+			Title = def.Name,
+			Rarity = rarity,
+			RarityText = Format.Bonus(Formulas.PetBonus(pet.Id, tier)),
 			Parent = grid,
-			UI.Corner(14),
-			UI.Gradient(if rainbow then RAINBOW_CARD else COLORS.Card, COLORS.CardDark, 90),
+			OnClick = function()
+				if multiMode then
+					toggleMark(pet.Uid)
+				else
+					select(pet.Uid)
+				end
+			end,
 		})
-		-- Rainbow cards get a shimmering rainbow outline (the stroke color tints the gradient)
-		local strokeColor = if rainbow then Color3.new(1, 1, 1) else rarity.Color
-		local stroke = UI.Stroke(3, strokeColor)
-		stroke.Parent = button
-		local shimmer = if rainbow then rainbowGradient(stroke) else nil
-
+		local z = tile.Frame.ZIndex
+		-- a little bigger than the art box, so the pet fills the tile and stands on the pedestal
 		Viewport.Pet(pet.Id, tier, {
-			Size = UDim2.new(1, -8, 1, -30),
-			Position = UDim2.fromOffset(4, 2),
-			Parent = button,
+			Parent = tile.Art,
+			Size = UDim2.fromScale(1.22, 1.22),
+			Position = UDim2.fromScale(0.5, 0.56),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			ZIndex = z + 3,
 		})
-		UI.Label({
-			Name = "Bonus",
-			Text = Format.Bonus(Formulas.PetBonus(pet.Id, tier)),
-			TextColor3 = COLORS.Energy,
-			Size = UDim2.new(1, -8, 0, 22),
-			Position = UDim2.new(0, 4, 1, -4),
-			AnchorPoint = Vector2.new(0, 1),
-			MaxTextSize = 17,
-			ZIndex = 3,
-			Parent = button,
-		})
-		local equipped = UI.Create("Frame", {
-			Name = "Equipped",
-			BackgroundColor3 = COLORS.Success,
-			Size = UDim2.fromOffset(26, 26),
-			Position = UDim2.fromOffset(4, 4),
-			Visible = pet.Equipped,
-			ZIndex = 3,
-			Parent = button,
-			UI.Round(),
-			UI.Stroke(2.5),
-		})
-		UI.Label({ Text = "✓", Size = UDim2.fromScale(0.72, 0.72), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 4, Parent = equipped })
-		if tier ~= "Normal" then
-			UI.Label({ Name = tier, Text = Pets.Tiers[tier].Icon, Stroke = false, Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -4, 0, 4), AnchorPoint = Vector2.new(1, 0), ZIndex = 3, Parent = button })
+
+		-- Golden pets get a warm tile, rainbow ones a pastel tile with a shimmering rainbow outline
+		local shimmer = nil
+		if tier == "Golden" then
+			UI.Gradient(SETS.Bolt.Tint, SETS.Bolt.Tint2).Parent = tile.Body
+		elseif tier == "Rainbow" then
+			UI.Gradient(SETS.Storm.Tint, SETS.Pink.Tint2).Parent = tile.Body
+			shimmer = rainbowGradient(tile.Outline)
 		end
-		-- Red cover while the pet is picked for multi-delete
-		local mark = UI.Create("Frame", {
-			Name = "Mark",
-			BackgroundColor3 = COLORS.Danger,
-			BackgroundTransparency = 0.45,
-			Size = UDim2.fromScale(1, 1),
-			Visible = false,
-			ZIndex = 5,
-			Parent = button,
-			UI.Corner(14),
+		if tier ~= "Normal" then
+			Icons.New(if tier == "Golden" then "Star" else "Rainbow", {
+				Name = tier,
+				Size = UDim2.fromOffset(26, 26),
+				Position = UDim2.new(1, 5, 0, -6),
+				AnchorPoint = Vector2.new(1, 0),
+				ZIndex = z + 6,
+				Parent = tile.Lift,
+			})
+		end
+		local equipped = Icons.New("Check", {
+			Name = "Equipped",
+			Size = UDim2.fromOffset(28, 28),
+			Position = UDim2.fromOffset(-7, -7),
+			AnchorPoint = Vector2.zero,
+			Visible = pet.Equipped,
+			ZIndex = z + 6,
+			Parent = tile.Lift,
 		})
-		UI.Label({ Text = "🗑️", Stroke = false, Size = UDim2.fromScale(0.45, 0.45), Position = UDim2.fromScale(0.5, 0.45), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 6, Parent = mark })
+		-- Coral cover while the pet is picked for multi-delete
+		local mark = frame({
+			Name = "Mark",
+			BackgroundColor3 = SETS.Coral.Top,
+			BackgroundTransparency = 0.45,
+			Size = UDim2.new(1, -4, 1, -4),
+			Position = UDim2.fromOffset(2, 2),
+			Visible = false,
+			ZIndex = z + 7,
+			Parent = tile.Lift,
+			UI.Corner(16),
+		})
+		Icons.New("Close", { Name = "Icon", Size = UDim2.fromOffset(40, 40), Position = UDim2.fromScale(0.5, 0.45), ZIndex = z + 8, Parent = mark })
 
-		UI.Bounce(button, 1.04)
-		button.Activated:Connect(function()
-			Registry.SoundController.Play("Click")
-			if multiMode then
-				toggleMark(pet.Uid)
-			else
-				select(pet.Uid)
-			end
-		end)
-
-		return { Button = button, Stroke = stroke, RarityColor = strokeColor, Equipped = equipped, Shimmer = shimmer, Mark = mark }
+		return { Button = tile.Frame, Tile = tile, Equipped = equipped, Shimmer = shimmer, Mark = mark }
 	end
 
 	local function refreshInventory()
@@ -670,89 +946,82 @@ function PetsPanel.Build()
 		end
 
 		emptyHint.Visible = #sorted == 0
-		summary.Text = string.format(
-			"Equipped %d/%d   •   Storage %d/%d   •   %s Energy",
-			Formulas.EquippedCount(data),
-			Formulas.EquipSlots(data),
-			#data.Pets,
-			GameConfig.Pets.MaxStorage,
-			Format.Multiplier(Formulas.PetMultiplier(data))
-		)
+		local function part(label: string, value: string)
+			return label .. ' <font color="#233066">' .. value .. "</font>"
+		end
+		summary.Text = table.concat({
+			part("Equipped", Formulas.EquippedCount(data) .. "/" .. Formulas.EquipSlots(data)),
+			part("Storage", #data.Pets .. "/" .. GameConfig.Pets.MaxStorage),
+			part("Energy", Format.Multiplier(Formulas.PetMultiplier(data))),
+		}, "  •  ")
 		local catchShare = Formulas.PetCatchPower(data) / math.max(1, Formulas.Power(data))
 		catchTip.Text = if catchShare > 0
-			then "🌪️ Your equipped pets catch weather for you with +" .. Format.Chance(catchShare) .. " Power!"
-			else "🌪️ Equip pets and they'll catch weather for you!"
+			then "Your equipped pets catch weather for you with +" .. Format.Chance(catchShare) .. " Power!"
+			else "Equip pets and they'll catch weather for you!"
 		refreshDetail()
 	end
 
 	---------------------------------------------------------------------
 	-- Index
 	---------------------------------------------------------------------
-	local indexCount = UI.Label({
+	local indexCount = UI.ProgressBar({
 		Name = "Count",
-		Text = "",
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Size = UDim2.new(1, -10, 0, 24),
-		Position = UDim2.fromOffset(6, 0),
-		MaxTextSize = 20,
+		Color = "Sky",
+		Size = UDim2.new(1, -8, 0, 32),
+		Position = UDim2.fromOffset(4, 0),
+		MaxTextSize = 18,
 		Parent = indexPage,
 	})
 	local indexGrid = UI.Scroll({
 		Name = "Grid",
-		Size = UDim2.new(1, 0, 1, -30),
-		Position = UDim2.fromOffset(0, 30),
+		Size = UDim2.new(1, 0, 1, -42),
+		Position = UDim2.fromOffset(0, 42),
 		Parent = indexPage,
-		UI.Grid(UDim2.fromOffset(124, 150), UDim2.fromOffset(10, 10)),
-		UI.Padding(4, 8, 8, 4),
+		UI.Grid(INDEX_TILE, UDim2.fromOffset(10, 10)),
+		UI.Padding(10, 10, 8, 4),
 	})
 	local indexSlots = {} -- [petId] = { Frame, Discovered }
+
+	-- Tapping a pet in the index says where it comes from
+	local function describe(petId: string, discovered: boolean)
+		local def = Pets.Pets[petId]
+		local rarity = Pets.Rarities[def.Rarity]
+		local source = def.Source or (def.Egg and Pets.Eggs[def.Egg] and ("Hatch it from the " .. Pets.Eggs[def.Egg].Name)) or ""
+		local name = if discovered then def.Name else "???"
+		local parts = { name, rarity.Name }
+		if discovered then
+			table.insert(parts, Format.Bonus(def.Bonus) .. " Energy")
+		end
+		if source ~= "" then
+			table.insert(parts, source)
+		end
+		Registry.InterfaceController.Notify(table.concat(parts, "  •  "), "Info")
+	end
 
 	local function buildIndexSlot(petId: string, order: number, discovered: boolean)
 		local def = Pets.Pets[petId]
 		local rarity = Pets.Rarities[def.Rarity]
-		local card = UI.Card({
+		local tile = UI.Tile({
 			Name = petId,
+			Title = if discovered then def.Name else "???",
+			Rarity = rarity,
+			RarityText = rarity.Name,
 			LayoutOrder = order,
-			StrokeColor = if discovered then rarity.Color else COLORS.Stroke,
-			StrokeThickness = 3,
-			StrokeTransparency = 0,
 			Parent = indexGrid,
+			OnClick = function()
+				describe(petId, discovered)
+			end,
 		})
 		Viewport.Pet(petId, false, {
-			Size = UDim2.new(1, -8, 0, 88),
-			Position = UDim2.fromOffset(4, 2),
+			Parent = tile.Art,
 			Silhouette = not discovered,
-			Parent = card,
+			ZIndex = tile.Frame.ZIndex + 3,
 		})
-		UI.Label({
-			Text = if discovered then def.Name else "???",
-			Size = UDim2.new(1, -8, 0, 20),
-			Position = UDim2.fromOffset(4, 90),
-			MaxTextSize = 16,
-			ZIndex = 3,
-			Parent = card,
-		})
-		UI.Label({
-			Text = rarity.Name,
-			TextColor3 = rarity.Color,
-			Size = UDim2.new(1, -8, 0, 17),
-			Position = UDim2.fromOffset(4, 110),
-			MaxTextSize = 14,
-			ZIndex = 3,
-			Parent = card,
-		})
-		UI.Label({
-			Text = if discovered then Format.Bonus(def.Bonus) else (def.Source or (def.Egg and Pets.Eggs[def.Egg].Name) or ""),
-			Font = if discovered then Theme.Font else Theme.BodyFont,
-			TextColor3 = if discovered then COLORS.Energy else COLORS.Muted,
-			Size = UDim2.new(1, -8, 0, 16),
-			Position = UDim2.fromOffset(4, 128),
-			MaxTextSize = 13,
-			Stroke = 1.5,
-			ZIndex = 3,
-			Parent = card,
-		})
-		return card
+		if not discovered then
+			tile.Body.BackgroundColor3 = Theme.Mist
+			tile.Title.TextColor3 = Theme.InkSoft
+		end
+		return tile.Frame
 	end
 
 	local function refreshIndex()
@@ -774,16 +1043,19 @@ function PetsPanel.Build()
 				indexSlots[petId] = { Frame = buildIndexSlot(petId, order, discovered), Discovered = discovered }
 			end
 		end
-		indexCount.Text = string.format("📖 Discovered %d / %d Stormlings", discoveredCount, #Pets.IndexOrder)
+		indexCount.Set(
+			discoveredCount / math.max(1, #Pets.IndexOrder),
+			string.format("Discovered %d / %d Stormlings", discoveredCount, #Pets.IndexOrder)
+		)
 	end
 
 	local tabs = UI.Tabs({
 		Tabs = {
-			{ Key = "Inventory", Text = "🎒 Inventory" },
-			{ Key = "Index", Text = "📖 Index" },
+			{ Key = "Inventory", Text = "Inventory" },
+			{ Key = "Index", Text = "Index" },
 		},
-		Color = "Pink",
-		TabWidth = 150,
+		TabWidth = 136,
+		Size = UDim2.new(0, 0, 0, TOP_BAR),
 		Parent = content,
 		OnSelect = function(key)
 			inventoryPage.Visible = key == "Inventory"

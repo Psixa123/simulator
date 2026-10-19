@@ -204,14 +204,17 @@ local function showAlert(typeId: string, zoneId: number)
 		AnchorPoint = Vector2.new(0, 0.5),
 		Parent = card,
 	})
-	UI.Label({
+	-- Ink text on the light card (STYLE_GUIDE: no stroke on light surfaces), "Rare" in Storm purple
+	UI.Text({
 		Name = "Title",
-		Text = "✨ Rare " .. def.Name .. "!",
-		TextColor3 = RARE_COLOR,
-		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = '<font color="#' .. Theme.Sets.Storm.Bottom:ToHex() .. '">Rare</font> ' .. def.Name .. "!",
+		Rich = true,
+		TextSize = 20,
+		Scaled = true,
+		MinTextSize = 10,
+		X = Enum.TextXAlignment.Left,
 		Size = UDim2.new(1, textWidth, 0, 24),
-		Position = UDim2.fromOffset(70, 10),
-		MaxTextSize = 20,
+		Position = UDim2.fromOffset(70, 11),
 		Parent = card,
 	})
 	UI.Label({
@@ -229,8 +232,9 @@ local function showAlert(typeId: string, zoneId: number)
 	if not here then
 		UI.Button({
 			Name = "Teleport",
-			Text = "🌀 TELEPORT",
-			Color = "Teal",
+			Text = "GO",
+			Icon = "Teleport",
+			Color = "Sky",
 			Size = UDim2.fromOffset(120, 46),
 			Position = UDim2.new(1, -10, 0.5, 0),
 			AnchorPoint = Vector2.new(1, 0.5),

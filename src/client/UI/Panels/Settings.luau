@@ -1,5 +1,6 @@
 --!nonstrict
 -- Settings panel: music, sound effects, other players' pets, performance mode, auto catch.
+-- Sky Lab look: one white row per setting with its icon in a tinted well and a toggle.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -11,59 +12,82 @@ local Remotes = require(Shared.Remotes)
 local Registry = require(script.Parent.Parent.Parent.Registry)
 local UI = require(script.Parent.Parent.UI)
 local Theme = require(script.Parent.Parent.Theme)
+local Icons = require(script.Parent.Parent.Icons)
 
 local Settings = {}
+
+-- Per setting: the well's colour set and the 3D icon (Icons.luau key, else the setting's emoji)
+local STYLE = {
+	Music = { Set = "Storm" },
+	Sfx = { Set = "Sky" },
+	OtherPets = { Set = "Pink", Icon = "Pets" },
+	LowGraphics = { Set = "Rain", Icon = "Settings" },
+	AutoCatch = { Set = "Leaf", Icon = "Power" },
+}
 
 function Settings.Build()
 	local window = UI.Window({
 		Name = "Settings",
 		Title = "Settings",
 		Icon = "⚙️",
-		Color = "Dark",
-		Size = UDim2.fromOffset(580, 520),
+		Size = UDim2.fromOffset(580, 504),
+		Padding = { 20, 16, 18 },
 	})
 
 	local list = UI.Create("Frame", {
 		Name = "List",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 1, -28),
+		Size = UDim2.new(1, 0, 1, -26),
 		Parent = window.Content,
 		UI.List(Enum.FillDirection.Vertical, 8),
 	})
 
 	local toggles = {}
+	local locks = {}
 	for index, info in GameConfig.SettingsInfo do
-		local card = UI.Card({
+		local style = STYLE[info.Key] or { Set = "Sky" }
+		local set = Theme.Set(style.Set)
+		local row = UI.Create("Frame", {
 			Name = info.Key,
-			Size = UDim2.new(1, -6, 0, 68),
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 70),
 			LayoutOrder = index,
 			Parent = list,
 		})
-		UI.Icon({
-			Text = info.Icon,
-			Color = Color3.fromRGB(120, 150, 230),
-			Size = UDim2.fromOffset(48, 48),
-			Position = UDim2.new(0, 10, 0.5, 0),
+		local card = UI.CloudCard({ Name = "Card", Size = UDim2.new(1, -4, 1, -4), Position = UDim2.fromOffset(2, 2), Parent = row })
+		local well = UI.Create("Frame", {
+			Name = "Well",
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			Size = UDim2.fromOffset(52, 52),
+			Position = UDim2.new(0, 7, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
 			Parent = card,
+			UI.Corner(14),
+			UI.Gradient(set.Tint, set.Tint2),
 		})
-		UI.Label({
+		Icons.New(style.Icon or info.Icon, { Name = "Icon", Size = UDim2.fromOffset(42, 42), Parent = well })
+		UI.Text({
+			Name = "Title",
 			Text = info.Name,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Size = UDim2.new(1, -190, 0, 26),
-			Position = UDim2.fromOffset(70, 10),
-			MaxTextSize = 22,
+			TextSize = 21,
+			Scaled = true,
+			MinTextSize = 12,
+			X = Enum.TextXAlignment.Left,
+			Size = UDim2.new(1, -180, 0, 24),
+			Position = UDim2.fromOffset(72, 9),
 			Parent = card,
 		})
-		UI.Label({
+		UI.Text({
+			Name = "Description",
 			Text = info.Description,
 			Font = Theme.BodyFont,
-			TextColor3 = Theme.Colors.SubText,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Size = UDim2.new(1, -190, 0, 22),
-			Position = UDim2.fromOffset(70, 37),
-			MaxTextSize = 17,
-			Stroke = 1.5,
+			TextSize = 13,
+			Scaled = true,
+			MinTextSize = 9,
+			Color = Theme.InkSoft,
+			X = Enum.TextXAlignment.Left,
+			Size = UDim2.new(1, -180, 0, 18),
+			Position = UDim2.fromOffset(72, 36),
 			Parent = card,
 		})
 		toggles[info.Key] = UI.Toggle({
@@ -81,18 +105,28 @@ function Settings.Build()
 				Remotes.SetSetting:InvokeServer(info.Key, value)
 			end,
 		})
+		if info.Key == "AutoCatch" then
+			-- A padlock next to the toggle while the gamepass isn't owned
+			locks[info.Key] = Icons.New("Lock", {
+				Name = "Lock",
+				Size = UDim2.fromOffset(28, 28),
+				Position = UDim2.new(1, -110, 0.5, 0),
+				AnchorPoint = Vector2.new(1, 0.5),
+				Visible = false,
+				Parent = card,
+			})
+		end
 	end
 
-	UI.Label({
+	UI.Text({
 		Name = "Version",
 		Text = GameConfig.GameName .. "  •  v" .. GameConfig.Version,
 		Font = Theme.BodyFont,
-		TextColor3 = Theme.Colors.Muted,
-		Size = UDim2.new(1, 0, 0, 18),
+		TextSize = 12,
+		Color = Theme.InkSoft,
+		Size = UDim2.new(1, 0, 0, 16),
 		Position = UDim2.fromScale(0, 1),
 		AnchorPoint = Vector2.new(0, 1),
-		MaxTextSize = 14,
-		Stroke = false,
 		Parent = window.Content,
 	})
 
@@ -107,6 +141,9 @@ function Settings.Build()
 				value = false
 			end
 			toggle.Set(value)
+		end
+		for key, lock in locks do
+			lock.Visible = key == "AutoCatch" and not Formulas.HasPass(data, "AutoCatch")
 		end
 	end
 

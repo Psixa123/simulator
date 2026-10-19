@@ -217,7 +217,7 @@ function InterfaceController.OpenPanel(name: string, ...)
 	window.Scale.Scale = panel.Fit * 0.8
 	UI.Tween(window.Scale, 0.3, { Scale = panel.Fit }, Enum.EasingStyle.Back)
 	dim.Visible = true
-	UI.Tween(dim, 0.2, { BackgroundTransparency = 0.7 }) -- light: the HUD stays readable (docs/ui_mockup.png)
+	UI.Tween(dim, 0.2, { BackgroundTransparency = 0.8 }) -- a light veil: the world stays bright (docs/ui_mockup.png)
 
 	if panel.OnOpen then
 		task.spawn(panel.OnOpen, ...)

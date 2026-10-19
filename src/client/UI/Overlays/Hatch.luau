@@ -22,6 +22,12 @@ local Viewport = require(script.Parent.Parent.Viewport)
 
 local Hatch = {}
 
+-- Slot layout in Overlay units (the stage, the name, the rarity pill and the bonus)
+local SLOT_WIDTH = 290
+local SLOT_HEIGHT = 410
+local SLOT_GAP = 20
+local TITLE_HEIGHT = 60 -- the egg's name above the slots
+
 local playing = false
 
 local function buildSlot(row: Frame, index: number, entry, eggId: string?)
@@ -32,7 +38,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?)
 	local slot = UI.Create("Frame", {
 		Name = "Slot" .. index,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(290, 410),
+		Size = UDim2.fromOffset(SLOT_WIDTH, SLOT_HEIGHT),
 		LayoutOrder = index,
 		ZIndex = 31,
 		Parent = row,
@@ -327,15 +333,38 @@ function Hatch.Play(result, options)
 		end
 	end)
 
-	-- Centred in the space below the Roblox top bar so the title never slides under it on phones
-	local shift = Registry.InterfaceController.SafeTop / 2
+	-- The title and the slots are centred in the space below the Roblox top bar, scaled down to fit
+	-- the screen: side by side, or in a column on portrait phones when that shows them bigger
+	local safeTop = Registry.InterfaceController.SafeTop
+	local overlayScale = Registry.InterfaceController.OverlayScale
+	local screenWidth, screenHeight = 1280, 720
+	if root.AbsoluteSize.X > 0 and root.AbsoluteSize.Y > 0 then
+		screenWidth, screenHeight = root.AbsoluteSize.X / overlayScale, root.AbsoluteSize.Y / overlayScale
+	end
+	local availableHeight = screenHeight - safeTop
+	local count = math.max(#results, 1)
+	local function fit(columns: number, rows: number)
+		local width = columns * SLOT_WIDTH + (columns - 1) * SLOT_GAP
+		local height = rows * SLOT_HEIGHT + (rows - 1) * SLOT_GAP
+		return math.min(1, (screenWidth - 24) / width, (availableHeight - TITLE_HEIGHT - 24) / height), width, height
+	end
+	local k, rowWidth, rowHeight = fit(count, 1)
+	local vertical = false
+	local kColumn, columnWidth, columnHeight = fit(1, count)
+	if count > 1 and kColumn > k + 0.05 then
+		vertical = true
+		k, rowWidth, rowHeight = kColumn, columnWidth, columnHeight
+	end
+	local groupHeight = TITLE_HEIGHT + rowHeight * k
+	local groupTop = safeTop + math.max((availableHeight - groupHeight) / 2 - 8, 0)
+
 	local title = options.Title or (eggId and Pets.Eggs[eggId] and Pets.Eggs[eggId].Name) or ""
 	UI.Label({
 		Name = "Title",
 		Text = title,
 		TextColor3 = Theme.Sets.Bolt.Top,
-		Size = UDim2.fromOffset(700, 54),
-		Position = UDim2.new(0.5, 0, 0.5, -226 + shift),
+		Size = UDim2.fromOffset(math.min(700, screenWidth - 24), 54),
+		Position = UDim2.new(0.5, 0, 0, groupTop + 27),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Stroke = 4,
 		ZIndex = 34,
@@ -345,13 +374,23 @@ function Hatch.Play(result, options)
 	local row = UI.Create("Frame", {
 		Name = "Row",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(#results * 310, 410),
-		Position = UDim2.new(0.5, 0, 0.5, 10 + shift),
+		Size = UDim2.fromOffset(rowWidth, rowHeight),
+		Position = UDim2.new(0.5, 0, 0, groupTop + TITLE_HEIGHT + rowHeight * k / 2),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		ZIndex = 31,
 		Parent = backdrop,
-		UI.List(Enum.FillDirection.Horizontal, 20, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
+		UI.List(
+			if vertical then Enum.FillDirection.Vertical else Enum.FillDirection.Horizontal,
+			SLOT_GAP,
+			Enum.HorizontalAlignment.Center,
+			Enum.VerticalAlignment.Center
+		),
 	})
+	if k < 0.999 then
+		local rowScale = Instance.new("UIScale")
+		rowScale.Scale = k
+		rowScale.Parent = row
+	end
 
 	local slots = {}
 	local bestOrder = 1
