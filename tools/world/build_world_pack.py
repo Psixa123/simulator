@@ -62,6 +62,9 @@ ROOT_SIZE = 1.0
 PAINT_RE = re.compile(r"^(Primary|Secondary|Tertiary|(Color|Neon|Glass)_[0-9A-F]{6})$")
 TINTS = ("Primary", "Secondary", "Tertiary")
 GLASS_ALPHA = 0.45
+# Props whose origin is not the centre of their base (tools/world/PROPS.md): the base check is skipped
+# and the previews frame the whole prop without a ground (viewer.html pivot=1)
+PIVOT_PROPS = {"WindmillBlades"}  # origin at the hub centre: MapService spins the blades about it
 
 sys.path.insert(0, str(HERE))
 
@@ -308,7 +311,7 @@ def build_prop(prop_id, prop):
     size = hi - lo
     if (size < 0.3).any() or (size > 150).any():
         problems.append(f"size {np.round(size, 2).tolist()} studs is not sane (0.3 .. 150 per axis)")
-    if not -1.5 <= lo[1] <= 0.5:
+    if prop_id not in PIVOT_PROPS and not -1.5 <= lo[1] <= 0.5:
         problems.append(f"base at y={lo[1]:.2f}: the origin must be at the centre of the prop's base")
     centre = (lo + hi) / 2
     if math.hypot(centre[0], centre[2]) > 0.35 * max(size[0], size[2]) + 0.5:
@@ -563,6 +566,7 @@ def render_all(jobs, glb_path, workers=4):
         prop_id, target, view, size = job
         target.parent.mkdir(parents=True, exist_ok=True)
         url = f"http://127.0.0.1:{port}/tools/world/viewer.html?prop={prop_id}&view={view}&size={size}&glb={glb_url}"
+        url += "&pivot=1" if prop_id in PIVOT_PROPS else ""
         command = [browser, "--headless=new", "--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
                    "--hide-scrollbars", "--force-device-scale-factor=1", "--default-background-color=00000000",
                    "--virtual-time-budget=20000", f"--window-size={size},{size}", f"--screenshot={target}", url]
