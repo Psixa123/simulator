@@ -6,6 +6,7 @@ official Open Cloud API. Claude can run them from a cloud session, and you can r
 | Script | What it does |
 |--------|--------------|
 | `upload_pets.py` | Uploads `assets/models/StormlingPets.glb` as a Model on your account (or group), waits for Roblox to approve it and writes its id into `GameConfig.PetMeshAssetId`. When a server starts, `PetMeshService` inserts that model into `ReplicatedStorage.PetMeshes`, so every pet uses its mesh model. Run it again after changing the pets (it uploads a new model). |
+| `upload_icons.py` | Uploads the 3D UI icons (`assets/ui/icons3d/<Key>.png`) as Image assets and writes each id into `src/client/UI/Icons.luau`. Icons still at `Id = 0` are uploaded; `--force` re-uploads, `--only Volts,Pets` limits it. The game shows each icon's emoji until its id is set and Roblox has approved the image. |
 | `upload_model.py` | The same upload for any model file and `GameConfig` key, e.g. the world prop pack (see [World props and other models](#world-props-and-other-models)). `upload_pets.py` is this script with the pet pack filled in. |
 | `publish_place.py` | Builds the place with Rojo and publishes it to your game (or only saves a version with `--saved`). |
 

@@ -13,34 +13,34 @@
 -- picture: require(Client.UI.Icons).Volts.Image = "assets/ui/Volts.png".
 
 local Icons = {
-	Volts = { Id = 0, Emoji = "⚡" }, -- volt coin
-	Energy = { Id = 0, Emoji = "💧" }, -- raindrop
-	Pets = { Id = 0, Emoji = "🐾" }, -- paw
-	Eggs = { Id = 0, Emoji = "🥚" }, -- spotted egg
-	Shop = { Id = 0, Emoji = "🛍️" }, -- shopping bag
-	Upgrades = { Id = 0, Emoji = "⬆️" }, -- green arrow
-	Rewards = { Id = 0, Emoji = "🎁" }, -- gift box
-	Teleport = { Id = 0, Emoji = "📍" }, -- map with pin
-	ClimateShift = { Id = 0, Emoji = "🌀" }, -- swirl orb
-	Settings = { Id = 0, Emoji = "⚙️" }, -- gear
-	Index = { Id = 0, Emoji = "📖" }, -- book
-	Radar = { Id = 0, Emoji = "📡" }, -- radar dish
-	Lock = { Id = 0, Emoji = "🔒" }, -- padlock
-	Check = { Id = 0, Emoji = "✅" }, -- check mark
-	Star = { Id = 0, Emoji = "⭐" }, -- star
-	Rainbow = { Id = 0, Emoji = "🌈" }, -- rainbow
-	Luck = { Id = 0, Emoji = "🍀" }, -- clover
-	Tank = { Id = 0, Emoji = "🛢️" }, -- storm jar
-	Power = { Id = 0, Emoji = "💨" }, -- vacuum
-	Range = { Id = 0, Emoji = "🎯" }, -- target
-	Speed = { Id = 0, Emoji = "👟" }, -- winged boot
-	Codes = { Id = 0, Emoji = "🎟️" }, -- ticket
-	Daily = { Id = 0, Emoji = "📅" }, -- calendar
-	MegaStorm = { Id = 0, Emoji = "🌪️" }, -- thundercloud / twister
-	Sell = { Id = 0, Emoji = "💰" }, -- coin bag
-	Gift = { Id = 0, Emoji = "🎁" }, -- small gift
-	Boost = { Id = 0, Emoji = "🚀" }, -- rocket
-	Close = { Id = 0, Emoji = "✖️" }, -- cross
+	Volts = { Id = 124885999776457, Emoji = "⚡" }, -- volt coin
+	Energy = { Id = 93164191801686, Emoji = "💧" }, -- raindrop
+	Pets = { Id = 108195676300187, Emoji = "🐾" }, -- paw
+	Eggs = { Id = 76752882488209, Emoji = "🥚" }, -- spotted egg
+	Shop = { Id = 140528433367615, Emoji = "🛍️" }, -- shopping bag
+	Upgrades = { Id = 107463561239039, Emoji = "⬆️" }, -- green arrow
+	Rewards = { Id = 121830471915641, Emoji = "🎁" }, -- gift box
+	Teleport = { Id = 81050004043307, Emoji = "📍" }, -- map with pin
+	ClimateShift = { Id = 119245140810178, Emoji = "🌀" }, -- swirl orb
+	Settings = { Id = 91818865654166, Emoji = "⚙️" }, -- gear
+	Index = { Id = 87920753461445, Emoji = "📖" }, -- book
+	Radar = { Id = 99222235630116, Emoji = "📡" }, -- radar dish
+	Lock = { Id = 119190543918004, Emoji = "🔒" }, -- padlock
+	Check = { Id = 104893568367190, Emoji = "✅" }, -- check mark
+	Star = { Id = 87166089920157, Emoji = "⭐" }, -- star
+	Rainbow = { Id = 129501797577068, Emoji = "🌈" }, -- rainbow
+	Luck = { Id = 130879040393802, Emoji = "🍀" }, -- clover
+	Tank = { Id = 111774116838157, Emoji = "🛢️" }, -- storm jar
+	Power = { Id = 120941314241479, Emoji = "💨" }, -- vacuum
+	Range = { Id = 71229855299748, Emoji = "🎯" }, -- target
+	Speed = { Id = 101080847056668, Emoji = "👟" }, -- winged boot
+	Codes = { Id = 99495361265124, Emoji = "🎟️" }, -- ticket
+	Daily = { Id = 84002661292585, Emoji = "📅" }, -- calendar
+	MegaStorm = { Id = 79806772234669, Emoji = "🌪️" }, -- thundercloud / twister
+	Sell = { Id = 121516565619665, Emoji = "💰" }, -- coin bag
+	Gift = { Id = 126027840891767, Emoji = "🎁" }, -- small gift
+	Boost = { Id = 75840590772147, Emoji = "🚀" }, -- rocket
+	Close = { Id = 87698644308982, Emoji = "✖️" }, -- cross
 }
 
 -- Other names that mean the same icon (panel and menu keys, config names)
