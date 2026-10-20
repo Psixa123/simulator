@@ -2702,3 +2702,118 @@ Ks 0.25 0.25 0.25
 Ns 60
 d 0.00
 illum 2
+newmtl AuroraGryphon.Root
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl AuroraGryphon.Body
+Kd 0.2902 0.3843 0.8392
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Accent
+Kd 0.3765 0.9647 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Eye
+Kd 0.1098 0.1020 0.1490
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Shine
+Kd 1.0000 1.0000 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 1.0000 1.0000 1.0000
+newmtl AuroraGryphon.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl AuroraGryphon.Color_F8FAFF
+Kd 0.9725 0.9804 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Color_FFD23C
+Kd 1.0000 0.8235 0.2353
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Accent@Wag
+Kd 0.3765 0.9647 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Accent@WingL
+Kd 0.3765 0.9647 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Accent@WingR
+Kd 0.3765 0.9647 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Neon_B27CFF@WingL
+Kd 0.6980 0.4863 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 0.6980 0.4863 1.0000
+newmtl AuroraGryphon.Neon_B27CFF@WingR
+Kd 0.6980 0.4863 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+Ke 0.6980 0.4863 1.0000
+newmtl AuroraGryphon.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl AuroraGryphon.Pivot@WingL
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
+newmtl AuroraGryphon.Pivot@WingR
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2

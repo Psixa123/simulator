@@ -160,6 +160,50 @@ end
 table.clear(pendingNotifications)
 
 ---------------------------------------------------------------------------
+-- Admin panel (owner only). Built once the server marks this player as an admin ("IsAdmin", set by
+-- AdminService); everyone else never gets the panel, the HUD button or the chat command. The server
+-- checks every admin command again, so this only decides whether the interface exists.
+---------------------------------------------------------------------------
+local localPlayer = Players.LocalPlayer
+local adminReady = false
+
+local function toggleAdmin()
+	Interface.TogglePanel("Admin")
+end
+
+local function enableAdmin()
+	if adminReady or localPlayer:GetAttribute("IsAdmin") ~= true then
+		return
+	end
+	adminReady = true
+	Interface.RegisterPanel("Admin", require(Panels:WaitForChild("Admin")).Build())
+	Registry.HudController.ShowAdminButton(toggleAdmin)
+
+	-- "/admin" in the chat opens it too (a chat problem must never take the panel down with it)
+	local ok, err = pcall(function()
+		if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+			local command = Instance.new("TextChatCommand")
+			command.Name = "AdminPanelCommand"
+			command.PrimaryAlias = "/admin"
+			command.Triggered:Connect(toggleAdmin)
+			command.Parent = TextChatService
+		else
+			localPlayer.Chatted:Connect(function(message)
+				if string.lower(string.match(message, "^%s*(.-)%s*$") or "") == "/admin" then
+					toggleAdmin()
+				end
+			end)
+		end
+	end)
+	if not ok then
+		warn("[Admin] Couldn't add the /admin chat command: " .. tostring(err))
+	end
+end
+
+localPlayer:GetAttributeChangedSignal("IsAdmin"):Connect(enableAdmin)
+enableAdmin()
+
+---------------------------------------------------------------------------
 -- VIP chat tag
 ---------------------------------------------------------------------------
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then

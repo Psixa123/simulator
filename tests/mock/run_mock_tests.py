@@ -1,5 +1,5 @@
-"""Runs the Luau mock tests for the pet mesh pack, the server's pack loaders, WorldProps and the map outside
-Roblox.
+"""Runs the Luau mock tests for the pet mesh pack, the server's pack loaders, WorldProps, the admin commands
+(AdminService) and the map outside Roblox.
 
 Bundles tests/mock/RobloxMock.luau, the game modules under test and the spec into one script and runs
 it with the `luau` command line (https://github.com/luau-lang/luau/releases). Set LUAU=path/to/luau if
@@ -28,9 +28,17 @@ MODULES = {
     "PetMeshService": "src/server/Services/PetMeshService.luau",
     "WorldProps": "src/server/Services/WorldProps.luau",
     "WorldPropsData": "src/shared/Config/WorldPropsData.luau",  # generated; optional
+    # Admin.spec.luau: AdminService with the real configs and formulas
+    "AdminService": "src/server/Services/AdminService.luau",
+    "GameConfig": "src/shared/Config/GameConfig.luau",
+    "Monetization": "src/shared/Config/Monetization.luau",
+    "Zones": "src/shared/Config/Zones.luau",
+    "Weather": "src/shared/Config/Weather.luau",
+    "Formulas": "src/shared/Formulas.luau",
+    "Format": "src/shared/Util/Format.luau",
 }
 OPTIONAL = {"WorldPropsData"}
-SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau", "WorldProps.spec.luau"]
+SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau", "WorldProps.spec.luau", "Admin.spec.luau"]
 MAP_SPEC = "MapContracts.luau"
 
 

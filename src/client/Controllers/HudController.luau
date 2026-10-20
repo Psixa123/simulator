@@ -31,6 +31,7 @@ local Icons = require(script.Parent.Parent.UI.Icons)
 
 local HudController = {}
 HudController.MenuButtons = {}
+HudController.AdminButton = nil :: TextButton? -- only for admins (ShowAdminButton)
 
 local INK = Theme.Ink
 local SETS = Theme.Sets
@@ -1108,6 +1109,29 @@ local function placeAll()
 	placeMenu()
 	placeBottom()
 	placeTimers()
+end
+
+-- Owner-only: a small Storm "Admin" button to the right of the currency capsules. Main.client.luau calls
+-- this only once the server has marked the player as an admin, so nobody else ever gets one.
+function HudController.ShowAdminButton(onClick: () -> ())
+	if HudController.AdminButton then
+		return HudController.AdminButton
+	end
+	local row = topStack:FindFirstChild("Currencies")
+	HudController.AdminButton = UI.Button({
+		Name = "Admin",
+		Text = "Admin",
+		Icon = "🛠️",
+		Color = "Storm",
+		Small = true,
+		TextSize = 16,
+		Size = UDim2.fromOffset(104, 40),
+		Position = UDim2.new(1, 8, 0, 22),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Parent = row or topStack,
+		OnClick = onClick,
+	})
+	return HudController.AdminButton
 end
 
 function HudController.Init()

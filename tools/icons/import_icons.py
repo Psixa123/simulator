@@ -13,10 +13,16 @@ raw SketchUp polygons in assets/source/world/icons.json. tools/icons/render_icon
         icons of the same key; --replace rewrites the file with only the extraction)
     python3 tools/icons/import_icons.py check
         sandbox safety of sketchup_icons.py, a dry run of it, and that assets/source/world/icons.json
-        holds every icon in render_icons.ICONS
+        holds every icon in render_icons.ICONS (and the same for the zone emblems)
 
-icons.json uses the world source layout (tools/world/import_sketchup.py) with its own format tag
-"storm-icons-source/1", so the world prop pack (tools/world/build_world_pack.py) skips it.
+--set zones works on the zone emblems instead (tools/icons/sketchup_zone_emblems.py, built on top of the
+icon helpers in chunks 1-2 of sketchup_icons.py, kept in assets/source/world/zone_emblems.json):
+
+    python3 tools/icons/import_icons.py --set zones offline   -> build/icons/zones/offline/icons.json
+    python3 tools/icons/import_icons.py --set zones import zones.txt --replace
+
+icons.json and zone_emblems.json use the world source layout (tools/world/import_sketchup.py) with their
+own format tag "storm-icons-source/1", so the world prop pack (tools/world/build_world_pack.py) skips them.
 """
 
 import argparse
@@ -32,6 +38,14 @@ SOURCE = ROOT / "assets" / "source" / "world" / "icons.json"
 OFFLINE = ROOT / "build" / "icons" / "offline" / "icons.json"
 FORMAT = "storm-icons-source/1"
 CATEGORY = "icons"
+# The icon sets: their SketchUp script, the helper chunks of other scripts sent before it (after lib.py),
+# their source file and the default output of an offline dry run.
+SETS = {
+    "icons": {"script": SCRIPT, "helpers": [], "source": SOURCE, "offline": OFFLINE},
+    "zones": {"script": HERE / "sketchup_zone_emblems.py", "helpers": [(SCRIPT, 2)],
+              "source": ROOT / "assets" / "source" / "world" / "zone_emblems.json",
+              "offline": ROOT / "build" / "icons" / "zones" / "offline" / "icons.json"},
+}
 
 sys.path.insert(0, str(WORLD))
 sys.path.insert(0, str(HERE))
@@ -133,26 +147,30 @@ def face_problems(props):
     return out
 
 
-def dry_run():
-    """lib.py + sketchup_icons.py + extract.py in one offline SketchUp stand-in session."""
+def dry_run(name="icons"):
+    """lib.py + the set's helper chunks + its script + extract.py in one offline SketchUp stand-in session."""
+    spec = SETS[name]
     session = offline_sketchup.Session()
     session.run_file(WORLD / "sketchup" / "lib.py")
+    for path, count in spec["helpers"]:
+        for n, chunk in enumerate(offline_sketchup.chunks(path)[:count], 1):
+            session.call(chunk, f"{Path(path).name}#{n}")
     reports = []
-    for res in session.run_file(SCRIPT):
+    for res in session.run_file(spec["script"]):
         reports.extend((res or {}).get("built", []))
     extraction = session.call((WORLD / "sketchup" / "extract.py").read_text(encoding="utf-8"), "extract.py")
     return reports, extraction
 
 
 def cmd_offline(args):
-    reports, extraction = dry_run()
+    reports, extraction = dry_run(args.set)
     for r in reports:
         warn = ("  ! " + "; ".join(r["warnings"])) if r["warnings"] else ""
         print(f"  {r['id']:<13} {r['pieces']:>3} pieces {r['tris']:>5} tris  size {r['size']}{warn}")
     props = to_source(extraction)
     for problem in face_problems(props):
         print(f"  ! {problem}")
-    write_source(props, args.out)
+    write_source(props, args.out or SETS[args.set]["offline"])
 
 
 def cmd_import(args):
@@ -160,22 +178,25 @@ def cmd_import(args):
     props = to_source(extraction)
     if not props:
         sys.exit("the extraction holds no icons")
-    merged = {} if args.replace else load_source(args.out)
+    out = args.out or SETS[args.set]["source"]
+    merged = {} if args.replace else load_source(out)
     merged.update(props)
-    write_source(merged, args.out)
+    write_source(merged, out)
 
 
-def cmd_check(args):
-    import render_icons
-
+def check_set(name, table, out):
+    """Checks of one icon set; returns the number of problems."""
+    spec = SETS[name]
+    script = spec["script"]
     failures = 0
-    problems = offline_sketchup.check_source(SCRIPT)
-    print(f"Sandbox safety: {'ok' if not problems else 'FAIL'}  {rel(SCRIPT)}")
+    print(f"[{name}]")
+    problems = offline_sketchup.check_source(script)
+    print(f"Sandbox safety: {'ok' if not problems else 'FAIL'}  {rel(script)}")
     for p in problems:
         print(f"    ! {p}")
     failures += len(problems)
     try:
-        reports, extraction = dry_run()
+        reports, extraction = dry_run(name)
         bad = [r for r in reports if r["warnings"]]
         print(f"Dry run: {'ok' if not bad else 'WARN'}  {len(reports)} icons built offline")
         for r in bad:
@@ -185,46 +206,59 @@ def cmd_check(args):
         print(f"Dry run: FAIL {type(e).__name__}: {e}")
         failures += 1
         scripted = set()
-    source = load_source()
+    source = load_source(spec["source"])
     bad = face_problems(source)
     print(f"Faces: {'ok' if not bad else 'FAIL'}  no self-intersecting faces in the source")
     for b in bad:
         print(f"    ! {b}")
     failures += len(bad)
-    wanted = list(render_icons.ICONS)
+    wanted = list(table)
     missing = [k for k in wanted if k not in source]
-    print(f"Source: {'ok' if not missing else 'FAIL'}  {rel(SOURCE)} holds {len(source)} icons")
+    print(f"Source: {'ok' if not missing else 'FAIL'}  {rel(spec['source'])} holds {len(source)} icons")
     for k in missing:
         print(f"    ! {k} is not imported yet")
     failures += len(missing)
     for k in wanted:
         if scripted and k not in scripted:
-            print(f"    ! {k} is in no build chunk of {SCRIPT.name}")
+            print(f"    ! {k} is in no build chunk of {script.name}")
             failures += 1
-    out = render_icons.OUT
     stale = [k for k in wanted if not (out / f"{k}.png").exists()]
     print(f"Renders: {'ok' if not stale else 'FAIL'}  {rel(out)}/<Key>.png")
     for k in stale:
         print(f"    ! {k}.png is missing")
     failures += len(stale)
+    return failures
+
+
+def cmd_check(args):
+    import render_icons
+
+    names = [args.set] if args.set_given else list(SETS)
+    failures = 0
+    for name in names:
+        failures += check_set(name, render_icons.SETS[name]["table"], render_icons.OUT)
     print("check passed" if not failures else f"check FAILED ({failures} problem(s))")
     sys.exit(1 if failures else 0)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--set", choices=sorted(SETS), default=None,
+                        help="icon set: icons (default) or zones (the zone emblems); check runs every set unless given")
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("offline", help="dry run of the SketchUp script -> a preview source")
-    p.add_argument("--out", default=str(OFFLINE))
+    p.add_argument("--out", default=None, help="default build/icons/offline/icons.json (zones: build/icons/zones/offline)")
     p.set_defaults(fn=cmd_offline)
-    p = sub.add_parser("import", help="merge a SketchUp extraction into assets/source/world/icons.json")
+    p = sub.add_parser("import", help="merge a SketchUp extraction into the set's source (assets/source/world)")
     p.add_argument("result")
     p.add_argument("--replace", action="store_true")
-    p.add_argument("--out", default=str(SOURCE))
+    p.add_argument("--out", default=None, help="default assets/source/world/icons.json (zones: zone_emblems.json)")
     p.set_defaults(fn=cmd_import)
     p = sub.add_parser("check", help="sandbox safety, dry run, source + renders complete")
     p.set_defaults(fn=cmd_check)
     args = parser.parse_args()
+    args.set_given = args.set is not None
+    args.set = args.set or "icons"
     args.fn(args)
 
 

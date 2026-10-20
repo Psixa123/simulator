@@ -2517,8 +2517,25 @@ IM.__newindex = function(self, key, value)
 			local d = math.min(size.X, size.Y, size.Z)
 			props.Size = v3(d, d, d)
 		end
+		if (key == "CFrame" or key == "Size") and isA(className, "BasePart") and kindOf(value) == kindOf(default) then
+			local bad = false
+			for index = 1, (if key == "CFrame" then 12 else 0) do
+				local n = value[index]
+				bad = bad or n ~= n or n == math.huge or n == -math.huge
+			end
+			if key == "Size" then
+				bad = value.X ~= value.X or value.Y ~= value.Y or value.Z ~= value.Z
+			end
+			if bad then
+				Mock.NonFinite = (Mock.NonFinite or 0) + 1
+				if Mock.NonFinite <= 5 then
+					table.insert(Mock.Warnings, fmt("mock: %s.%s set to a NaN/infinite value\n%s", fullName(self), key, debug.traceback()))
+				end
+			end
+		end
 		if key == "Size" and isA(className, "BasePart") then
-			value = v3(math.max(value.X, 0.001), math.max(value.Y, 0.001), math.max(value.Z, 0.001))
+			-- Roblox keeps every axis between 0.001 and 2048 studs (a longer part is silently cut to 2048)
+			value = v3(math.clamp(value.X, 0.001, 2048), math.clamp(value.Y, 0.001, 2048), math.clamp(value.Z, 0.001, 2048))
 			if className == "Part" and props.Shape == Enum.PartType.Ball then
 				-- Roblox keeps balls round: all three axes take the axis that changed (approximated as the min)
 				local d = math.min(value.X, value.Y, value.Z)
@@ -3403,6 +3420,894 @@ CLASSES.MarketplaceService.Methods = {
 	end,
 }
 
+---------------------------------------------------------------------------------------------------- players, characters, remotes, data stores
+-- For full-boot tests (tests/mock/FullBoot.luau), which run every server service and play a player:
+--   MockTest.AddPlayer(name) makes a Player (PlayerGui, Backpack) and fires Players.PlayerAdded;
+--   Player:LoadCharacter() / LoadCharacterAsync() build an R15-shaped rig standing on an enabled
+--   SpawnLocation (fresh Backpack with the StarterPack tools) and fire CharacterAdded;
+--   Humanoid:EquipTool moves a Tool into the character and grips its Handle at the RightGripAttachment
+--   (a Tool that RequiresHandle without a Handle isn't equipped, like in Roblox); Tool:Activate() fires
+--   Activated like a click; setting Humanoid.Health to 0 fires Died.
+--   MockTest.SetLocalPlayer(player) makes that player "the client" in the same runtime: client code's
+--   RemoteEvent:FireServer / RemoteFunction:InvokeServer reach the server handlers after Mock.Latency
+--   seconds, and FireClient / FireAllClients to it reach OnClientEvent. Every FireClient is logged in
+--   MockTest.ClientEvents.
+--   DataStores keep their values in memory; MessagingService and PolicyService answer like a live server.
+-- There is no physics: characters stay where they are put (tests move them with PivotTo).
+-- (in a do block: the mock's main chunk is near Luau's 200-local limit)
+do
+	Mock.Latency = 0.03
+	Mock.ClientEvents = {}
+	Mock.Kicks = {}
+	local PlayersService = getService("Players")
+	local RunServiceObject = getService("RunService")
+
+	local function deliver(fn, ...)
+		if Mock.Latency > 0 then
+			return task.delay(Mock.Latency, fn, ...)
+		end
+		return task.defer(fn, ...)
+	end
+
+	local function maybeYield()
+		if currentThreadCanYield() then
+			task.wait(Mock.Latency)
+		end
+	end
+
+	local function deepCopy(value)
+		if type(value) ~= "table" or rawget(value, "__kind") then
+			return value
+		end
+		local copy = {}
+		for key, item in value do
+			copy[key] = deepCopy(item)
+		end
+		return copy
+	end
+
+	-- Players ------------------------------------------------------------------------------------------
+	class("Player", "Instance", {
+		UserId = 0,
+		DisplayName = "",
+		Character = NIL,
+		AccountAge = 400,
+		MembershipType = E.MembershipType.None,
+		Team = NIL,
+		Neutral = true,
+		RespawnLocation = NIL,
+		CanLoadCharacterAppearance = true,
+		LocaleId = "en-us",
+		FollowUserId = 0,
+		AutoJumpEnabled = true,
+		CameraMaxZoomDistance = 128,
+		CameraMinZoomDistance = 0.5,
+		HealthDisplayDistance = 100,
+		NameDisplayDistance = 100,
+		DevEnableMouseLock = true,
+		ReplicationFocus = NIL,
+		GameplayPaused = false,
+	}, { Events = events({ "CharacterAdded", "CharacterRemoving", "CharacterAppearanceLoaded", "Chatted", "Idled", "OnTeleport" }) })
+	class("Backpack", "Instance", {})
+	class("StarterGear", "Instance", {})
+	class("PlayerGui", "Instance", { SelectionImageObject = NIL })
+	class("PlayerScripts", "Instance", {})
+	class("ForceField", "Instance", { Visible = true })
+	class("Animator", "Instance", {})
+	class("HumanoidDescription", "Instance", {})
+	class("Humanoid", "Instance", {
+		MaxHealth = 100,
+		WalkSpeed = 16,
+		JumpPower = 50,
+		JumpHeight = 7.2,
+		UseJumpPower = false,
+		HipHeight = 2,
+		RigType = E.HumanoidRigType.R15,
+		AutoRotate = true,
+		AutoJumpEnabled = true,
+		BreakJointsOnDeath = true,
+		RequiresNeck = true,
+		EvaluateStateMachine = true,
+		MaxSlopeAngle = 89,
+		PlatformStand = false,
+		Sit = false,
+		Jump = false,
+		DisplayName = "",
+		NameDisplayDistance = 100,
+		HealthDisplayDistance = 100,
+		DisplayDistanceType = E.HumanoidDisplayDistanceType.Viewer,
+		HealthDisplayType = E.HumanoidHealthDisplayType.DisplayWhenDamaged,
+		CameraOffset = Vector3.zero,
+		WalkToPoint = Vector3.zero,
+		MoveDirection = Vector3.zero,
+		FloorMaterial = E.Material.Plastic,
+		RootPart = NIL,
+		SeatPart = NIL,
+	}, {
+		Events = events({ "Died", "HealthChanged", "StateChanged", "Running", "Jumping", "FreeFalling", "MoveToFinished", "Seated", "AnimationPlayed" }),
+	})
+
+	local function humanoidHealth(humanoid)
+		local health = rawget(humanoid, "__health")
+		if health == nil then
+			return humanoid.__props.MaxHealth or 100
+		end
+		return health
+	end
+	CLASSES.Humanoid.Getters.Health = humanoidHealth
+	CLASSES.Humanoid.Setters.Health = function(humanoid, value)
+		if type(value) ~= "number" then
+			fail("bad value for Humanoid.Health: expected number, got " .. kindOf(value), 3)
+		end
+		local before = humanoidHealth(humanoid)
+		local health = math.clamp(value, 0, humanoid.__props.MaxHealth or 100)
+		if rawget(humanoid, "__dead") then
+			health = 0
+		end
+		rawset(humanoid, "__health", health)
+		if health ~= before then
+			getSignal(humanoid, "HealthChanged"):Fire(health)
+		end
+		if health <= 0 and not rawget(humanoid, "__dead") then
+			rawset(humanoid, "__dead", true)
+			getSignal(humanoid, "Died"):Fire()
+		end
+	end
+
+	local function playerOf(character)
+		for _, child in PlayersService.__children do
+			if child.__class == "Player" and child.__props.Character == character then
+				return child
+			end
+		end
+		return nil
+	end
+
+	local function backpackOf(player)
+		return player and methods.FindFirstChildOfClass(player, "Backpack")
+	end
+
+	-- Holds a tool's Handle in the right hand: moves the tool there and adds the RightGrip weld
+	local function grip(character, tool)
+		local hand = methods.FindFirstChild(character, "RightHand") or methods.FindFirstChild(character, "Right Arm")
+		local handle = methods.FindFirstChild(tool, "Handle")
+		if not (hand and handle and isA(handle.__class, "BasePart")) then
+			return
+		end
+		local attachment = methods.FindFirstChild(hand, "RightGripAttachment")
+		local c0 = if attachment then attachment.__props.CFrame or CFrame.identity else CFrame.new(0, -1, 0)
+		local c1 = tool.Grip
+		local target = mulCF(mulCF(hand.__props.CFrame or CFrame.identity, c0), inverseCF(c1))
+		moveTree(tool, mulCF(target, inverseCF(handle.__props.CFrame or CFrame.identity)))
+		local weld = Instance.new("Weld")
+		weld.__props.Name = "RightGrip"
+		weld.__props.Part0 = hand
+		weld.__props.Part1 = handle
+		weld.__props.C0 = c0
+		weld.__props.C1 = c1
+		setParent(weld, hand)
+	end
+
+	local function unequipTools(humanoid)
+		local character = rawget(humanoid, "__parent")
+		if not character then
+			return
+		end
+		local backpack = backpackOf(playerOf(character))
+		for _, child in table.clone(character.__children) do
+			if child.__class == "Tool" then
+				for _, hand in character.__children do
+					local weld = methods.FindFirstChild(hand, "RightGrip")
+					if weld and weld.__props.Part1 and isDescendantOf(weld.__props.Part1, child) then
+						methods.Destroy(weld)
+					end
+				end
+				setParent(child, backpack)
+				getSignal(child, "Unequipped"):Fire()
+			end
+		end
+	end
+
+	CLASSES.Humanoid.Methods = {
+		EquipTool = function(self, tool)
+			if kindOf(tool) ~= "Instance" or tool.__class ~= "Tool" then
+				fail("Humanoid:EquipTool expects a Tool", 2)
+			end
+			local character = rawget(self, "__parent")
+			if not character or rawget(tool, "__parent") == character or humanoidHealth(self) <= 0 then
+				return
+			end
+			if tool.RequiresHandle and not methods.FindFirstChild(tool, "Handle") then
+				table.insert(Mock.Warnings, "mock: Humanoid:EquipTool(" .. fullName(tool) .. ") - RequiresHandle is on but there is no Handle, so Roblox doesn't equip it")
+				return
+			end
+			unequipTools(self)
+			setParent(tool, character)
+			grip(character, tool)
+			getSignal(tool, "Equipped"):Fire(nil)
+		end,
+		UnequipTools = function(self)
+			unequipTools(self)
+		end,
+		TakeDamage = function(self, amount)
+			local character = rawget(self, "__parent")
+			if character and methods.FindFirstChildOfClass(character, "ForceField") then
+				return
+			end
+			self.Health = humanoidHealth(self) - amount
+		end,
+		GetState = function()
+			return Enum.HumanoidStateType.Running
+		end,
+		ChangeState = noop,
+		SetStateEnabled = noop,
+		GetStateEnabled = function()
+			return true
+		end,
+		Move = noop,
+		ApplyDescription = noop,
+		GetPlayingAnimationTracks = function()
+			return {}
+		end,
+		BuildRigFromAttachments = noop,
+	}
+
+	-- Tool:Activate() / Deactivate() fire Activated / Deactivated while it's held (Roblox does the same)
+	CLASSES.Tool.Methods = {
+		Activate = function(self)
+			local character = rawget(self, "__parent")
+			if self.Enabled and character and methods.FindFirstChildOfClass(character, "Humanoid") then
+				getSignal(self, "Activated"):Fire()
+			end
+		end,
+		Deactivate = function(self)
+			local character = rawget(self, "__parent")
+			if character and methods.FindFirstChildOfClass(character, "Humanoid") then
+				getSignal(self, "Deactivated"):Fire()
+			end
+		end,
+	}
+
+	-- An R15-shaped rig: the HumanoidRootPart (2 x 2 x 1) is 3 studs above the feet like Roblox's default
+	local function limb(model, name, size, offset)
+		local part = Instance.new("Part")
+		part.__props.Name = name
+		part.__props.Size = size
+		part.__props.CFrame = offset
+		part.__props.TopSurface = Enum.SurfaceType.Smooth
+		part.__props.BottomSurface = Enum.SurfaceType.Smooth
+		setParent(part, model)
+		return part
+	end
+	local function attach(part, name, offset)
+		local attachment = Instance.new("Attachment")
+		attachment.__props.Name = name
+		attachment.__props.CFrame = offset
+		setParent(attachment, part)
+		return attachment
+	end
+	local function buildCharacter(player)
+		local model = Instance.new("Model")
+		model.__props.Name = player.__props.Name
+		local root = limb(model, "HumanoidRootPart", v3(2, 2, 1), CFrame.identity)
+		root.__props.Transparency = 1
+		attach(root, "RootAttachment", CFrame.identity)
+		limb(model, "LowerTorso", v3(2, 0.4, 1), CFrame.new(0, -0.8, 0))
+		local upper = limb(model, "UpperTorso", v3(2, 1.6, 1), CFrame.new(0, 0.2, 0))
+		attach(upper, "BodyBackAttachment", CFrame.new(0, 0.2, 0.5))
+		attach(upper, "BodyFrontAttachment", CFrame.new(0, 0.2, -0.5))
+		attach(upper, "NeckRigAttachment", CFrame.new(0, 0.8, 0))
+		local head = limb(model, "Head", v3(1.2, 1.2, 1.2), CFrame.new(0, 1.6, 0))
+		attach(head, "FaceFrontAttachment", CFrame.new(0, 0, -0.6))
+		attach(head, "HatAttachment", CFrame.new(0, 0.6, 0))
+		attach(head, "HairAttachment", CFrame.new(0, 0.6, 0))
+		for _, side in { "Right", "Left" } do
+			local x = if side == "Right" then 1.5 else -1.5
+			limb(model, side .. "UpperArm", v3(1, 1.2, 1), CFrame.new(x, 0.4, 0))
+			limb(model, side .. "LowerArm", v3(1, 1.1, 1), CFrame.new(x, -0.6, 0))
+			local hand = limb(model, side .. "Hand", v3(0.6, 0.6, 0.6), CFrame.new(x, -1.1, 0))
+			attach(hand, side .. "GripAttachment", CFrame.new(0, -0.15, 0) * CFrame.Angles(-math.pi / 2, 0, 0))
+			local legX = x / 3
+			limb(model, side .. "UpperLeg", v3(1, 1.2, 1), CFrame.new(legX, -1.6, 0))
+			limb(model, side .. "LowerLeg", v3(1, 0.8, 1), CFrame.new(legX, -2.4, 0))
+			limb(model, side .. "Foot", v3(1, 0.4, 1), CFrame.new(legX, -2.8, 0))
+		end
+		local humanoid = Instance.new("Humanoid")
+		humanoid.__props.Name = "Humanoid"
+		humanoid.__props.RootPart = root
+		humanoid.__props.DisplayName = player.__props.DisplayName or player.__props.Name
+		local starterPlayer = methods.FindFirstChildOfClass(game, "StarterPlayer")
+		if starterPlayer then
+			humanoid.__props.WalkSpeed = starterPlayer.CharacterWalkSpeed
+		end
+		setParent(humanoid, model)
+		setParent(Instance.new("Animator"), humanoid)
+		model.__props.PrimaryPart = root
+		return model
+	end
+
+	-- Where Roblox puts a new character: on top of an enabled neutral SpawnLocation (facing its front)
+	local function spawnFrame()
+		local spawns = {}
+		local function visit(node)
+			for _, child in node.__children do
+				if child.__class == "SpawnLocation" and child.Enabled and child.Neutral then
+					table.insert(spawns, child)
+				end
+				visit(child)
+			end
+		end
+		visit(Workspace)
+		local spawn = spawns[1]
+		if not spawn then
+			table.insert(Mock.Warnings, "mock: no enabled neutral SpawnLocation; the character appears at (0, 100, 0)")
+			return CFrame.new(0, 100, 0)
+		end
+		local c = spawn.CFrame
+		local look = v3(-c[6], 0, -c[12])
+		local top = c.Position + v3(0, spawn.Size.Y / 2 + 3, 0)
+		if look.Magnitude < 1e-3 then
+			return CFrame.new(top)
+		end
+		return CFrame.lookAt(top, top + look)
+	end
+
+	local function loadCharacter(player)
+		if rawget(player, "__parent") ~= PlayersService then
+			fail("LoadCharacter can only be called while the player is in the game", 3)
+		end
+		local old = player.__props.Character
+		if old then
+			getSignal(player, "CharacterRemoving"):Fire(old)
+			methods.Destroy(old)
+		end
+		local oldBackpack = backpackOf(player)
+		if oldBackpack then
+			methods.Destroy(oldBackpack)
+		end
+		local backpack = Instance.new("Backpack")
+		backpack.__props.Name = "Backpack"
+		setParent(backpack, player)
+		local starterPack = methods.FindFirstChildOfClass(game, "StarterPack")
+		if starterPack then
+			for _, tool in starterPack.__children do
+				local copy = methods.Clone(tool)
+				if copy then
+					setParent(copy, backpack)
+				end
+			end
+		end
+		local model = buildCharacter(player)
+		methods.PivotTo(model, spawnFrame())
+		setParent(model, Workspace)
+		player.Character = model
+		getSignal(player, "CharacterAdded"):Fire(model)
+		task.defer(function()
+			if model.Parent then
+				getSignal(player, "CharacterAppearanceLoaded"):Fire(model)
+			end
+		end)
+	end
+
+	local function removePlayer(player)
+		if rawget(player, "__parent") ~= PlayersService then
+			return
+		end
+		getSignal(PlayersService, "PlayerRemoving"):Fire(player)
+		local character = player.__props.Character
+		if character then
+			methods.Destroy(character)
+		end
+		setParent(player, nil)
+	end
+
+	CLASSES.Player.Methods = {
+		LoadCharacter = function(self)
+			loadCharacter(self)
+		end,
+		LoadCharacterAsync = function(self)
+			loadCharacter(self)
+		end,
+		LoadCharacterWithHumanoidDescription = function(self)
+			loadCharacter(self)
+		end,
+		Kick = function(self, message)
+			table.insert(Mock.Kicks, { Player = self.__props.Name, Message = message })
+			table.insert(Mock.Warnings, fmt("mock: %s was kicked: %s", self.__props.Name, tostring(message)))
+			deliver(removePlayer, self)
+		end,
+		HasAppearanceLoaded = function()
+			return true
+		end,
+		GetRankInGroup = function()
+			return 0
+		end,
+		GetRankInGroupAsync = function()
+			maybeYield()
+			return 0
+		end,
+		GetRoleInGroup = function()
+			return "Guest"
+		end,
+		IsInGroup = function()
+			return false
+		end,
+		IsInGroupAsync = function()
+			return false
+		end,
+		IsFriendsWith = function()
+			return false
+		end,
+		GetJoinData = function()
+			return {}
+		end,
+		GetNetworkPing = function()
+			return Mock.Latency * 2
+		end,
+		ClearCharacterAppearance = noop,
+		Move = noop,
+	}
+
+	CLASSES.Players.Methods = {
+		GetPlayers = function(self)
+			local list = {}
+			for _, child in self.__children do
+				if child.__class == "Player" then
+					table.insert(list, child)
+				end
+			end
+			return list
+		end,
+		GetPlayerFromCharacter = function(_, character)
+			return character and playerOf(character)
+		end,
+		GetPlayerByUserId = function(self, userId)
+			for _, child in self.__children do
+				if child.__class == "Player" and child.__props.UserId == userId then
+					return child
+				end
+			end
+			return nil
+		end,
+		GetUserIdFromNameAsync = function()
+			return 1
+		end,
+		GetNameFromUserIdAsync = function(_, userId)
+			return "Player" .. tostring(userId)
+		end,
+		GetUserThumbnailAsync = function()
+			return "rbxasset://textures/ui/GuiImagePlaceholder.png", true
+		end,
+		GetHumanoidDescriptionFromUserId = function()
+			return Instance.new("HumanoidDescription")
+		end,
+	}
+
+	-- Remotes ------------------------------------------------------------------------------------------
+	local function logClientEvent(remote, player, ...)
+		table.insert(Mock.ClientEvents, { Remote = remote.__props.Name, Player = player, Args = table.pack(...), Time = Mock.Now })
+		if #Mock.ClientEvents > 400 then
+			table.remove(Mock.ClientEvents, 1)
+		end
+	end
+	local function localPlayer()
+		return PlayersService.__props.LocalPlayer
+	end
+	CLASSES.RemoteEvent.Methods = {
+		FireClient = function(self, player, ...)
+			if kindOf(player) ~= "Instance" or player.__class ~= "Player" then
+				fail("RemoteEvent:FireClient: argument 1 must be a Player", 2)
+			end
+			logClientEvent(self, player, ...)
+			if player == localPlayer() then
+				local signal = getSignal(self, "OnClientEvent")
+				deliver(signal.Fire, signal, ...)
+			end
+		end,
+		FireAllClients = function(self, ...)
+			logClientEvent(self, nil, ...)
+			if localPlayer() then
+				local signal = getSignal(self, "OnClientEvent")
+				deliver(signal.Fire, signal, ...)
+			end
+		end,
+		FireServer = function(self, ...)
+			local player = localPlayer()
+			if not player then
+				fail("RemoteEvent:FireServer: there is no client (MockTest.SetLocalPlayer)", 2)
+			end
+			local signal = getSignal(self, "OnServerEvent")
+			deliver(signal.Fire, signal, player, ...)
+		end,
+	}
+	CLASSES.RemoteFunction.Methods = {
+		InvokeServer = function(self, ...)
+			local player = localPlayer()
+			if not player then
+				fail("RemoteFunction:InvokeServer: there is no client (MockTest.SetLocalPlayer)", 2)
+			end
+			maybeYield()
+			-- like Roblox, a call made before the server set OnServerInvoke waits for it
+			local deadline = Mock.Now + 60
+			while not self.__props.OnServerInvoke and Mock.Now < deadline do
+				task.wait(0.1)
+			end
+			local callback = self.__props.OnServerInvoke
+			if not callback then
+				fail("RemoteFunction:InvokeServer: " .. fullName(self) .. " never got an OnServerInvoke", 2)
+			end
+			return callback(player, ...)
+		end,
+		InvokeClient = function(self, player, ...)
+			local callback = self.__props.OnClientInvoke
+			if callback and player == localPlayer() then
+				return callback(...)
+			end
+			return nil
+		end,
+	}
+
+	-- Data stores, messaging, policies -------------------------------------------------------------------
+	Mock.DataStores = {} -- [name] = { [key] = value }
+	class("DataStoreService", "Instance", {}, { Service = true })
+	class("MessagingService", "Instance", {}, { Service = true })
+	class("PolicyService", "Instance", {}, { Service = true })
+	class("GroupService", "Instance", {}, { Service = true })
+	class("GlobalDataStore", "Instance", {}, { Abstract = true })
+	class("DataStore", "GlobalDataStore", {})
+	class("OrderedDataStore", "GlobalDataStore", {})
+	class("DataStorePages", "Instance", { IsFinished = true })
+
+	local function storeData(store)
+		local name = rawget(store, "__storeName")
+		Mock.DataStores[name] = Mock.DataStores[name] or {}
+		return Mock.DataStores[name]
+	end
+	local function checkKey(key)
+		if type(key) ~= "string" or #key == 0 or #key > 50 then
+			fail("DataStore key must be a string of 1 to 50 characters, got " .. tostring(key), 3)
+		end
+	end
+	local storeMethods = {
+		GetAsync = function(self, key)
+			checkKey(key)
+			maybeYield()
+			return deepCopy(storeData(self)[key])
+		end,
+		SetAsync = function(self, key, value)
+			checkKey(key)
+			maybeYield()
+			storeData(self)[key] = deepCopy(value)
+			return "1"
+		end,
+		UpdateAsync = function(self, key, transform)
+			checkKey(key)
+			maybeYield()
+			local data = storeData(self)
+			local result = transform(deepCopy(data[key]), nil)
+			if result == nil then
+				return nil
+			end
+			data[key] = deepCopy(result)
+			return deepCopy(result)
+		end,
+		IncrementAsync = function(self, key, delta)
+			checkKey(key)
+			maybeYield()
+			local data = storeData(self)
+			data[key] = (tonumber(data[key]) or 0) + (delta or 1)
+			return data[key]
+		end,
+		RemoveAsync = function(self, key)
+			checkKey(key)
+			maybeYield()
+			local data = storeData(self)
+			local old = data[key]
+			data[key] = nil
+			return deepCopy(old)
+		end,
+	}
+	CLASSES.DataStore.Methods = storeMethods
+	local orderedMethods = table.clone(storeMethods)
+	orderedMethods.GetSortedAsync = function(self, ascending, pageSize, minValue, maxValue)
+		maybeYield()
+		local entries = {}
+		for key, value in storeData(self) do
+			if type(value) == "number" and (minValue == nil or value >= minValue) and (maxValue == nil or value <= maxValue) then
+				table.insert(entries, { key = key, value = value })
+			end
+		end
+		table.sort(entries, function(a, b)
+			if ascending then
+				return a.value < b.value
+			end
+			return a.value > b.value
+		end)
+		local page = {}
+		for index = 1, math.min(#entries, pageSize or 50) do
+			page[index] = entries[index]
+		end
+		local pages = Instance.new("DataStorePages")
+		rawset(pages, "__page", page)
+		return pages
+	end
+	CLASSES.OrderedDataStore.Methods = orderedMethods
+	CLASSES.DataStorePages.Methods = {
+		GetCurrentPage = function(self)
+			return rawget(self, "__page") or {}
+		end,
+		AdvanceToNextPageAsync = function(self)
+			rawset(self, "__page", {})
+		end,
+	}
+	local function getStore(className, name, scope)
+		if type(name) ~= "string" then
+			fail("DataStoreService:Get" .. className .. " expects a name", 3)
+		end
+		local key = className .. ":" .. name .. ":" .. tostring(scope or "global")
+		local store = Instance.new(className)
+		store.__props.Name = name
+		rawset(store, "__storeName", key)
+		return store
+	end
+	CLASSES.DataStoreService.Methods = {
+		GetDataStore = function(_, name, scope)
+			return getStore("DataStore", name, scope)
+		end,
+		GetGlobalDataStore = function()
+			return getStore("DataStore", "global")
+		end,
+		GetOrderedDataStore = function(_, name, scope)
+			return getStore("OrderedDataStore", name, scope)
+		end,
+		GetRequestBudgetForRequestType = function()
+			return 60
+		end,
+	}
+	CLASSES.MessagingService.Methods = {
+		PublishAsync = function()
+			maybeYield()
+		end,
+		SubscribeAsync = function()
+			maybeYield()
+			return { __kind = "RBXScriptConnection", Connected = true, Disconnect = function(connection)
+				connection.Connected = false
+			end }
+		end,
+	}
+	CLASSES.PolicyService.Methods = {
+		GetPolicyInfoForPlayerAsync = function()
+			maybeYield()
+			return {
+				ArePaidRandomItemsRestricted = false,
+				AllowedExternalLinkReferences = {},
+				IsPaidItemTradingAllowed = true,
+				IsSubjectToChinaPolicies = false,
+				IsContentSharingAllowed = true,
+				AreAdsAllowed = true,
+			}
+		end,
+	}
+	CLASSES.GroupService.Methods = {
+		GetGroupInfoAsync = function(_, id)
+			return { Id = id, Name = "Group", Owner = { Id = 1, Name = "Owner" }, Roles = {} }
+		end,
+		GetGroupsAsync = function()
+			return {}
+		end,
+	}
+	CLASSES.MarketplaceService.Props = { ProcessReceipt = NIL }
+	CLASSES.MarketplaceService.Methods.PlayerOwnsAsset = function()
+		return false
+	end
+	CLASSES.MarketplaceService.Methods.PromptGamePassPurchase = noop
+	CLASSES.MarketplaceService.Methods.PromptProductPurchase = noop
+	CLASSES.MarketplaceService.Methods.PromptPurchase = noop
+	CLASSES.TextService.Methods.FilterStringAsync = function(_, text)
+		maybeYield()
+		return {
+			GetNonChatStringForBroadcastAsync = function()
+				return text
+			end,
+			GetNonChatStringForUserAsync = function()
+				return text
+			end,
+			GetChatForUserAsync = function()
+				return text
+			end,
+		}
+	end
+
+	-- The client side of a full-boot test ------------------------------------------------------------------
+	-- The mouse sits where MockTest.SetMouse put it (default: the middle of the screen); the camera's
+	-- ViewportPointToRay casts through it with the camera's FieldOfView.
+	Mock.Mouse = nil
+	CLASSES.UserInputService.Methods = {
+		GetMouseLocation = function()
+			local camera = Workspace.__props.CurrentCamera
+			local size = if camera then camera.ViewportSize else v2(1920, 1080)
+			return Mock.Mouse or v2(size.X / 2, size.Y / 2)
+		end,
+		GetMouseDelta = function()
+			return Vector2.zero
+		end,
+		IsKeyDown = function()
+			return false
+		end,
+		IsMouseButtonPressed = function()
+			return false
+		end,
+		GetLastInputType = function()
+			return Enum.UserInputType.MouseMovement
+		end,
+		GetConnectedGamepads = function()
+			return {}
+		end,
+		GetFocusedTextBox = function()
+			return nil
+		end,
+	}
+	local function viewportRay(camera, x, y)
+		local size = camera.ViewportSize
+		local c = camera.CFrame
+		local tanY = math.tan(math.rad(camera.FieldOfView) / 2)
+		local tanX = tanY * size.X / size.Y
+		local dx = (x / size.X * 2 - 1) * tanX
+		local dy = (1 - y / size.Y * 2) * tanY
+		local direction = vectorToWorld(c, v3(dx, dy, -1))
+		return Ray.new(c.Position, direction.Unit)
+	end
+	CLASSES.Camera.Methods = {
+		ViewportPointToRay = function(self, x, y)
+			return viewportRay(self, x, y)
+		end,
+		ScreenPointToRay = function(self, x, y)
+			return viewportRay(self, x, y + 58)
+		end,
+		WorldToViewportPoint = function(self, point)
+			local size = self.ViewportSize
+			local relative = pointToWorld(inverseCF(self.CFrame), point)
+			local tanY = math.tan(math.rad(self.FieldOfView) / 2)
+			local tanX = tanY * size.X / size.Y
+			local depth = -relative.Z
+			local x = (relative.X / math.max(depth, 1e-6) / tanX + 1) / 2 * size.X
+			local y = (1 - relative.Y / math.max(depth, 1e-6) / tanY) / 2 * size.Y
+			return v3(x, y, depth), depth > 0 and x >= 0 and x <= size.X and y >= 0 and y <= size.Y
+		end,
+	}
+	CLASSES.Camera.Methods.WorldToScreenPoint = CLASSES.Camera.Methods.WorldToViewportPoint
+
+	-- Workspace:Raycast against the parts' boxes (balls and cylinders count as their box). Honours CanQuery,
+	-- RaycastParams.FilterType Include / Exclude with FilterDescendantsInstances, and RespectCanCollide.
+	local function rayHitsBox(part, origin, direction)
+		local c = part.__props.CFrame or CFrame.identity
+		local inverse = inverseCF(c)
+		local o = pointToWorld(inverse, origin)
+		local d = vectorToObject(c, direction)
+		local size = part.__props.Size or v3(4, 1, 2)
+		local half = { size.X / 2, size.Y / 2, size.Z / 2 }
+		local os, ds = { o.X, o.Y, o.Z }, { d.X, d.Y, d.Z }
+		local tMin, tMax, axis, sign = 0, 1, 0, 1
+		for index = 1, 3 do
+			if math.abs(ds[index]) < 1e-12 then
+				if math.abs(os[index]) > half[index] then
+					return nil
+				end
+			else
+				local t1 = (-half[index] - os[index]) / ds[index]
+				local t2 = (half[index] - os[index]) / ds[index]
+				local near, far, nearSign = t1, t2, -1
+				if t1 > t2 then
+					near, far, nearSign = t2, t1, 1
+				end
+				if near > tMin then
+					tMin, axis, sign = near, index, nearSign
+				end
+				tMax = math.min(tMax, far)
+				if tMin > tMax then
+					return nil
+				end
+			end
+		end
+		local localNormal = if axis == 1 then v3(sign, 0, 0) elseif axis == 2 then v3(0, sign, 0) elseif axis == 3 then v3(0, 0, sign) else v3(0, 1, 0)
+		return tMin, vectorToWorld(c, localNormal)
+	end
+	CLASSES.Workspace.Methods.Raycast = function(self, origin, direction, params)
+		if kindOf(origin) ~= "Vector3" or kindOf(direction) ~= "Vector3" then
+			fail("Workspace:Raycast expects (Vector3 origin, Vector3 direction, RaycastParams?)", 2)
+		end
+		local filter = params and params.FilterDescendantsInstances or {}
+		local include = params and params.FilterType == Enum.RaycastFilterType.Include
+		local roots = if include then filter else { self }
+		local function excluded(part)
+			if include then
+				return false
+			end
+			for _, item in filter do
+				if part == item or isDescendantOf(part, item) then
+					return true
+				end
+			end
+			return false
+		end
+		local best, bestT, bestNormal = nil, math.huge, nil
+		local function test(part)
+			if part.__class ~= "Terrain" and isA(part.__class, "BasePart") and part.CanQuery ~= false then
+				if params and params.RespectCanCollide and not part.CanCollide then
+					return
+				end
+				local t, normal = rayHitsBox(part, origin, direction)
+				if t and t < bestT and not excluded(part) then
+					best, bestT, bestNormal = part, t, normal
+				end
+			end
+		end
+		for _, root in roots do
+			if isDescendantOf(root, self) or root == self then
+				if root ~= self then
+					test(root)
+				end
+				forEachDescendant(root, test)
+			end
+		end
+		if not best then
+			return nil
+		end
+		local position = origin + direction * bestT
+		return { __kind = "RaycastResult", Instance = best, Position = position, Normal = bestNormal, Material = best.Material, Distance = (direction * bestT).Magnitude }
+	end
+
+	-- The test API (not Roblox): see the top of this section
+	local nextUserId = 1000
+	local MockTest = {}
+	function MockTest.AddPlayer(name, userId)
+		nextUserId += 1
+		local player = newObject("Player")
+		player.__props.Name = name or ("Player" .. nextUserId)
+		player.__props.DisplayName = player.__props.Name
+		player.__props.UserId = userId or nextUserId
+		local playerGui = Instance.new("PlayerGui")
+		playerGui.__props.Name = "PlayerGui"
+		setParent(playerGui, player)
+		local playerScripts = Instance.new("PlayerScripts")
+		playerScripts.__props.Name = "PlayerScripts"
+		setParent(playerScripts, player)
+		local backpack = Instance.new("Backpack")
+		backpack.__props.Name = "Backpack"
+		setParent(backpack, player)
+		setParent(player, PlayersService)
+		getSignal(PlayersService, "PlayerAdded"):Fire(player)
+		if PlayersService.CharacterAutoLoads then
+			deliver(loadCharacter, player)
+		end
+		return player
+	end
+	MockTest.RemovePlayer = removePlayer
+	function MockTest.SetLocalPlayer(player)
+		PlayersService.__props.LocalPlayer = player
+	end
+	function MockTest.SetMouse(position)
+		Mock.Mouse = position
+	end
+	-- One frame: Stepped, Heartbeat and RenderStepped (client code runs on these)
+	function MockTest.Frame(dt)
+		dt = dt or 1 / 30
+		getSignal(RunServiceObject, "Stepped"):Fire(Mock.Now, dt)
+		getSignal(RunServiceObject, "Heartbeat"):Fire(dt)
+		getSignal(RunServiceObject, "RenderStepped"):Fire(dt)
+	end
+	MockTest.ClientEvents = Mock.ClientEvents
+	MockTest.Kicks = Mock.Kicks
+	MockTest.Errors = Mock.Errors
+	MockTest.Warnings = Mock.Warnings
+	MockTest.Gaps = Mock.Gaps
+	MockTest.DataStores = Mock.DataStores
+	function MockTest.Now()
+		return Mock.Now
+	end
+	Mock.Test = MockTest
+end
+
 ---------------------------------------------------------------------------------------------------- globals: typeof, warn, print, time, require
 local function typeof(value)
 	return kindOf(value)
@@ -3597,6 +4502,9 @@ local function jnum(n)
 	return s
 end
 local function jrot(n)
+	if n ~= n or n == math.huge or n == -math.huge then
+		return "null"
+	end
 	local s = fmt("%.5f", n)
 	s = string.gsub(s, "0+$", "")
 	s = string.gsub(s, "%.$", "")
@@ -4039,6 +4947,8 @@ Mock.Globals = {
 	end,
 	plugin = nil,
 	shared = {},
+	-- not Roblox: the full-boot test API (players, the client, frames), see "players, characters, remotes"
+	MockTest = Mock.Test,
 }
 
 -- install the globals (the CLI's _G and libraries are read-only, so they go into the script environment,

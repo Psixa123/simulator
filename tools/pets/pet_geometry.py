@@ -1130,6 +1130,7 @@ PETS = {
     "MaelstromSpirit": _pet("Maelstrom Spirit", "Exclusive", "Cloud", (122, 62, 222), (255, 150, 240), ["Halo", "Wings", "Crown"], "Rainbow", (255, 200, 250)),
     "RainbowRoc": _pet("Rainbow Roc", "Exclusive", "Round", (255, 248, 252), (255, 120, 200), ["Wings", "Beak", "Crown", "Tail"], "Rainbow", (120, 220, 255)),
     "Sunbeam": _pet("Sunbeam", "Epic", "Round", (255, 235, 120), (255, 255, 255), ["Rays", "Halo"], "Glow", None),
+    "AuroraGryphon": _pet("Aurora Gryphon", "Exclusive", "Round", (74, 98, 214), (96, 246, 200), ["Ears", "Wings", "Beak", "Tail"], "Glow", None),
 }
 
 # Pet index order (same as Pets.IndexOrder)
@@ -1141,6 +1142,7 @@ PET_IDS = [
     "Ember", "Coal", "LavaPup", "PhoenixChick", "InfernoDrake",
     "Stardust", "Comet", "Nebula", "Moonbeam", "GalaxyGuardian",
     "Sunbeam", "TempestTitan", "VoltWyrm", "FrostColossus", "CycloneDrake", "MaelstromSpirit", "RainbowRoc",
+    "AuroraGryphon",
 ]
 
 # Per-pet design choices on top of the Look (styles of features + small signature details)
@@ -1182,6 +1184,11 @@ DESIGN = {
     "MaelstromSpirit": {"mouth": "smile", "wings": "feather"},
     "RainbowRoc": {"mouth": None, "wings": "feather", "tail": "bird", "feet": "bird", "beak": "chick"},
     "Sunbeam": {"mouth": "open"},
+    # Lobby shop premium pet: tufted ears, golden eagle beak and talons, a snowy chest ruff, mint wings with
+    # glowing aurora-violet flight feathers, an aurora plume tail and starlight freckles
+    "AuroraGryphon": {"mouth": None, "ears": "tuft", "beak": "eagle", "wings": "aurora", "wing_size": 1.08,
+                      "wing_glow": (178, 124, 255), "tail": "plume", "feet": "talon", "ruff": True,
+                      "star_freckles": "Shine"},
 }
 
 
@@ -1633,6 +1640,9 @@ EAR_STYLES = {
             "mid": (0.03, 0.72, 0.0), "tip": (0.1, 1.0, 0.0), "turn": 18.0},
     "pup": {"yaw": 46.0, "pitch": 40.0, "len": 0.6, "wid": 0.3, "thick": 0.11, "tilt": 34.0, "lean": 0.0,
             "mid": (0.16, 0.95, -0.1), "tip": (0.5, 0.6, -0.34), "turn": 16.0},
+    # gryphon feather tufts: tall, slim and swept back
+    "tuft": {"yaw": 38.0, "pitch": 50.0, "len": 0.66, "wid": 0.22, "thick": 0.1, "tilt": 24.0, "lean": 20.0,
+             "mid": (0.05, 0.7, 0.12), "tip": (0.16, 1.0, 0.34), "turn": 10.0},
 }
 
 
@@ -1907,6 +1917,23 @@ def feather_wing(ctx, size):
     return merge_meshes(parts)
 
 
+def aurora_wing(ctx, size):
+    # right wing (+X): a fan of tintable feathers in front, longer glowing flight feathers peeking out
+    # behind them (the aurora edge) and two soft coverts over the hinge; returns (front, glow)
+    front = []
+    glow = []
+    fan = [(66.0, 1.0), (44.0, 1.08), (22.0, 1.02), (0.0, 0.88), (-21.0, 0.7)]
+    for i, (ang, L) in enumerate(fan):
+        f = leaf(L * 0.78 * size, 0.25 * size, 0.07 * size, lod(ctx, 6, 5), lod(ctx, 6, 4), 0.6, 0.55, 0.2)
+        front.append(xform(f, [xf_rot_z(rad(ang)), xf_translate(0.0, 0.0, 0.018 * i * size)]))
+        g = leaf(L * 1.1 * size, 0.19 * size, 0.05 * size, lod(ctx, 5, 4), lod(ctx, 6, 4), 0.5, 0.6, 0.24)
+        glow.append(xform(g, [xf_rot_z(rad(ang - 4.0)), xf_translate(0.0, 0.0, (0.018 * i + 0.055) * size)]))
+    for (ang, L, W, z) in ((34.0, 0.5, 0.3, -0.05), (6.0, 0.4, 0.26, -0.07)):
+        c = leaf(L * size, W * size, 0.09 * size, lod(ctx, 6, 5), lod(ctx, 5, 4), 0.55, 0.5, 0.1)
+        front.append(xform(c, [xf_rot_z(rad(ang)), xf_translate(0.0, 0.02 * size, z * size)]))
+    return (merge_meshes(front), merge_meshes(glow))
+
+
 def bat_wing(ctx, size):
     # right wing (+X): scalloped membrane (extruded) + bones; returns (membrane, bones)
     pts = [(0.0, 0.2), (0.35, 0.45), (0.72, 0.68), (0.95, 0.62), (1.1, 0.42), (1.18, 0.12)]
@@ -1970,6 +1997,11 @@ def feat_wings(ctx):
             bones = None
             raise_a = rad(26.0)
             sweep_a = rad(-34.0)
+        elif style == "aurora":
+            membrane, glow = aurora_wing(ctx, size)
+            bones = None
+            raise_a = rad(18.0)
+            sweep_a = rad(-14.0)
         else:
             membrane = feather_wing(ctx, size)
             bones = None
@@ -1983,6 +2015,8 @@ def feat_wings(ctx):
         add(ctx, "Accent@" + anim, transform_mesh(membrane, xf))
         if bones is not None:
             add(ctx, "Body@" + anim, transform_mesh(bones, xf))
+        if style == "aurora":
+            add(ctx, neon_role(ctx["design"].get("wing_glow", ctx["look"]["Accent"])) + "@" + anim, transform_mesh(glow, xf))
         add_pivot(ctx, anim, hinge)
 
 
@@ -2029,6 +2063,14 @@ def feat_tail(ctx):
         tdir = vnorm(vsub(end, prev))
         accent_parts.append(transform_mesh(xform(spade, [xf_rot_z(PI), xf_translate(0.0, 0.16, 0.0)]),
                                            xf_frame(end, tdir, (1.0, 0.0, 0.0))))
+    elif style == "plume":
+        # aurora plume: long feathers sweeping back and curling up, a short tuft at the root
+        for (ang, L, W, lift) in ((-30.0, 0.72, 0.16, -30.0), (-11.0, 0.92, 0.18, -40.0), (11.0, 0.92, 0.18, -40.0),
+                                  (30.0, 0.72, 0.16, -30.0), (0.0, 1.08, 0.2, -52.0)):
+            f = leaf(L, W, 0.055, lod(ctx, 6, 4), lod(ctx, 7, 5), 0.6, 0.5, 0.42)
+            f = xform(f, [xf_rot_y(-PI / 2.0), xf_rot_x(rad(lift)), xf_rot_y(rad(ang))])
+            accent_parts.append(f)
+        accent_parts.append(ellipsoid(0.17, 0.15, 0.2, lod(ctx, 4, 3)))
     elif style == "bird":
         for (ang, L) in ((-24.0, 0.75), (0.0, 0.88), (24.0, 0.75)):
             f = leaf(L, 0.17, 0.05, lod(ctx, 6, 4), lod(ctx, 7, 5), 0.6, 0.5, 0.25)
@@ -2163,11 +2205,34 @@ def feat_flower(ctx):
     ctx["head_top"] = max(ctx.get("head_top", 0.0), y + 0.15)
 
 
+def eagle_beak(ctx, s, n):
+    # golden hooked beak: a broad upper bill curving down over a small lower bill
+    # (beak space: +Y out of the face, +Z up, +X to the side)
+    def upper_rf(t):
+        if t >= 1.0:
+            return 0.0
+        return (0.012 + 0.11 * (1.0 - t) ** 0.75, 0.01 + 0.085 * (1.0 - t) ** 0.6)
+    upper = sweep([(0.0, -0.05, 0.035), (0.0, 0.1, 0.06), (0.0, 0.2, 0.03), (0.0, 0.23, -0.07)], lod(ctx, 10, 6), upper_rf,
+                  lod(ctx, 10, 6), (1.0, 0.0, 0.0), "round", "round", 0.1)
+
+    def lower_rf(t):
+        if t >= 1.0:
+            return 0.0
+        return (0.01 + 0.07 * (1.0 - t) ** 0.8, 0.008 + 0.04 * (1.0 - t) ** 0.8)
+    lower = sweep([(0.0, -0.04, -0.03), (0.0, 0.04, -0.045), (0.0, 0.1, -0.05), (0.0, 0.13, -0.045)], lod(ctx, 6, 4), lower_rf,
+                  lod(ctx, 8, 6), (1.0, 0.0, 0.0), "round", "round", 0.1)
+    frame = xf_frame(vmad(s, n, -0.03), vnorm(vadd(n, (0.0, -0.1, 0.0))), (0.0, 1.0, 0.0))
+    add(ctx, fixed_role(GOLD), transform_mesh(merge_meshes([upper, lower]), frame))
+
+
 def feat_beak(ctx):
     style = ctx["design"].get("beak", "chick")
     patch = ctx["face_patch"]
     f = ctx["body"]["face"]
     s, n = patch(0.0, f["mouth_v"] + 0.05)
+    if style == "eagle":
+        eagle_beak(ctx, s, n)
+        return
     big = 1.0 if style == "chick" else 0.85
     upper = cone(0.13 * big, 0.0, 0.2 * big, lod(ctx, 10, 6), 0.03, 2)
     upper = scale_mesh(upper, 1.0, 1.0, 0.68)
@@ -2240,7 +2305,17 @@ def detail_feet(ctx):
     look = ctx["look"]
     for side in (-1, 1):
         p, n = surface_at(body, side * 26.0, -62.0)
-        if style == "bird":
+        if style == "talon":
+            # gryphon paws with golden talons
+            paw = ellipsoid(0.2, 0.15, 0.24, lod(ctx, 5, 3))
+            add(ctx, "Body", translate_mesh(paw, p[0] * 0.92, p[1] + 0.02, p[2] - 0.06))
+            claws = []
+            for dx in (-0.09, 0.0, 0.09):
+                claw = cone(0.04, 0.0, 0.1, 6, 0.012)
+                base = (p[0] * 0.92 + dx, p[1] - 0.02, p[2] - 0.06 - 0.2)
+                claws.append(transform_mesh(claw, xf_frame(base, vnorm((dx * 0.8, -0.35, -1.0)), (0.0, 1.0, 0.0))))
+            add(ctx, fixed_role(GOLD), merge_meshes(claws))
+        elif style == "bird":
             foot = ellipsoid(0.15, 0.06, 0.2, lod(ctx, 4, 3))
             toes = []
             for a in (-0.45, 0.0, 0.45):
@@ -2348,7 +2423,8 @@ def detail_star_freckles(ctx):
         p, n = surface_at(body, yaw, pitch)
         st = extrude(star_poly(4, 0.07 * s, 0.025 * s), 0.025, 0.008, 1)
         stars.append(transform_mesh(st, xf_frame(vmad(p, n, 0.005), perpendicular(n), vmul(n, -1.0))))
-    add(ctx, neon_role((255, 255, 255)), merge_meshes(stars))
+    role = ctx["design"].get("star_freckles")
+    add(ctx, role if isinstance(role, str) else neon_role((255, 255, 255)), merge_meshes(stars))
 
 
 def detail_belly_accent(ctx):
@@ -2417,6 +2493,29 @@ def detail_bolt_cheeks(ctx):
         add(ctx, "Accent", transform_mesh(xform(m, [xf_rot_z(side * rad(15.0))]), xf))
 
 
+def ruff_shape(a):
+    # bib outline: round shoulders, a scalloped lower edge of feather tips
+    s = math.sin(a)
+    if s >= 0.0:
+        return 1.0
+    return 1.0 - 0.13 * (-s) * (1.0 - abs(math.cos(3.5 * (a + PI / 2.0))))
+
+
+def detail_ruff(ctx):
+    # snowy chest ruff under the beak: a scalloped bib plus a few loose feathers along its lower edge
+    patch = body_patch(ctx["body"], 0.0, -34.0)
+    parts = [decal(patch, 0.0, 0.03, 0.5, 0.36, 0.02, 0.004, 3, lod(ctx, 28, 14), skirt=0.03, dome=0.35, shape=ruff_shape)]
+    bib = dome_patch(patch, 0.0, 0.03, 0.5, 0.36, 0.02, 0.004, 0.35)
+    for (u, v, L, a) in ((-0.3, -0.18, 0.2, 18.0), (-0.11, -0.27, 0.23, 6.0), (0.11, -0.27, 0.23, -6.0), (0.3, -0.18, 0.2, -18.0)):
+        s, n = bib(u, v)
+        # down along the surface, fanned out a little and lifted off it so the tips stand free
+        down = vnorm(vsub((0.0, -1.0, 0.0), vmul(n, -n[1])))
+        down = vnorm(vadd(xf_dir(xf_rot_axis(n, rad(a)), down), vmul(n, 0.3)))
+        f = leaf(L, 0.11, 0.05, lod(ctx, 6, 4), lod(ctx, 5, 4), 0.6, 0.5, 0.0)
+        parts.append(transform_mesh(f, xf_basis(down, vcross(n, down), n, vmad(s, n, -0.025))))
+    add(ctx, fixed_role((248, 250, 255)), merge_meshes(parts))
+
+
 FEATURES = {
     "Ears": feat_ears, "BunnyEars": feat_bunny_ears, "Horns": feat_horns, "Antenna": feat_antenna,
     "Flower": feat_flower, "Flame": feat_flame, "Crown": feat_crown, "Bolt": feat_bolt, "Halo": feat_halo,
@@ -2434,6 +2533,7 @@ DETAILS = [
     ("star_mark", detail_star_mark), ("moon_mark", detail_moon_mark), ("freckles", detail_freckles),
     ("star_freckles", detail_star_freckles), ("belly_accent", detail_belly_accent), ("back_stripe", detail_back_stripe),
     ("arms", detail_arms), ("shards", detail_shards), ("bolt_cheeks", detail_bolt_cheeks), ("ripples", detail_ripples),
+    ("ruff", detail_ruff),
 ]
 
 

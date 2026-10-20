@@ -22,6 +22,9 @@ Usage (from the repo root):
     python3 tools/icons/render_icons.py --icons Volts,Star   only these
     python3 tools/icons/render_icons.py --source build/icons/offline/icons.json --out build/icons/offline
                                                              preview an offline dry run (import_icons.py offline)
+    python3 tools/icons/render_icons.py --set zones          the zone emblems (assets/source/world/zone_emblems.json
+                                                             -> assets/ui/icons3d/Zone_<Key>.png + _zones.png)
+    python3 tools/icons/render_icons.py --set zones --source build/icons/zones/offline/icons.json
 
 Requirements: Python 3.9+, numpy, Pillow, Chrome/Chromium (CHROME_PATH or Playwright's headless shell) and
 three.js (`npm install` in tools/world).
@@ -45,6 +48,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = ROOT / "tools" / "icons"
 WORLD = ROOT / "tools" / "world"
 SOURCE = ROOT / "assets" / "source" / "world" / "icons.json"
+ZONE_SOURCE = ROOT / "assets" / "source" / "world" / "zone_emblems.json"
 OUT = ROOT / "assets" / "ui" / "icons3d"
 BUILD = ROOT / "build" / "icons"
 FONT = ROOT / "assets" / "source" / "fonts" / "FredokaOne-Regular.ttf"
@@ -95,6 +99,20 @@ ICONS = {
     "Gift": {"yaw": -32, "pitch": 20},
     "Boost": {"yaw": -18, "pitch": 6},
     "Close": {"yaw": -20, "pitch": 6},
+}
+
+# The zone emblems (tools/icons/sketchup_zone_emblems.py): one gold medallion per region of
+# src/shared/Config/Zones.luau, keyed Zone_<Zone.Key>, all from the same slight 3/4 angle so they read as a set.
+ZONE_VIEW = {"yaw": -16, "pitch": 7, "fill": 0.86}
+ZONE_ICONS = {f"Zone_{key}": dict(ZONE_VIEW) for key in
+              ("Hub", "Meadows", "Thunder", "Dunes", "Frost", "Volcano", "Sky")}
+
+# Icon sets: source, hero-angle table, contact sheet (in OUT), work folder (GLB, raw renders, check48)
+SETS = {
+    "icons": {"source": SOURCE, "table": ICONS, "sheet": "_sheet.png", "work": BUILD, "glb": "StormIcons.glb",
+              "title": "3D UI icons"},
+    "zones": {"source": ZONE_SOURCE, "table": ZONE_ICONS, "sheet": "_zones.png", "work": BUILD / "zones",
+              "glb": "StormZoneEmblems.glb", "title": "zone emblems"},
 }
 
 
@@ -154,7 +172,7 @@ def write_glb(source, target):
 
 # ------------------------------------------------------------------------------ rendering
 
-def render_raw(keys, glb_path, raw_dir, workers=4):
+def render_raw(keys, glb_path, raw_dir, workers=4, table=None):
     """viewer.html screenshots: [shaded | ids+depth], SIZE*SS px each -> raw_dir/<Key>.png"""
     browser = wp.find_browser()
     if not browser:
@@ -169,7 +187,7 @@ def render_raw(keys, glb_path, raw_dir, workers=4):
     raw_dir.mkdir(parents=True, exist_ok=True)
 
     def one(key):
-        view = dict(VIEW, **ICONS.get(key, {}))
+        view = dict(VIEW, **(ICONS if table is None else table).get(key, {}))
         query = "&".join(f"{k}={view[k]}" for k in ("yaw", "pitch", "roll", "fill", "noline"))
         url = f"http://127.0.0.1:{port}/tools/icons/viewer.html?icon={key}&size={px}&glb=/pack.glb&{query}"
         target = raw_dir / f"{key}.png"
@@ -274,7 +292,7 @@ def font(size):
         return ImageFont.load_default()
 
 
-def contact_sheet(images, target, cell=128, columns=7):
+def contact_sheet(images, target, cell=128, columns=7, title="3D UI icons"):
     keys = list(images)
     rows = (len(keys) + columns - 1) // columns
     pad, label, header = 18, 26, 64
@@ -282,7 +300,7 @@ def contact_sheet(images, target, cell=128, columns=7):
     h = header + rows * (cell + label + pad) + pad
     sheet = Image.new("RGBA", (w, h), MIST + (255,))
     d = ImageDraw.Draw(sheet)
-    d.text((w / 2, header / 2 + 4), "Storm Catcher Simulator - 3D UI icons", font=font(30), fill=INK, anchor="mm")
+    d.text((w / 2, header / 2 + 4), "Storm Catcher Simulator - " + title, font=font(30), fill=INK, anchor="mm")
     for i, key in enumerate(keys):
         r, c = divmod(i, columns)
         x, y = pad + c * (cell + pad), header + r * (cell + label + pad)
@@ -329,33 +347,37 @@ def check48(images, target, columns=14):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--source", default=str(SOURCE), help="icon source json (default assets/source/world/icons.json)")
+    parser.add_argument("--set", choices=sorted(SETS), default="icons", help="icons (default) or zones (zone emblems)")
+    parser.add_argument("--source", default=None, help="icon source json (default the set's: assets/source/world/"
+                                                       "icons.json or zone_emblems.json)")
     parser.add_argument("--out", default=None, help="output folder (default assets/ui/icons3d; for --source previews "
                                                     "the source's folder)")
     parser.add_argument("--icons", default="", help="comma-separated icon keys (default all)")
     parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
 
-    source = Path(args.source).resolve()
-    preview = source != SOURCE.resolve()
+    spec = SETS[args.set]
+    table = spec["table"]
+    source = Path(args.source or spec["source"]).resolve()
+    preview = source != Path(spec["source"]).resolve()
     out = Path(args.out).resolve() if args.out else (source.parent if preview else OUT)
-    work = (source.parent if preview else BUILD)
-    glb = work / "StormIcons.glb"
+    work = (source.parent if preview else spec["work"])
+    glb = work / spec["glb"]
     built = write_glb(source, glb)
     print(f"wrote {rel(glb)} ({glb.stat().st_size // 1024} KB, {len(built)} icons)")
-    wanted = [k for k in args.icons.split(",") if k] or [k for k in ICONS if k in built] + \
-        [k for k in built if k not in ICONS]
+    wanted = [k for k in args.icons.split(",") if k] or [k for k in table if k in built] + \
+        [k for k in built if k not in table]
     missing = [k for k in wanted if k not in built]
     if missing:
         sys.exit("not in the source: " + ", ".join(missing))
-    raws = render_raw(wanted, glb, work / "raw", args.workers)
+    raws = render_raw(wanted, glb, work / "raw", args.workers, table)
     for key in wanted:
         finish(raws[key], out / f"{key}.png")
         tris = sum(len(p["tris"]) for p in built[key]["pieces"].values())
         print(f"  {key:<13} {len(built[key]['pieces']):>2} paints {tris:>5} tris -> {rel(out / (key + '.png'))}")
-    images = {k: out / f"{k}.png" for k in list(ICONS) + [k for k in built if k not in ICONS]
+    images = {k: out / f"{k}.png" for k in list(table) + [k for k in built if k not in table]
               if (out / f"{k}.png").exists()}
-    sheet = contact_sheet(images, out / "_sheet.png")
+    sheet = contact_sheet(images, out / spec["sheet"], columns=min(7, max(1, len(images))), title=spec["title"])
     chk = check48(images, work / "check48.png")
     print(f"wrote {rel(sheet)} and {rel(chk)}")
 

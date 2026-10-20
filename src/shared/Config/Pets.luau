@@ -75,6 +75,15 @@ Pets.Pets = {
 
 	-------------------------------------------------------------------- Rewards
 	Sunbeam = { Name = "Sunbeam", Rarity = "Epic", Bonus = 0.9, Source = "Day 7 daily reward", Look = { Body = "Round", Color = rgb(255, 235, 120), Accent = rgb(255, 255, 255), Features = { "Rays", "Halo" }, Effect = "Glow" } },
+
+	-------------------------------------------------------------------- Lobby shop (Robux)
+	-- Developer product Monetization.Products.AuroraGryphon (R$2,000, one copy per purchase).
+	-- Bonus 6 (+600%): the best pet you can own until about Frostpeak - it beats every egg Legendary up to
+	-- the Dune Sea (3.75) and the first Mega Storm exclusive (5), equals the Frostpeak Legendary and sits just
+	-- under the second one (Volt Wyrm 6.5); Frost Colossus (8), Magma/Cosmic Legendaries (9.75 / 15),
+	-- Cosmic Epics (7) and crafted Golden pets pass it in the late game, so it speeds players up without
+	-- replacing progression.
+	AuroraGryphon = { Name = "Aurora Gryphon", Rarity = "Exclusive", Bonus = 6, Source = "Lobby shop", Look = { Body = "Round", Color = rgb(74, 98, 214), Accent = rgb(96, 246, 200), Features = { "Ears", "Wings", "Beak", "Tail" }, Effect = "Glow" } },
 }
 
 Pets.Eggs = {
@@ -189,7 +198,7 @@ for _, eggId in Pets.EggOrder do
 		table.insert(Pets.IndexOrder, entry.Id)
 	end
 end
-for _, id in { "Sunbeam", "TempestTitan", "VoltWyrm", "FrostColossus", "CycloneDrake", "MaelstromSpirit", "RainbowRoc" } do
+for _, id in { "Sunbeam", "TempestTitan", "VoltWyrm", "FrostColossus", "CycloneDrake", "MaelstromSpirit", "RainbowRoc", "AuroraGryphon" } do
 	table.insert(Pets.IndexOrder, id)
 end
 
