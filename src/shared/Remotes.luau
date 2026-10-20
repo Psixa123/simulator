@@ -24,6 +24,7 @@ return {
 	SetSetting = get("SetSetting") :: RemoteFunction,
 	Sell = get("Sell") :: RemoteFunction,
 	DevGrant = get("DevGrant") :: RemoteFunction,
+	AdminCommand = get("AdminCommand") :: RemoteFunction, -- owner-only admin panel (AdminService)
 
 	-- RemoteEvents
 	Catch = get("Catch") :: RemoteEvent, -- client -> server

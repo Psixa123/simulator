@@ -325,6 +325,17 @@ GameConfig.MegaStorm = {
 }
 
 ---------------------------------------------------------------------------
+-- Admins (the owner-only admin panel: AdminService on the server, UI/Panels/Admin on the client)
+-- The place owner is always an admin; for a group-owned place, members of the owning group with at
+-- least MinGroupRank are. UserIds adds more admins. Everyone is an admin in Roblox Studio.
+-- The server checks this on every admin command; the client only uses it to show the panel.
+---------------------------------------------------------------------------
+GameConfig.Admins = {
+	UserIds = { 233074756 },
+	MinGroupRank = 255, -- 255 = the group owner
+}
+
+---------------------------------------------------------------------------
 -- Defaults
 ---------------------------------------------------------------------------
 GameConfig.DefaultSettings = {

@@ -23,6 +23,7 @@
         "SetSetting": { "$className": "RemoteFunction" },
         "Sell": { "$className": "RemoteFunction" },
         "DevGrant": { "$className": "RemoteFunction" },
+        "AdminCommand": { "$className": "RemoteFunction" },
         "Catch": { "$className": "RemoteEvent" },
         "DataChanged": { "$className": "RemoteEvent" },
         "Notify": { "$className": "RemoteEvent" },

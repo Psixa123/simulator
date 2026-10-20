@@ -48,6 +48,9 @@
         "DevGrant": {
           "$className": "RemoteFunction"
         },
+        "AdminCommand": {
+          "$className": "RemoteFunction"
+        },
         "Catch": {
           "$className": "RemoteEvent"
         },

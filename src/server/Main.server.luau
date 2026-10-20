@@ -22,6 +22,7 @@ local ORDER = {
 	"HazardService",
 	"MegaStormService",
 	"LeaderboardService",
+	"AdminService", -- owner-only admin panel commands (uses the services above)
 }
 
 for _, name in ORDER do
