@@ -336,12 +336,16 @@ local function catchTarget(character: Model?): number
 	return character and character:GetAttribute("CatchTarget") or 0
 end
 
--- The zone 1 cell nearest the main path, and the spot on the path's side to catch it from
-local function pickCell()
+-- The zone 1 cell nearest the main path with at least `minHealth` left (any cell when none has)
+local function pickCell(minHealth: number?, maxHealth: number?)
 	local best, bestScore = nil, math.huge
 	for _, model in zoneOneCells() do
 		local origin = model:GetAttribute("Origin")
 		local score = math.abs(origin.Z) + origin.X * 0.05
+		local health = model:GetAttribute("Health") or 0
+		if health < (minHealth or 0) or health > (maxHealth or math.huge) then
+			score += 10000
+		end
 		if score < bestScore then
 			best, bestScore = model, score
 		end
@@ -423,21 +427,47 @@ local function runScenario()
 	local function describe(result, what, where)
 		return result .. " " .. (if typeof(what) == "Instance" then what:GetFullName() else tostring(what)) .. (if where then " " .. tostring(where) else "")
 	end
-	-- straight out sideways from lanes around the spawn (and the hub's ends): a wall stops every walk
+	-- the boundary walls enclose the whole playable strip (Roblox cuts parts to 2048 studs per axis, so
+	-- one long side wall left gaps at both ends), with island ground right up to them
+	local walls = map and map:FindFirstChild("Boundaries")
+	local boundaryParts = {}
+	for _, wall in (walls and walls:GetChildren() or {}) do
+		if wall:IsA("BasePart") then
+			table.insert(boundaryParts, wall)
+		end
+	end
+	local function walled(point: Vector3): boolean
+		for _, wall in boundaryParts do
+			local offset = wall.CFrame:PointToObjectSpace(point)
+			local half = wall.Size / 2
+			if math.abs(offset.X) <= half.X and math.abs(offset.Y) <= half.Y and math.abs(offset.Z) <= half.Z then
+				return true
+			end
+		end
+		return false
+	end
 	for _, side in { -1, 1 } do
-		local reachedWall, fell = 0, {}
-		for _, x in { spawnAt.X, spawnAt.X - 10, spawnAt.X + 10, MapLayout.HubStart + 4, -150, -20, 20 } do
-			character:PivotTo(CFrame.new(x, spawnAt.Y, 0))
-			local result, what, where = walkTo(character, x, side * (MapLayout.HalfWidth + 40), "side")
-			if result == "fell" then
-				table.insert(fell, string.format("x=%d %s", x, describe(result, what, where)))
-			elseif result == "blocked" and what.Name == "Boundary" then
-				reachedWall += 1
+		local gaps, edges = {}, {}
+		for x = MapLayout.HubStart - 2, MapLayout.WorldEnd + 2, 4 do
+			if not walled(Vector3.new(x, 3, side * (MapLayout.HalfWidth + 2))) then
+				table.insert(gaps, x)
+			end
+			if not groundAt(x, side * (MapLayout.HalfWidth - 1), 0.5) then
+				table.insert(edges, x)
 			end
 		end
 		local name = if side < 0 then "north" else "south"
-		check("walking " .. name .. " from the hub never leaves the island", #fell == 0, table.concat(fell, "; "))
-		check("walking " .. name .. " from the hub ends at a boundary wall", reachedWall > 0)
+		check("the " .. name .. " wall runs the whole world without gaps", #gaps == 0, "open at x = " .. table.concat(gaps, ", ", 1, math.min(#gaps, 12)))
+		check("island ground reaches the " .. name .. " wall everywhere", #edges == 0, "no ground at x = " .. table.concat(edges, ", ", 1, math.min(#edges, 12)))
+	end
+	for _, info in { { MapLayout.HubStart - 4, "west" }, { MapLayout.WorldEnd + 4, "east" } } do
+		local gaps = {}
+		for z = -MapLayout.HalfWidth, MapLayout.HalfWidth, 4 do
+			if not walled(Vector3.new(info[1], 3, z)) then
+				table.insert(gaps, z)
+			end
+		end
+		check("the " .. info[2] .. " wall spans the whole width", #gaps == 0, "open at z = " .. table.concat(gaps, ", "))
 	end
 	for _, z in { 0, -30, 30, -100, 100 } do
 		character:PivotTo(CFrame.new(spawnAt.X, spawnAt.Y, z))
@@ -448,7 +478,6 @@ local function runScenario()
 		end
 	end
 	-- the hub's benches and lamps stand where players can get to them
-	local walls = map and map:FindFirstChild("Boundaries")
 	local westWall = -math.huge
 	for _, wall in (walls and walls:GetChildren() or {}) do
 		if wall:IsA("BasePart") and wall.Size.Z > wall.Size.X and wall.Position.X < 0 then
@@ -467,21 +496,38 @@ local function runScenario()
 	task.wait(0.5)
 
 	------------------------------------------------------------------ walk to zone 1 weather
-	local cell = pickCell()
+	local power = Formulas.Power(data)
+	local perSecond = power / GameConfig.CatchTickRate
+	local range = Formulas.Range(data)
+	-- walks along the main path to the cell's x, then into the field next to it
+	local function goTo(target: Model, label: string): boolean
+		local at = target:GetAttribute("Origin")
+		note(string.format("%s: walking to cell %d (%s, %d hp) at %.0f, %.0f, %.0f", label, target:GetAttribute("CellId"), tostring(target:GetAttribute("Type")), target:GetAttribute("Health"), at.X, at.Y, at.Z))
+		local here = root.Position
+		if math.abs(here.Z) > 1 then
+			local back, what, where = walkTo(character, here.X, 0, "back to the path")
+			check(label .. ": walking back to the main path", back == "ok", describe(back, what, where))
+		end
+		local result, what, where = walkTo(character, at.X - 8, 0, "path")
+		check(label .. ": walking the main path to the cell", result == "ok", describe(result, what, where))
+		result, what, where = walkTo(character, at.X - 8, at.Z, "field")
+		check(label .. ": walking into the field next to the cell", result == "ok", describe(result, what, where))
+		local distance = (root.Position - at).Magnitude
+		return check(label .. ": the cell is in vacuum range", distance <= range, string.format("%.1f > %d", distance, range))
+	end
+	local function emptyTank()
+		if data.Energy > 0 then
+			Registry.EconomyService.Sell(player, "Pad")
+		end
+	end
+
+	local cell = pickCell(perSecond * 1.5)
 	check("picked a zone 1 cell", cell ~= nil)
 	if not cell then
 		return
 	end
 	local cellId = cell:GetAttribute("CellId")
-	local origin = cell:GetAttribute("Origin")
-	note(string.format("walking to cell %d (%s) at %.0f, %.0f, %.0f", cellId, tostring(cell:GetAttribute("Type")), origin.X, origin.Y, origin.Z))
-	local result, what, where = walkTo(character, origin.X - 8, 0, "path")
-	check("walking the main path from the hub spawn to zone 1", result == "ok", result .. " " .. (if typeof(what) == "Instance" then what:GetFullName() else tostring(what)) .. " " .. tostring(where))
-	result, what, where = walkTo(character, origin.X - 8, origin.Z, "field")
-	check("walking into zone 1's field", result == "ok", result .. " " .. (if typeof(what) == "Instance" then what:GetFullName() else tostring(what)) .. " " .. tostring(where))
-	local range = Formulas.Range(data)
-	local distance = (root.Position - origin).Magnitude
-	check("the cell is in vacuum range", distance <= range, string.format("%.1f > %d", distance, range))
+	goTo(cell, "server path")
 
 	------------------------------------------------------------------ the server path: Catch "Start" <id>
 	local function drained(label: string, targetId: number, seconds: number)
@@ -515,6 +561,11 @@ local function runScenario()
 	check("the client sees the cells (EffectsController)", registry.EffectsController.GetCell(cellId) ~= nil)
 
 	------------------------------------------------------------------ the client path, desktop: mouse over the cell
+	-- a fresh cell that outlasts the click (the server path drained the first one)
+	emptyTank()
+	cell = pickCell(perSecond * 2.5) or cell
+	cellId = cell:GetAttribute("CellId")
+	goTo(cell, "desktop")
 	local tool = character:FindFirstChild("StormVacuum")
 	client.CameraFixed = true
 	local eye = root.Position + Vector3.new(-10, 5, 0)
@@ -534,9 +585,21 @@ local function runScenario()
 	UserInputService.MouseEnabled = false
 	UserInputService.TouchEnabled = true
 	UserInputService.KeyboardEnabled = false
+	emptyTank()
+	-- next to a cell the tank can hold entirely, so it's the nearest one and holding catches it all
+	local small = pickCell(perSecond, Formulas.TankCapacity(data) * 0.9 / Formulas.EnergyMultiplier(data, os.time()))
+	if small then
+		goTo(small, "phone")
+	end
 	local caught = data.Stats.CellsCaught
+	local energyBefore = data.Energy
 	tool:Activate()
-	drained("phone tap", cellId, 1.5)
+	task.wait(1)
+	local phoneTarget = catchTarget(character)
+	local phoneCell = phoneTarget ~= 0 and registry.EffectsController.GetCell(phoneTarget)
+	check("phone tap: CatchTarget is a cell in range", phoneCell ~= nil and (phoneCell:GetAttribute("Origin") - root.Position).Magnitude <= range, phoneTarget)
+	check("phone tap: the player's energy rises", data.Energy > energyBefore, string.format("%.1f -> %.1f", energyBefore, data.Energy))
+	cell = phoneCell or cell
 	local popped = waitUntil(function()
 		return cell.Parent == nil or data.Energy >= Formulas.TankCapacity(data) - 1e-6
 	end, 40, 0.2)
@@ -571,18 +634,14 @@ local function runScenario()
 	end, 5)
 	check("the respawned character holds the vacuum", newTool ~= nil)
 	collectSolids()
-	local next = pickCell()
+	emptyTank()
+	local next = pickCell(perSecond * 2)
 	if newTool and next then
 		local nextOrigin = next:GetAttribute("Origin")
 		local nextId = next:GetAttribute("CellId")
 		newCharacter:PivotTo(CFrame.new(nextOrigin.X - 8, 3, nextOrigin.Z))
 		task.wait(0.3)
 		cell = next
-		local sold = data.Energy
-		if data.Energy >= Formulas.TankCapacity(data) - 1e-6 then
-			Registry.EconomyService.Sell(player, "Pad")
-			note(string.format("sold a full tank (%.0f energy) before the respawn check", sold))
-		end
 		newTool:Activate()
 		drained("after respawn", nextId, 1.5)
 		newTool:Deactivate()

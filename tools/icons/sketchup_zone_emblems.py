@@ -40,7 +40,7 @@ def medal(p, face):
     L["piece"](p, GOLD_L, IC["torus"]((0, -0.5, CZ), 1.93, 0.21, n=56, m=10), crease=60)
 
 
-def clip_below(wave, r=FACE_R - 0.04, n=32, soft=0.18):
+def clip_below(wave, r=FACE_R - 0.04, n=32, soft=0.3):
     """Outline (counter-clockwise from the front) of the part of the face circle (radius r, centred on
     the medal) that lies below the curve z = wave(x) (face-local x, z): hills, dunes, mountains. The two
     corners where the curve meets the circle are rounded off over `soft`, so slab bevels can't fold."""
@@ -70,9 +70,9 @@ def clip_below(wave, r=FACE_R - 0.04, n=32, soft=0.18):
     return (arc + bend(arc[-1], [xr, wave(xr)], top[0]) + top + bend(top[-1], [xl, wave(xl)], arc[0]))
 
 
-def scenery(p, paint, wave, y, depth=0.24, bevel=0.07):
+def scenery(p, paint, wave, y, depth=0.24, bevel=0.06):
     """A flat slab of scenery (hill, dune, peak) filling the face below wave(x), its front at y - depth/2."""
-    L["piece"](p, paint, IC["slab"](clip_below(wave), depth, bevel, y=y, z=CZ, support=0.03), crease=50)
+    L["piece"](p, paint, IC["slab"](clip_below(wave), depth, bevel, y=y, z=CZ, support=0.0), crease=50)
 
 
 def sun(p, c, r, core="Color_FFE14D", ray="Color_FFA526", y=-0.66, rays=10):
@@ -135,7 +135,7 @@ ZE.update({"CZ": CZ, "FACE_R": FACE_R, "FACE_Y": FACE_Y, "new_emblem": new_emble
            "sparkle": sparkle, "heart": heart})
 result = {"chunk": 1, "helpers": len(ZE)}
 
-# ===== chunk 2/4: Hub (Storm Station: a house on a cloud), Meadows (Sunny Plains: sun over clover hills) =====
+# ===== chunk 2/4: Hub (Storm Station: a domed lab on a cloud), Meadows (Sunny Plains: sun over clover hills) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ZE = session_state["ZE"]
@@ -145,25 +145,34 @@ CZ = ZE["CZ"]
 
 def hub():
     p = ZE["new_emblem"]("Hub", 0)
+    Z0 = CZ + 0.2  # the station sits a little above the medal centre
     ZE["medal"](p, "Color_5CC8FF")
     ZE["sparkle"](p, "Color_FFFFFF", (-1.02, 0.72), 0.3, -0.62)
     ZE["sparkle"](p, "Color_FFFFFF", (1.12, 0.42), 0.22, -0.62)
-    # the station: a chunky white house with a coral roof, a glowing round window and a blue door
-    body = L["rounded_box"]((0.0, -0.72, CZ - 0.3), [1.56, 0.46, 1.12], 0.16, seg=2)
+    # the station: a white lab with a coral band, a big glass observatory dome and a lightning rod
+    body = L["rounded_box"]((0.0, -0.72, Z0 - 0.44), [1.5, 0.5, 0.92], 0.16, seg=2)
     L["piece"](p, "Color_EEF0FF", body, crease=40)
-    roof = [[-1.12, 0.12], [1.12, 0.12], [0.0, 1.08]]
-    L["piece"](p, P["coral"], IC["slab"](roof, 0.6, 0.12, y=-0.76, z=CZ + 0.08, corner=0.2, support=0.04), crease=50)
-    L["piece"](p, P["bolt"], IC["disc"]((0.0, -1.08, CZ + 0.5), 0.2, 0.16, 0.06, n=24), crease=50)
-    door = L["round_poly"]([[-0.24, -0.86], [0.24, -0.86], [0.24, -0.26], [-0.24, -0.26]], 0.2, seg=3)
-    L["piece"](p, P["sky_d"], IC["slab"](door, 0.14, 0.04, y=-0.98, z=CZ, x=0.0, support=0.0), crease=50)
-    for x in (-0.52, 0.52):
-        L["piece"](p, "Color_8FDBFF", IC["disc"]((x, -0.98, CZ - 0.3), 0.15, 0.12, 0.04, n=20), crease=50)
-    # a weather vane on the roof ridge
-    L["piece"](p, P["inksoft"], L["tube"]([(0.0, -0.76, CZ + 1.12), (0.0, -0.76, CZ + 1.42)], 0.06, n=8), crease=60)
-    L["piece"](p, P["bolt"], L["ball"]((0.0, -0.76, CZ + 1.48), 0.11, seg=3), crease=60)
+    L["piece"](p, P["coral"], L["rounded_box"]((0.0, -0.74, Z0 + 0.06), [1.74, 0.6, 0.22], 0.09, seg=2), crease=40)
+    prof = [(0.66 * math.cos(math.pi / 2 * k / 6), 0.66 * math.sin(math.pi / 2 * k / 6)) for k in range(7)]
+    dome = L["scale"](L["lathe"](prof, n=36), [1.0, 0.5, 1.0])
+    L["piece"](p, P["sky_l"], L["move"](dome, (0.0, -0.74, Z0 + 0.16)), crease=60)
+    shine = [(-0.2 + 0.36 * math.cos(math.radians(a)), Z0 + 0.17 + 0.36 * math.sin(math.radians(a))) for a in
+             (150, 128, 106, 86)]
+    L["piece"](p, "Color_FFFFFF", L["tube"]([(x, -1.04 - 0.2 * (z - Z0 - 0.17), z) for x, z in shine], 0.05, n=8),
+               crease=60)
+    door = [[-0.6, -0.9], [-0.16, -0.9], [-0.16, -0.3], [-0.6, -0.3]]
+    L["piece"](p, P["sky_d"], IC["slab"](door, 0.14, 0.04, y=-0.98, z=Z0, corner=0.2, support=0.0), crease=50)
+    # a porthole with a gold rim and a bolt on it
+    L["piece"](p, P["sky_l"], IC["disc"]((0.34, -0.97, Z0 - 0.45), 0.25, 0.1, 0.03, n=28), crease=50)
+    L["piece"](p, P["bolt"], IC["torus"]((0.34, -1.02, Z0 - 0.45), 0.26, 0.05, n=28, m=8), crease=60)
+    L["piece"](p, P["bolt"], IC["slab"](IC["bolt_shape"](0.36), 0.08, 0.02, y=-1.02, x=0.35, z=Z0 - 0.45,
+                                        corner=0.03, support=0.0), crease=50)
+    # the lightning rod on top of the dome
+    L["piece"](p, P["inksoft"], L["tube"]([(0.0, -0.74, Z0 + 0.74), (0.0, -0.74, Z0 + 1.1)], 0.06, n=8), crease=60)
+    L["piece"](p, P["bolt"], L["ball"]((0.0, -0.74, Z0 + 1.18), 0.12, seg=3), crease=60)
     # a fluffy cloud the station floats on
-    ZE["cloud"](p, "Color_FFFFFF", [(-0.95, -1.0, 0.36), (-0.4, -0.92, 0.44), (0.25, -0.95, 0.44),
-                                    (0.88, -1.02, 0.34), (0.0, -1.2, 0.36)], -0.86, 0.5, floor=-1.4)
+    ZE["cloud"](p, "Color_FFFFFF", [(-0.95, -1.08, 0.34), (-0.4, -1.0, 0.42), (0.25, -1.03, 0.42),
+                                    (0.88, -1.1, 0.32), (0.0, -1.26, 0.34)], -0.86, 0.5, floor=-1.46)
     return p
 
 
@@ -248,16 +257,12 @@ def cactus(p, x, z, h, y, paint="Color_34C28C"):
 def dunes():
     p = ZE["new_emblem"]("Dunes", 3)
     ZE["medal"](p, "Color_9DEBF2")
-    ZE["sun"](p, (-0.55, 0.62), 0.5, core="Color_FFF08A", ray="Color_FF9A3C")
-    # a pale dune behind with a cactus on it, a golden dune in front
-    ZE["scenery"](p, "Color_FFD983", lambda x: -0.15 + 0.55 * math.exp(-((x - 0.5) / 0.75) ** 2), -0.6)
-    cactus(p, 0.62, 0.2, 0.9, -0.66)
-    ZE["scenery"](p, "Color_F5A742", lambda x: -0.72 + 0.42 * math.exp(-((x + 0.65) / 0.85) ** 2), -0.72,
-                  depth=0.3)
-    # wind lines over the front dune
-    for x0, z0, ln in ((-0.95, -0.95, 0.7), (0.05, -1.22, 0.62)):
-        line = [(x0 + ln * k / 4, -0.9, CZ + z0 + 0.06 * math.sin(math.pi * k / 4)) for k in range(5)]
-        L["piece"](p, "Color_FFE7B0", L["tube"](line, 0.05, n=6), crease=60)
+    ZE["sun"](p, (-0.58, 0.7), 0.48, core="Color_FFF08A", ray="Color_FF9A3C")
+    # three dunes from pale to deep gold, a cactus on the back one
+    ZE["scenery"](p, "Color_FFE3A0", lambda x: -0.12 + 0.55 * math.exp(-((x - 0.55) / 0.75) ** 2), -0.6)
+    cactus(p, 0.66, 0.24, 0.86, -0.66)
+    ZE["scenery"](p, "Color_FFC65C", lambda x: -0.52 + 0.4 * math.exp(-((x + 0.7) / 0.8) ** 2), -0.7, depth=0.28)
+    ZE["scenery"](p, "Color_F29A3A", lambda x: -1.02 + 0.3 * math.exp(-((x - 0.55) / 0.7) ** 2), -0.8, depth=0.3)
     return p
 
 
@@ -301,14 +306,11 @@ def frost():
     ZE["scenery"](p, "Color_8FC2FA", peak(0.75, 0.35, 1.2), -0.6)
     main = peak(-0.2, 0.92, 1.25)
     ZE["scenery"](p, "Color_4F8DEB", main, -0.68, depth=0.28)
-    cap = []
-    for k in range(13):
-        x = -0.2 - 0.66 + 1.32 * k / 12
-        cap.append([x, main(x) + 0.02])
-    for k in range(1, 12):
-        x = -0.2 + 0.62 - 1.24 * k / 12
-        cap.append([x, 0.18 + 0.12 * math.cos(math.pi * 3 * k / 12)])
-    cap = list(reversed(cap))
+    # the snow cap: the peak's top down to z = 0.17, its lower edge dripping down in three scallops
+    half = math.sqrt(((0.94 - 0.17) / 1.25) ** 2 - 0.12 * 0.12)
+    xl, xr = -0.2 - half, -0.2 + half
+    cap = [[xl + (xr - xl) * k / 24, 0.17 - 0.09 * (1 - math.cos(6 * math.pi * k / 24))] for k in range(25)]
+    cap += [[xr - (xr - xl) * k / 24, main(xr - (xr - xl) * k / 24) + 0.02] for k in range(1, 24)]
     L["piece"](p, "Color_FFFFFF", IC["slab"](cap, 0.2, 0.05, y=-0.86, z=CZ, corner=0.08, support=0.0), crease=50)
     # snow drifts at the foot
     ZE["scenery"](p, "Color_F4FAFF", lambda x: -1.05 + 0.18 * math.cos(2.2 * x), -0.78, depth=0.22)
@@ -343,14 +345,16 @@ def sky():
                              ((0.1, 1.28), 0.16, "Color_FFFFFF", 4)):
         ZE["sparkle"](p, paint, c, r, -0.62, points=pts)
     # a ringed planet: pink with a pale band, a gold ring tilted towards the viewer
-    centre = (0.0, -0.8, CZ)
-    L["piece"](p, "Color_FF8CDC", L["ball"](centre, [0.82, 0.62, 0.82], seg=8), crease=60)
-    band = L["ball"]((0.0, 0.0, 0.0), [0.835, 0.635, 0.16], seg=8)
-    band = L["move"](L["rotate"](band, "y", -18), centre)
+    centre = (0.0, -0.98, CZ)
+    L["piece"](p, "Color_FF8CDC", L["ball"](centre, [0.8, 0.45, 0.8], seg=8), crease=60)
+    band = L["ball"]((0.0, 0.0, 0.0), [0.815, 0.46, 0.17], seg=8)
+    band = L["move"](L["rotate"](L["move"](band, (0.0, 0.0, 0.18)), "y", -16), centre)
     L["piece"](p, "Color_FFC2EE", band, crease=60)
-    ring = IC["torus"]((0.0, 0.0, 0.0), 1.18, 0.11, n=48, m=8, axis="z", squash=0.6)
-    ring = L["rotate"](L["rotate"](ring, "x", -72), "y", -18)
-    L["piece"](p, P["bolt"], L["move"](ring, centre), crease=60)
+    # the ring: a circle squashed to an ellipse, its bottom half swung to the front and its top half to the
+    # back (z/R from -1 to 1 -> y from -0.6 to +0.24), so it passes in front of the planet and behind it
+    ring = IC["torus"]((0.0, 0.0, 0.0), 1.28, 0.11, n=64, m=8, axis="y", squash=0.7)
+    ring = L["warp"](ring, lambda q: [q[0], q[1] + 0.42 * (q[2] / 1.28) - 0.18 * (q[2] / 1.28) ** 2, 0.34 * q[2]])
+    L["piece"](p, P["bolt"], L["move"](L["rotate"](ring, "y", -16), centre), crease=60)
     return p
 
 

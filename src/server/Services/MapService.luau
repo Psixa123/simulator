@@ -1041,6 +1041,26 @@ local function pieceOf(target: Instance, prefix: string): BasePart?
 	return nil
 end
 
+-- The face of `piece` that points most nearly straight up, for particles that should rise from it: a
+-- pack mesh stands upright, but a part-built cylinder lies on its side (its Top face points sideways)
+local function upFace(piece: BasePart): Enum.NormalId
+	local frame = piece.CFrame
+	local best, bestY = Enum.NormalId.Top, -math.huge
+	for _, face in {
+		{ Enum.NormalId.Top, frame.UpVector.Y },
+		{ Enum.NormalId.Bottom, -frame.UpVector.Y },
+		{ Enum.NormalId.Right, frame.RightVector.Y },
+		{ Enum.NormalId.Left, -frame.RightVector.Y },
+		{ Enum.NormalId.Front, frame.LookVector.Y },
+		{ Enum.NormalId.Back, -frame.LookVector.Y },
+	} do
+		if face[2] > bestY then
+			best, bestY = face[1], face[2]
+		end
+	end
+	return best
+end
+
 ---------------------------------------------------------------------------
 -- Islands: ground, cliffs, the cloud sea, fields and paths
 ---------------------------------------------------------------------------
@@ -1721,7 +1741,7 @@ local function addSteam(target: Instance)
 			Lifetime = NumberRange.new(2, 3),
 			Rate = 4,
 			Speed = NumberRange.new(5, 8),
-			EmissionDirection = Enum.NormalId.Top,
+			EmissionDirection = upFace(vent),
 			SpreadAngle = Vector2.new(12, 12),
 			RotSpeed = NumberRange.new(-30, 30),
 		})
@@ -2042,7 +2062,7 @@ function Decor.Volcano(d, zoneId: number)
 			Lifetime = NumberRange.new(5, 7),
 			Rate = 5,
 			Speed = NumberRange.new(10, 16),
-			EmissionDirection = Enum.NormalId.Top,
+			EmissionDirection = upFace(crater),
 			SpreadAngle = Vector2.new(15, 15),
 			RotSpeed = NumberRange.new(-20, 20),
 		})
@@ -2359,7 +2379,7 @@ local function buildHub(parent: Instance)
 
 	-- Paths: the main path (around the spawn and under the arena it stops) and branches to every station
 	local paths = folder("Paths", hub)
-	pavers(paths, biome, towerX + 14, MapLayout.HubEnd, 0, PATH_HALF * 2, false, function(x, z)
+	pavers(paths, biome, MapLayout.HubStart - 2, MapLayout.HubEnd, 0, PATH_HALF * 2, false, function(x, z)
 		return math.abs(x - center.X) < radius + 3 or math.abs(x - spawnAt.X) < 12
 	end)
 	pavers(paths, biome, -73, -8, -160, 10, true)
@@ -2405,13 +2425,17 @@ local function buildHub(parent: Instance)
 	leaderboard(hub, MapLayout.Leaderboards.Volts, Vector3.zAxis, "Volts", "🏆 TOP STORM CATCHERS", BOLT_DEEP)
 	leaderboard(hub, MapLayout.Leaderboards.Rebirths, -Vector3.zAxis, "Rebirths", "🌀 MOST CLIMATE SHIFTS", STORM_DEEP)
 
-	-- Lamps along the path, benches and planted trees
+	-- Lamps along the path, benches and planted trees (all inside the west boundary at HubStart - 2,
+	-- where the path ends at a railing: the Weather Tower behind it is scenery)
 	local decor = folder("Decor", hub)
-	for _, x in { -236, -214, -60, -38, -16 } do
+	for _, x in { -217, -60, -38, -16 } do
 		lamp(decor, Vector3.new(x, 0, -12), Vector3.new(x, 0, 0), biome.Lamp)
 		lamp(decor, Vector3.new(x, 0, 12), Vector3.new(x, 0, 0), biome.Lamp)
 	end
-	for _, spot in { { -224, -24 }, { -224, 24 }, { -204, -20 }, { -204, 20 } } do
+	for _, z in { -15.3, -5.1, 5.1, 15.3 } do
+		place("Fence", decor, CFrame.new(MapLayout.HubStart - 1.4, GROUND_Y, z) * facing(1, 0), { Paints = { Primary = hex("FFF6E6"), Secondary = SKY }, Collide = false })
+	end
+	for _, spot in { { -214, -24 }, { -214, 24 }, { -204, -20 }, { -204, 20 } } do
 		place("Bench", decor, CFrame.new(spot[1], GROUND_Y, spot[2]) * facing(0, -math.sign(spot[2])), { Paints = { Primary = SUNSET, Secondary = INK_SOFT }, Collide = true })
 	end
 	local rng = Random.new(77)
@@ -2612,8 +2636,17 @@ function MapService.Init()
 	local function wall(cframe: CFrame, size: Vector3)
 		part({ Name = "Boundary", CFrame = cframe, Size = size, Transparency = 1, CanQuery = false, CanTouch = false, CastShadow = false, Parent = walls })
 	end
-	wall(CFrame.new(centerX, 110, -(MapLayout.HalfWidth + 2)), Vector3.new(length + 24, 280, 4))
-	wall(CFrame.new(centerX, 110, MapLayout.HalfWidth + 2), Vector3.new(length + 24, 280, 4))
+	-- The side walls run the whole world (2164 studs), but Roblox cuts every part to 2048 studs per
+	-- axis, which left gaps at both ends: they're built from equal pieces that each fit
+	local sideLength = length + 24
+	local pieces = math.ceil(sideLength / 2000)
+	local pieceLength = sideLength / pieces
+	for index = 1, pieces do
+		local x = centerX - sideLength / 2 + pieceLength * (index - 0.5)
+		for _, side in { -1, 1 } do
+			wall(CFrame.new(x, 110, side * (MapLayout.HalfWidth + 2)), Vector3.new(pieceLength, 280, 4))
+		end
+	end
 	wall(CFrame.new(MapLayout.HubStart - 4, 110, 0), Vector3.new(4, 280, 260))
 	wall(CFrame.new(MapLayout.WorldEnd + 4, 110, 0), Vector3.new(4, 280, 260))
 

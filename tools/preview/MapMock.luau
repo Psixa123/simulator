@@ -2899,8 +2899,10 @@ function modelSetPivot(model, value)
 end
 
 local function moveTree(object, delta)
+	-- Roblox keeps every part's rotation orthonormal; without that, the small rounding error of a moved
+	-- pivot doubles with every PivotTo (delta = target * transpose(pivot)) and blows up after ~50 moves
 	eachPart(object, function(part)
-		part.__props.CFrame = mulCF(delta, part.__props.CFrame or CFrame.identity)
+		part.__props.CFrame = CFmethods.Orthonormalize(mulCF(delta, part.__props.CFrame or CFrame.identity))
 	end)
 	local function movePivots(node)
 		if isA(node.__class, "Model") and rawget(node, "__pivotSet") and not node.__props.PrimaryPart then
@@ -2926,7 +2928,7 @@ function methods.PivotTo(self, target)
 		fail("PivotTo expects a CFrame, got " .. kindOf(target), 2)
 	end
 	if isA(self.__class, "Model") then
-		local current = modelPivot(self)
+		local current = CFmethods.Orthonormalize(modelPivot(self))
 		local delta = mulCF(target, inverseCF(current))
 		moveTree(self, delta)
 		if not self.__props.PrimaryPart then

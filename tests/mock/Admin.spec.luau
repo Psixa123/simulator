@@ -200,8 +200,8 @@ Registry.PetService = {
 	end,
 }
 Registry.BoostService = {
-	Add = function(player, boostName, seconds)
-		call(string.format("BoostService.Add %s %s %d", player.Name, boostName, seconds))
+	Add = function(player, boostName, seconds, silent)
+		call(string.format("BoostService.Add %s %s %d%s", player.Name, boostName, seconds, if silent then " silent" else ""))
 		datas[player].Boosts[boostName] = os.time() + seconds
 	end,
 }
@@ -227,10 +227,12 @@ Registry.MegaStormService = {
 }
 
 local rateLimited = false
+local rateKeys = {} -- the keys AdminService rate limits on
 local notified = {} -- list of "Player|text|kind" ("*" = everyone)
 local roots = {} -- [Player] = fake HumanoidRootPart
 local Net = {
-	RateLimit = function()
+	RateLimit = function(_, key)
+		table.insert(rateKeys, key)
 		return not rateLimited
 	end,
 	Fail = function(message)
@@ -459,6 +461,8 @@ reset()
 rateLimited = true
 reply = invoke(owner, "Volts", { Mode = "Give", Amount = 5 })
 check("rate limit: refused", reply.Ok == false and reply.Error == "Slow down!")
+-- per command, so the panel's background Inspect never gets a click refused
+check("rate limit: keyed per command", rateKeys[#rateKeys] == "AdminVolts", rateKeys[#rateKeys])
 rateLimited = false
 
 ------------------------------------------------------------------------ commands
@@ -508,7 +512,8 @@ check("shifts: gear redressed", table.find(calls, "CharacterGear.DressPlayer Own
 
 reset()
 reply = invoke(owner, "Boost", { Boost = "Luck", Minutes = 30 })
-check("boost give", reply.Ok and table.find(calls, "BoostService.Add OwnerOfStorms Luck 1800") ~= nil, table.concat(calls, " | "))
+-- the admin's own boost: only the admin's answer, not the usual "boost active" toast as well
+check("boost give", reply.Ok and table.find(calls, "BoostService.Add OwnerOfStorms Luck 1800 silent") ~= nil, table.concat(calls, " | "))
 reply = invoke(owner, "Boost", { Boost = "Luck", Minutes = 0 })
 check("boost clear", reply.Ok and data.Boosts.Luck == 0)
 
@@ -567,6 +572,9 @@ check("target: info is the target's", reply.Info.Name == "Puffball42")
 check("target: logged with the target", count(Mock.Prints, "Target=\"Puffball42\"") == 1, table.concat(Mock.Prints, " | "))
 reply = invoke(owner, "Zone", { Zone = 2, Target = "Puffy" })
 check("target: by display name", reply.Ok and puffData.Zone == 2)
+reply = invoke(owner, "Boost", { Boost = "Energy", Minutes = 5, Target = "Puffball42" })
+check("target: boost toasts the target", reply.Ok and table.find(calls, "BoostService.Add Puffball42 Energy 300") ~= nil, table.concat(calls, " | "))
+check("target: boost answer names them", reply.Ok and string.find(reply.Message, "for Puffy", 1, true) ~= nil, reply.Message)
 reply = invoke(owner, "Inspect", { Target = "puff" })
 check("target: by the start of a name", reply.Ok and reply.Info.Volts == 77 and reply.Info.Zone == 2, reply.Error)
 reply = invoke(owner, "Inspect", { Target = "" })

@@ -468,8 +468,10 @@ COMMANDS.Boost = {
 			Registry.DataService.Replicate(ctx.Target, "Boosts")
 			return ok(string.format("Cleared %s %s boost.", whose(ctx), boost.Name))
 		end
-		Registry.BoostService.Add(ctx.Target, ctx.Args.Boost, ctx.Args.Minutes * 60)
-		return ok(string.format("%s %s boost: +%s.", boost.Icon, boost.Name, Format.Duration(ctx.Args.Minutes * 60)))
+		-- The target gets the usual "boost active" toast; the admin gets this answer instead of both
+		Registry.BoostService.Add(ctx.Target, ctx.Args.Boost, ctx.Args.Minutes * 60, ctx.Target == ctx.Admin)
+		local whom = if ctx.Target == ctx.Admin then "" else " for " .. name(ctx.Target)
+		return ok(string.format("%s %s boost%s: +%s.", boost.Icon, boost.Name, whom, Format.Duration(ctx.Args.Minutes * 60)))
 	end,
 }
 
@@ -735,12 +737,13 @@ function AdminService.Handle(admin: Player, command, args)
 	if admin:GetAttribute("IsAdmin") ~= true then
 		admin:SetAttribute("IsAdmin", true) -- e.g. a group rank lookup that only worked now
 	end
-	if not Net.RateLimit(admin, "AdminCommand", RATE_LIMIT) then
-		return Net.Fail("Slow down!")
-	end
 	local spec = type(command) == "string" and COMMANDS[command]
 	if not spec then
 		return Net.Fail("Unknown admin command.")
+	end
+	-- Per command, so the panel's background Inspect never gets a click refused
+	if not Net.RateLimit(admin, "Admin" .. command, RATE_LIMIT) then
+		return Net.Fail("Slow down!")
 	end
 	local clean, reason = AdminService.Validate(spec, args)
 	if not clean then

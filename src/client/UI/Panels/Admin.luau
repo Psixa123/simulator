@@ -87,7 +87,7 @@ local function field(props)
 		Position = UDim2.fromOffset(7, 1),
 		Font = Theme.Font,
 		PlaceholderText = props.Placeholder or "0",
-		PlaceholderColor3 = Theme.InkSoft,
+		PlaceholderColor3 = Theme.InkSoft:Lerp(WHITE, 0.45), -- lighter than a typed value
 		Text = props.Text or "",
 		TextColor3 = INK,
 		TextSize = props.TextSize or 18,
@@ -131,8 +131,76 @@ local function well(parent: Instance, icon: string, color: Color3, size: number,
 	return holder
 end
 
--- A white row: icon well, title + info on the left, controls (right aligned) on the right.
--- Returns { Frame, Card, Title, Info, Controls }
+-- A round avatar: the player's initial on a candy disc, covered by their Roblox headshot once it has
+-- loaded (rbxthumb needs no web call; a test player without a picture keeps the initial).
+-- Returns { Frame, Set(player, colorName) }
+local function avatar(parent: Instance, size: number, position: UDim2, anchor: Vector2?)
+	local disc = UI.Create("Frame", {
+		Name = "Avatar",
+		BackgroundColor3 = WHITE,
+		Size = UDim2.fromOffset(size, size),
+		Position = position,
+		AnchorPoint = anchor or Vector2.new(0, 0.5),
+		Parent = parent,
+		UI.Round(),
+		UI.Gradient(SETS.Storm.Top, SETS.Storm.Bottom),
+	})
+	local gradient = disc:FindFirstChildOfClass("UIGradient")
+	local letter = UI.Text({
+		Name = "Letter",
+		Text = "",
+		TextSize = math.floor(size * 0.52),
+		Stroke = SETS.Storm.Stroke,
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromOffset(0, 1),
+		Parent = disc,
+	})
+	local photo = UI.Create("ImageLabel", {
+		Name = "Photo",
+		BackgroundTransparency = 1,
+		Image = "",
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 2,
+		Parent = disc,
+		UI.Round(),
+	})
+	local ring = UI.Stroke(2, INK)
+	ring.Parent = disc
+
+	local api = { Frame = disc }
+	function api.Set(player: Player, colorName: string?)
+		local set = SETS[colorName or "Storm"] or SETS.Storm
+		gradient.Color = ColorSequence.new(set.Top, set.Bottom)
+		local stroke = letter:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Color = set.Stroke
+		end
+		letter.Text = string.upper(string.sub(player.DisplayName, 1, 1))
+		photo.Image = if player.UserId > 0
+			then string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150", player.UserId)
+			else ""
+	end
+	return api
+end
+
+-- Players whose Name or DisplayName contains the text (any case); an exact Name wins outright
+local function matchPlayers(query: string): { Player }
+	local lower = string.lower(query)
+	local found = {}
+	for _, player in Players:GetPlayers() do
+		local name = string.lower(player.Name)
+		if name == lower then
+			return { player }
+		end
+		if string.find(name, lower, 1, true) or string.find(string.lower(player.DisplayName), lower, 1, true) then
+			table.insert(found, player)
+		end
+	end
+	return found
+end
+
+-- A white row: icon well (or props.Player's avatar), title + info on the left, controls (right aligned)
+-- on the right. Returns { Frame, Card, Title, Info, Controls, Avatar? }
 local function row(parent: Instance, order: number, props)
 	local height = props.Height or ROW_HEIGHT
 	local holder = UI.Create("Frame", {
@@ -143,7 +211,13 @@ local function row(parent: Instance, order: number, props)
 		Parent = parent,
 	})
 	local card = UI.CloudCard({ Name = "Card", Size = UDim2.new(1, -4, 1, -4), Position = UDim2.fromOffset(2, 2), Parent = holder })
-	well(card, props.Icon, props.Color or SETS.Sky.Top, 46, UDim2.new(0, 8, 0, (height - 4) / 2))
+	local face
+	if props.Player then
+		face = avatar(card, 46, UDim2.new(0, 8, 0, (height - 4) / 2))
+		face.Set(props.Player, props.AvatarColor)
+	else
+		well(card, props.Icon, props.Color or SETS.Sky.Top, 46, UDim2.new(0, 8, 0, (height - 4) / 2))
+	end
 	local titleWidth = props.TitleWidth or TITLE_WIDTH
 	local title = UI.Text({
 		Name = "Title",
@@ -178,7 +252,7 @@ local function row(parent: Instance, order: number, props)
 		Parent = card,
 		UI.List(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center),
 	})
-	return { Frame = holder, Card = card, Title = title, Info = info, Controls = controls }
+	return { Frame = holder, Card = card, Title = title, Info = info, Controls = controls, Avatar = face }
 end
 
 -- A section heading inside a scrolling page
@@ -274,7 +348,7 @@ function Admin.Build()
 	end
 
 	-- Sends a command; targeted commands go to the picked player (or options.Player). Shows the
-	-- server's answer as a toast unless options.Quiet.
+	-- server's answer as a toast; options.Quiet hides a success, options.Silent any answer.
 	local TARGETED = {
 		Volts = true, Energy = true, Upgrade = true, Rebirths = true, Boost = true, Pass = true,
 		Zone = true, Teleport = true, Pets = true, Inspect = true, Goto = true, Bring = true,
@@ -290,7 +364,9 @@ function Admin.Build()
 			return Remotes.AdminCommand:InvokeServer(command, args)
 		end)
 		if not success or type(reply) ~= "table" then
-			notify("The server didn't answer that admin command.", "Error")
+			if not options.Silent then
+				notify("The server didn't answer that admin command.", "Error")
+			end
 			return nil
 		end
 		if reply.Ok then
@@ -298,10 +374,10 @@ function Admin.Build()
 				targetInfo = reply.Info
 				targetInfo.ReceivedAt = os.clock()
 			end
-			if not options.Quiet and type(reply.Message) == "string" then
+			if not options.Quiet and not options.Silent and type(reply.Message) == "string" then
 				notify(reply.Message, "Success")
 			end
-		else
+		elseif not options.Silent then
 			notify(tostring(reply.Error or "That didn't work."), "Error")
 		end
 		refresh()
@@ -336,27 +412,7 @@ function Admin.Build()
 		UI.Stroke(Theme.OutlineSmall, INK),
 	})
 	local chipStroke = chip:FindFirstChildOfClass("UIStroke")
-	local avatar = UI.Create("Frame", {
-		Name = "Avatar",
-		BackgroundColor3 = WHITE,
-		Size = UDim2.fromOffset(34, 34),
-		Position = UDim2.new(0, 6, 0.5, 0),
-		AnchorPoint = Vector2.new(0, 0.5),
-		Parent = chip,
-		UI.Round(),
-		UI.Gradient(SETS.Storm.Top, SETS.Storm.Bottom),
-		UI.Stroke(2, INK),
-	})
-	local avatarGradient = avatar:FindFirstChildOfClass("UIGradient")
-	local avatarLetter = UI.Text({
-		Name = "Letter",
-		Text = "",
-		TextSize = 18,
-		Stroke = SETS.Storm.Stroke,
-		Size = UDim2.fromScale(1, 1),
-		Position = UDim2.fromOffset(0, 1),
-		Parent = avatar,
-	})
+	local chipAvatar = avatar(chip, 34, UDim2.new(0, 6, 0.5, 0))
 	UI.Text({
 		Name = "Caption",
 		Text = "TARGET",
@@ -408,12 +464,7 @@ function Admin.Build()
 		local set = if other then SETS.Sunset else SETS.Storm
 		local who = target or localPlayer
 		chipName.Text = if other then who.DisplayName else "You"
-		avatarLetter.Text = string.upper(string.sub(who.DisplayName, 1, 1))
-		avatarGradient.Color = ColorSequence.new(set.Top, set.Bottom)
-		local letterStroke = avatarLetter:FindFirstChildOfClass("UIStroke")
-		if letterStroke then
-			letterStroke.Color = set.Stroke
-		end
+		chipAvatar.Set(who, if other then "Sunset" else "Storm")
 		chip.BackgroundColor3 = if other then set.Tint else WHITE
 		if chipStroke then
 			chipStroke.Color = if other then set.Bottom else INK
@@ -497,7 +548,7 @@ function Admin.Build()
 		end })
 		upgradeRows[upgradeId] = upgradeRow
 	end
-	local allRow = row(me, nextOrder(), { Name = "AllUpgrades", Icon = "Upgrades", Color = SETS.Leaf.Top, Title = "Every upgrade", Info = "All four at once" })
+	local allRow = row(me, nextOrder(), { Name = "AllUpgrades", Icon = "Upgrades", Color = SETS.Leaf.Top, Title = "Every upgrade", Info = "All four at once", TitleWidth = 290 })
 	local maxLevel = 1
 	for _, def in GameConfig.Upgrades do
 		maxLevel = math.max(maxLevel, def.MaxLevel)
@@ -532,7 +583,7 @@ function Admin.Build()
 		boostRows[boostName] = boostRow
 	end
 
-	heading(me, nextOrder(), "Gamepasses (this session only)")
+	heading(me, nextOrder(), "Gamepasses (green = owned, for this session only)")
 	local passKeys = {}
 	for key in Monetization.Gamepasses do
 		table.insert(passKeys, key)
@@ -555,7 +606,7 @@ function Admin.Build()
 		Position = UDim2.fromOffset(2, 2),
 		Parent = passHolder,
 		UI.Padding(10, 10, 10, 10),
-		UI.Grid(UDim2.fromOffset(156, BUTTON_HEIGHT), UDim2.fromOffset(8, 8)),
+		UI.Grid(UDim2.new(0.25, -6, 0, BUTTON_HEIGHT), UDim2.fromOffset(8, 8)), -- four across, filling the card
 	})
 	local passButtons = {}
 	local function passOwned(key: string): boolean
@@ -568,7 +619,7 @@ function Admin.Build()
 			Name = key,
 			Text = pass.Name,
 			Icon = pass.Icon,
-			Color = "Off",
+			Color = "Ink",
 			TextSize = 15,
 			LayoutOrder = index,
 			Parent = passCard,
@@ -577,14 +628,22 @@ function Admin.Build()
 			end,
 		})
 	end
-	button({ Name = "AllOn", Text = "All on", Color = "Leaf", LayoutOrder = #passKeys + 1, Parent = passCard, OnClick = function()
-		run("Pass", { Pass = "All", Owned = true })
-	end })
-	button({ Name = "AllOff", Text = "All off", Color = "Coral", LayoutOrder = #passKeys + 2, Parent = passCard, OnClick = function()
-		run("Pass", { Pass = "All", Owned = false })
-	end })
 	-- keep a gap under the card's outline
 	UI.Create("Frame", { Name = "Gap", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 4), Position = UDim2.new(0, 0, 1, 0), Parent = passHolder })
+	local allPassesRow = row(me, nextOrder(), {
+		Name = "AllPasses",
+		Icon = "Shop",
+		Color = SETS.Leaf.Top,
+		Title = "Every gamepass",
+		Info = "Grant or remove them all at once",
+		TitleWidth = 290,
+	})
+	button({ Name = "AllOff", Text = "All off", Color = "Coral", Width = 100, LayoutOrder = 1, Parent = allPassesRow.Controls, OnClick = function()
+		run("Pass", { Pass = "All", Owned = false })
+	end })
+	button({ Name = "AllOn", Text = "All on", Color = "Leaf", Width = 100, LayoutOrder = 2, Parent = allPassesRow.Controls, OnClick = function()
+		run("Pass", { Pass = "All", Owned = true })
+	end })
 
 	heading(me, nextOrder(), "Danger zone")
 	local resetRow = row(me, nextOrder(), {
@@ -598,9 +657,10 @@ function Admin.Build()
 	button({ Text = "Reset my data", Color = "Coral", Width = 170, LayoutOrder = 1, Parent = resetRow.Controls, OnClick = function()
 		Confirm.Show({
 			Title = "Reset your data?",
-			Text = "Volts, pets, zones, upgrades, Climate Shifts, boosts, rewards and stats go back to a brand new save. Settings and gamepasses stay.\nThis can't be undone.",
+			Text = "Volts, pets, zones, upgrades, Shifts and\nboosts start over like a brand new save.\nSettings and gamepasses stay.\nThis can't be undone.",
 			ConfirmText = "Reset",
-			Color = "Red",
+			Color = "Coral",
+			Icon = "Close",
 			OnConfirm = function()
 				run("Reset", { Confirm = "RESET" })
 			end,
@@ -793,29 +853,41 @@ function Admin.Build()
 	pages.World = world
 	order = 0
 
-	heading(world, nextOrder(), "Zones (unlock, teleport, spawn weather)")
+	heading(world, nextOrder(), "Zones")
+	local allZonesRow = row(world, nextOrder(), {
+		Name = "AllZones",
+		Icon = "Lock",
+		Color = SETS.Leaf.Top,
+		Title = "Every zone",
+		Info = "Unlock them all, or lock all but the first",
+		TitleWidth = 290,
+	})
+	button({ Text = "Lock all", Color = "Sunset", Width = 110, LayoutOrder = 1, Parent = allZonesRow.Controls, OnClick = function()
+		run("Zone", { Zone = 1 })
+	end })
+	button({ Text = "Unlock all", Color = "Leaf", Width = 120, LayoutOrder = 2, Parent = allZonesRow.Controls, OnClick = function()
+		run("Zone", { Zone = #Zones })
+	end })
 	local cellsRow = row(world, nextOrder(), {
 		Name = "Cells",
 		Icon = "🌦️",
 		Color = SETS.Rain.Top,
-		Title = "Weather per spawn",
-		Info = "Cells the Weather buttons add",
-		TitleWidth = 260,
+		Title = "Weather cells",
+		Info = "How many each Weather button spawns (1-20)",
+		TitleWidth = 330,
 	})
-	local cellsBox = field({ Name = "Count", Placeholder = "1-20", Text = "5", Size = UDim2.fromOffset(90, BUTTON_HEIGHT - 2), LayoutOrder = 1, Parent = cellsRow.Controls })
-	button({ Text = "Unlock all", Color = "Leaf", Width = 120, LayoutOrder = 2, Parent = cellsRow.Controls, OnClick = function()
-		run("Zone", { Zone = #Zones })
-	end })
+	local cellsBox = field({ Name = "Count", Placeholder = "1-20", Text = "5", Size = UDim2.fromOffset(110, BUTTON_HEIGHT - 2), LayoutOrder = 1, Parent = cellsRow.Controls })
 
 	local zoneRows = {}
-	local hubRow = row(world, nextOrder(), { Name = "Hub", Icon = "Teleport", Color = Zones.Hub.Color, Title = Zones.Hub.Name, Info = "The hub" })
-	button({ Text = "Go", Color = "Sky", Width = 70, LayoutOrder = 3, Parent = hubRow.Controls, OnClick = function()
+	local goButtons = {} -- "Go" for yourself, "Send" when another player is the target
+	local hubRow = row(world, nextOrder(), { Name = "Hub", Icon = "Teleport", Color = Zones.Hub.Color, Title = Zones.Hub.Name, Info = "The hub, where everyone starts", TitleWidth = 330 })
+	table.insert(goButtons, button({ Name = "Go", Text = "Go", Color = "Sky", Width = 84, LayoutOrder = 3, Parent = hubRow.Controls, OnClick = function()
 		run("Teleport", { To = "Hub" })
-	end })
-	local arenaRow = row(world, nextOrder(), { Name = "Arena", Icon = "MegaStorm", Color = SETS.Storm.Top, Title = "Mega Storm Arena", Info = "Where the Mega Storm strikes" })
-	button({ Text = "Go", Color = "Sky", Width = 70, LayoutOrder = 3, Parent = arenaRow.Controls, OnClick = function()
+	end }))
+	local arenaRow = row(world, nextOrder(), { Name = "Arena", Icon = "MegaStorm", Color = SETS.Storm.Top, Title = "Mega Storm Arena", Info = "Where the Mega Storm strikes", TitleWidth = 330 })
+	table.insert(goButtons, button({ Name = "Go", Text = "Go", Color = "Sky", Width = 84, LayoutOrder = 3, Parent = arenaRow.Controls, OnClick = function()
 		run("Teleport", { To = "Arena" })
-	end })
+	end }))
 	for zoneId, zone in ipairs(Zones) do
 		local zoneRow = row(world, nextOrder(), { Name = "Zone" .. zoneId, Icon = zone.Icon, Color = zone.Color, Title = zone.Name })
 		-- Unlock = unlocked up to this zone; Relock = this zone and the ones after it lock again
@@ -836,9 +908,10 @@ function Admin.Build()
 				run("Weather", { Zone = zoneId, Count = math.clamp(cells, 1, 20) })
 			end
 		end })
-		zoneRow.Go = button({ Name = "Go", Text = "Go", Color = "Sky", Width = 70, LayoutOrder = 3, Parent = zoneRow.Controls, OnClick = function()
+		zoneRow.Go = button({ Name = "Go", Text = "Go", Color = "Sky", Width = 84, LayoutOrder = 3, Parent = zoneRow.Controls, OnClick = function()
 			run("Teleport", { To = zoneId })
 		end })
+		table.insert(goButtons, zoneRow.Go)
 		zoneRows[zoneId] = zoneRow
 	end
 
@@ -865,12 +938,12 @@ function Admin.Build()
 		Color = SETS.Sunset.Top,
 		Title = "Tell everyone",
 		Info = "A toast for the whole server",
-		TitleWidth = 130,
+		TitleWidth = 190,
 	})
 	local announceBox = field({
 		Name = "Text",
-		Placeholder = "Message (filtered)",
-		Size = UDim2.fromOffset(266, BUTTON_HEIGHT - 2),
+		Placeholder = "Message (chat filtered)",
+		Size = UDim2.fromOffset(250, BUTTON_HEIGHT - 2),
 		X = Enum.TextXAlignment.Left,
 		TextSize = 16,
 		LayoutOrder = 1,
@@ -900,6 +973,7 @@ function Admin.Build()
 		Parent = content,
 	})
 	pages.Players = playersPage
+	-- The target's summary (the server's answer for another player, live data for yourself)
 	local infoCard = UI.CloudCard({
 		Name = "Info",
 		Size = UDim2.new(1, -16, 0, 74),
@@ -909,7 +983,7 @@ function Admin.Build()
 		StrokeColor = SETS.Sky.Tint2,
 		Parent = playersPage,
 	})
-	well(infoCard, "Index", SETS.Sky.Top, 50, UDim2.new(0, 10, 0.5, 0))
+	local infoAvatar = avatar(infoCard, 50, UDim2.new(0, 10, 0.5, 0))
 	local infoTitle = UI.Text({
 		Name = "Title",
 		Text = "",
@@ -917,7 +991,7 @@ function Admin.Build()
 		Scaled = true,
 		MinTextSize = 11,
 		X = Enum.TextXAlignment.Left,
-		Size = UDim2.new(1, -200, 0, 24),
+		Size = UDim2.new(1, -206, 0, 24),
 		Position = UDim2.fromOffset(72, 11),
 		Parent = infoCard,
 	})
@@ -930,8 +1004,8 @@ function Admin.Build()
 		MinTextSize = 9,
 		Color = Theme.InkSoft,
 		X = Enum.TextXAlignment.Left,
-		Size = UDim2.new(1, -200, 0, 30),
-		Position = UDim2.fromOffset(72, 36),
+		Size = UDim2.new(1, -206, 0, 34),
+		Position = UDim2.fromOffset(72, 34),
 		Wrapped = true,
 		Parent = infoCard,
 	})
@@ -947,13 +1021,45 @@ function Admin.Build()
 			run("Inspect", nil, { Quiet = true })
 		end,
 	})
+
+	-- Find a player by name: typing filters the list, Enter / Pick targets the only match
+	local findBox = field({
+		Name = "Find",
+		Placeholder = "Find a player: name or display name",
+		X = Enum.TextXAlignment.Left,
+		TextSize = 16,
+		Size = UDim2.new(1, -144, 0, BUTTON_HEIGHT),
+		Position = UDim2.fromOffset(2, 86),
+		Parent = playersPage,
+	})
+	local findButton = button({
+		Name = "FindTarget",
+		Text = "Pick",
+		Color = "Leaf",
+		Width = 116,
+		Position = UDim2.new(1, -14, 0, 86),
+		AnchorPoint = Vector2.new(1, 0),
+		Parent = playersPage,
+	})
+
 	local playerList = UI.Scroll({
 		Name = "List",
-		Size = UDim2.new(1, 0, 1, -86),
-		Position = UDim2.fromOffset(0, 86),
+		Size = UDim2.new(1, 0, 1, -134),
+		Position = UDim2.fromOffset(0, 134),
 		Parent = playersPage,
 		UI.List(Enum.FillDirection.Vertical, 6),
 		UI.Padding(2, 12, 8, 2),
+	})
+	local emptyNote = UI.Text({
+		Name = "Empty",
+		Text = "",
+		Font = Theme.BodyFont,
+		TextSize = 15,
+		Color = Theme.InkSoft,
+		Size = UDim2.new(1, -8, 0, 44),
+		Wrapped = true,
+		LayoutOrder = 9,
+		Parent = playerList,
 	})
 	local playerRows = {} -- [Player] = row
 
@@ -970,6 +1076,61 @@ function Admin.Build()
 		end
 	end
 
+	-- Shows the rows matching the find box, and a note when nobody (else) is listed
+	local function applyFilter()
+		local query = string.match(findBox.Text, "^%s*(.-)%s*$") or ""
+		local shown, others = 0, 0
+		local matching = {}
+		if query ~= "" then
+			for _, player in matchPlayers(query) do
+				matching[player] = true
+			end
+		end
+		for player, playerRow in playerRows do
+			local visible = query == "" or matching[player] == true
+			playerRow.Frame.Visible = visible
+			if visible then
+				shown += 1
+			end
+			if player ~= localPlayer then
+				others += 1
+			end
+		end
+		if shown == 0 then
+			emptyNote.Text = string.format('Nobody here matches "%s".', query)
+		elseif query == "" and others == 0 then
+			emptyNote.Text = "You're the only one in this server. Other players show up here when they join."
+		else
+			emptyNote.Text = ""
+		end
+		emptyNote.Visible = emptyNote.Text ~= ""
+	end
+
+	local function pickFromBox()
+		local query = string.match(findBox.Text, "^%s*(.-)%s*$") or ""
+		if query == "" then
+			notify("Type a player's name first.", "Error")
+			return
+		end
+		local found = matchPlayers(query)
+		if #found == 1 then
+			findBox.Text = ""
+			selectTarget(found[1])
+			notify("Target: " .. (if found[1] == localPlayer then "you" else found[1].DisplayName) .. ".", "Info")
+		elseif #found == 0 then
+			notify(string.format('There is no player called "%s" in this server.', query), "Error")
+		else
+			notify(string.format('%d players match "%s"; type a bit more.', #found, query), "Error")
+		end
+	end
+	findButton.Activated:Connect(pickFromBox)
+	findBox.FocusLost:Connect(function(enterPressed)
+		if enterPressed then
+			pickFromBox()
+		end
+	end)
+	findBox:GetPropertyChangedSignal("Text"):Connect(applyFilter)
+
 	local function addPlayerRow(player: Player)
 		if playerRows[player] then
 			return
@@ -977,8 +1138,8 @@ function Admin.Build()
 		local isMe = player == localPlayer
 		local playerRow = row(playerList, if isMe then 0 else 1, {
 			Name = player.Name,
-			Icon = if isMe then "Star" else "Pets",
-			Color = if isMe then SETS.Bolt.Top else SETS.Sky.Top,
+			Player = player,
+			AvatarColor = if isMe then "Storm" else "Sunset",
 			Title = player.DisplayName .. (if isMe then " (you)" else ""),
 			Info = "@" .. player.Name,
 			TitleWidth = 220,
@@ -1000,8 +1161,10 @@ function Admin.Build()
 	for _, player in Players:GetPlayers() do
 		addPlayerRow(player)
 	end
+	applyFilter()
 	Players.PlayerAdded:Connect(function(player)
 		addPlayerRow(player)
+		applyFilter()
 		refresh()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
@@ -1010,6 +1173,7 @@ function Admin.Build()
 		if playerRow then
 			playerRow.Frame:Destroy()
 		end
+		applyFilter()
 		if target == player then
 			notify(player.DisplayName .. " left; the admin panel targets you again.", "Info")
 			selectTarget(nil)
@@ -1063,11 +1227,11 @@ function Admin.Build()
 			end
 		else
 			for _, label in { voltsRow.Info, energyRow.Info, shiftsRow.Info } do
-				label.Text = "Loading " .. who .. "..."
+				label.Text = "Loading..."
 			end
 		end
 		for key, passButton in passButtons do
-			UI.SetButtonColor(passButton, if passOwned(key) then "Leaf" else "Off")
+			UI.SetButtonColor(passButton, if passOwned(key) then "Leaf" else "Ink")
 		end
 
 		-- Pets
@@ -1096,9 +1260,13 @@ function Admin.Build()
 			end
 			UI.SetButtonColor(zoneRow.Go, if open then "Sky" else "Off")
 		end
+		for _, goButton in goButtons do
+			UI.SetButtonText(goButton, if target then "Send" else "Go")
+		end
 
 		-- Players
 		local subject = target or localPlayer
+		infoAvatar.Set(subject, if target then "Sunset" else "Storm")
 		infoTitle.Text = subject.DisplayName .. "  (@" .. subject.Name .. ")" .. (if target then "" else "  •  you")
 		if info then
 			local zone = Zones.Get(info.Zone or 1)
@@ -1106,14 +1274,18 @@ function Admin.Build()
 			for _ in info.Passes or {} do
 				passCount += 1
 			end
+			local shifts, pets = info.Rebirths or 0, info.Pets or 0
 			infoText.Text = string.format(
-				"⚡ %s Volts   •   %s %s   •   🌀 %d Shifts   •   🐾 %d pets   •   %d passes",
+				"⚡ %s Volts   •   🌀 %d Shift%s   •   🐾 %d pet%s\n%s %s   •   %d gamepass%s",
 				Format.Number(info.Volts or 0),
+				shifts,
+				if shifts == 1 then "" else "s",
+				pets,
+				if pets == 1 then "" else "s",
 				zone and zone.Icon or "",
 				zone and zone.Name or "?",
-				info.Rebirths or 0,
-				info.Pets or 0,
-				passCount
+				passCount,
+				if passCount == 1 then "" else "es"
 			)
 		else
 			infoText.Text = "Asking the server..."
@@ -1134,10 +1306,16 @@ function Admin.Build()
 		end
 	end)
 	task.spawn(function()
+		local tick = 0
 		while true do
 			task.wait(1)
+			tick += 1
 			if window.Frame.Visible then
-				refresh() -- boost timers
+				if target and tick % 6 == 0 then
+					run("Inspect", nil, { Silent = true }) -- another player's numbers come from the server
+				else
+					refresh() -- boost timers
+				end
 			end
 		end
 	end)

@@ -95,25 +95,28 @@ local function findSpot(zoneId: number): Vector3
 	return candidate
 end
 
-local function spawnCell(zoneId: number)
+-- typeId: a weather type from the zone's list (random by rarity when nil). extra = true spawns even
+-- when the zone already has its CellCount (admin spawns; those extra cells don't respawn).
+-- Returns true when a cell was spawned.
+local function spawnCell(zoneId: number, typeId: string?, extra: boolean?): boolean
 	local zone = Zones[zoneId]
-	if countCells(zoneId) >= zone.CellCount then
-		return
+	if not extra and countCells(zoneId) >= zone.CellCount then
+		return false
 	end
 
-	local typeId = pickType(zone)
-	local def = Weather.Types[typeId]
-	local health = Formulas.CellHealth(typeId, zoneId)
-	local position = findSpot(zoneId) + Vector3.new(0, WeatherModels.HoverHeight(typeId), 0)
+	local cellType: string = typeId or pickType(zone)
+	local def = Weather.Types[cellType]
+	local health = Formulas.CellHealth(cellType, zoneId)
+	local position = findSpot(zoneId) + Vector3.new(0, WeatherModels.HoverHeight(cellType), 0)
 
 	nextId += 1
 	local id = nextId
 
-	local model = WeatherModels.Build(typeId)
+	local model = WeatherModels.Build(cellType)
 	model.Name = "Cell" .. id
 	model:PivotTo(CFrame.new(position) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
 	model:SetAttribute("CellId", id)
-	model:SetAttribute("Type", typeId)
+	model:SetAttribute("Type", cellType)
 	model:SetAttribute("Zone", zoneId)
 	model:SetAttribute("Health", health)
 	model:SetAttribute("MaxHealth", health)
@@ -122,13 +125,13 @@ local function spawnCell(zoneId: number)
 
 	local cell = {
 		Id = id,
-		Type = typeId,
+		Type = cellType,
 		Zone = zoneId,
 		Health = health,
 		MaxHealth = health,
 		Model = model,
 		Position = position,
-		Value = Formulas.CellValue(typeId, zoneId),
+		Value = Formulas.CellValue(cellType, zoneId),
 		Contributors = {},
 	}
 	cells[id] = cell
@@ -139,10 +142,27 @@ local function spawnCell(zoneId: number)
 			local root = Net.GetRoot(player)
 			-- Storm Radar owners get their own alert for every zone they've unlocked
 			if not StormRadar.Alert(player, cell) and root and MapLayout.ZoneAt(root.Position) == zoneId then
-				Net.Effect(player, "RareSpawn", typeId, position)
+				Net.Effect(player, "RareSpawn", cellType, position)
 			end
 		end
 	end
+	return true
+end
+
+-- Admin panel (AdminService "Weather"): spawns up to `count` cells in a zone right away, on top of its
+-- usual CellCount. typeId: one of the zone's weather types, random when nil. Returns how many spawned.
+function WeatherService.SpawnCells(zoneId: number, count: number, typeId: string?): number
+	local zone = Zones[zoneId]
+	if not zone or not zoneCells[zoneId] or (typeId ~= nil and not table.find(zone.Weather, typeId)) then
+		return 0
+	end
+	local spawned = 0
+	for _ = 1, math.clamp(math.floor(count), 0, 20) do
+		if spawnCell(zoneId, typeId, true) then
+			spawned += 1
+		end
+	end
+	return spawned
 end
 
 local function popCell(cell)
@@ -310,42 +330,61 @@ local function petTick(player: Player, now: number)
 	end
 end
 
+-- One vacuum tick for a player catching `targetId`
+local function catchTick(player: Player, targetId: number, now: number)
+	local data = Registry.DataService.Get(player)
+	local root = Net.GetRoot(player)
+	local character = player.Character
+	if not data or not root or not character or not character:FindFirstChild("StormVacuum") then
+		WeatherService.StopCatch(player)
+		return
+	end
+
+	if targetId == MEGA_TARGET then
+		if not Registry.MegaStormService.Drain(player, data, root) then
+			WeatherService.StopCatch(player)
+		end
+		return
+	end
+
+	local cell = cells[targetId]
+	if not cell then
+		WeatherService.StopCatch(player)
+		return
+	end
+	if (root.Position - cell.Position).Magnitude > Formulas.Range(data) + GameConfig.CatchRangeLeeway then
+		WeatherService.StopCatch(player)
+		return
+	end
+
+	if not drainCell(player, data, cell, Formulas.Power(data), now) then
+		WeatherService.StopCatch(player)
+		tankFullMessage(player)
+	end
+end
+
+-- Each player is ticked on their own, so an error with one player's state can never stop everyone
+-- else's vacuum and pets (each different error is reported once)
+local reported = {} -- [Player] = the last error reported for them
+local function guarded(player: Player, fn, ...): boolean
+	local ok, err = pcall(fn, ...)
+	if not ok and reported[player] ~= err then
+		reported[player] = err
+		warn(string.format("[WeatherService] %s: %s", player.Name, tostring(err)))
+	end
+	return ok
+end
+
 local function tick()
 	local now = os.time()
 	for player, targetId in catchers do
-		local data = Registry.DataService.Get(player)
-		local root = Net.GetRoot(player)
-		local character = player.Character
-		if not data or not root or not character or not character:FindFirstChild("StormVacuum") then
+		if not guarded(player, catchTick, player, targetId, now) then
 			WeatherService.StopCatch(player)
-			continue
-		end
-
-		if targetId == MEGA_TARGET then
-			if not Registry.MegaStormService.Drain(player, data, root) then
-				WeatherService.StopCatch(player)
-			end
-			continue
-		end
-
-		local cell = cells[targetId]
-		if not cell then
-			WeatherService.StopCatch(player)
-			continue
-		end
-		if (root.Position - cell.Position).Magnitude > Formulas.Range(data) + GameConfig.CatchRangeLeeway then
-			WeatherService.StopCatch(player)
-			continue
-		end
-
-		if not drainCell(player, data, cell, Formulas.Power(data), now) then
-			WeatherService.StopCatch(player)
-			tankFullMessage(player)
 		end
 	end
 
 	for _, player in Players:GetPlayers() do
-		petTick(player, now)
+		guarded(player, petTick, player, now)
 	end
 end
 
@@ -422,6 +461,7 @@ function WeatherService.Init()
 	Players.PlayerRemoving:Connect(function(player)
 		catchers[player] = nil
 		petStates[player] = nil
+		reported[player] = nil
 	end)
 end
 

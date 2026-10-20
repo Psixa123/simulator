@@ -118,9 +118,38 @@ function MapContracts.Init()
 	end
 	if walls then
 		local boundaries = descendants(walls, "BasePart")
-		check("four boundary walls", #boundaries == 4, #boundaries)
+		check("boundary walls exist", #boundaries >= 4, #boundaries)
+		-- covered[side] = x ranges the side walls block (-1 = north, 1 = south); ends = x of the end walls
+		local covered, ends = { [-1] = {}, [1] = {} }, {}
 		for _, wall in boundaries do
 			check("boundary walls are invisible and solid", wall.Transparency == 1 and wall.CanCollide, wall.Name)
+			-- Roblox cuts a part to 2048 studs per axis: a longer wall would leave gaps
+			local size = wall.Size
+			check("boundary walls fit Roblox's 2048-stud part limit", math.max(size.X, size.Y, size.Z) <= 2048, size)
+			local low, high = bounds(wall)
+			if size.X > size.Z then
+				local side = if wall.Position.Z < 0 then -1 else 1
+				check("side walls stand just outside the playable strip", math.abs(math.abs(wall.Position.Z) - (MapLayout.HalfWidth + 2)) < 0.5, wall.Position)
+				table.insert(covered[side], { low.X, high.X })
+			else
+				table.insert(ends, wall.Position.X)
+				check("end walls span the playable strip", high.Z >= MapLayout.HalfWidth and low.Z <= -MapLayout.HalfWidth, size)
+			end
+		end
+		table.sort(ends)
+		check("a wall at each end of the world", #ends == 2 and ends[1] < MapLayout.HubStart and ends[2] > MapLayout.WorldEnd, table.concat(ends, ", "))
+		for side, ranges in covered do
+			-- no gap from the west wall to the east wall
+			table.sort(ranges, function(a, b)
+				return a[1] < b[1]
+			end)
+			local reach = (ends[1] or MapLayout.HubStart) + 2
+			for _, range in ranges do
+				if range[1] <= reach + 0.01 then
+					reach = math.max(reach, range[2])
+				end
+			end
+			check((if side < 0 then "north" else "south") .. " side walls run end to end without gaps", reach >= (ends[2] or MapLayout.WorldEnd) - 2, reach)
 		end
 	end
 
@@ -448,6 +477,39 @@ function MapContracts.Init()
 		end
 	end
 	check("windmill blades spin", spinningBlades >= 1, spinningBlades)
+
+	-- Directed particles (steam, smoke, sparkles) rise: their face points up on the part that emits them,
+	-- whichever way the part is turned (a part-built cylinder's Top face points sideways)
+	local FACES = {
+		[Enum.NormalId.Top] = function(c)
+			return c.UpVector
+		end,
+		[Enum.NormalId.Bottom] = function(c)
+			return -c.UpVector
+		end,
+		[Enum.NormalId.Right] = function(c)
+			return c.RightVector
+		end,
+		[Enum.NormalId.Left] = function(c)
+			return -c.RightVector
+		end,
+		[Enum.NormalId.Front] = function(c)
+			return c.LookVector
+		end,
+		[Enum.NormalId.Back] = function(c)
+			return -c.LookVector
+		end,
+	}
+	local directed = 0
+	for _, emitter in descendants(map, "ParticleEmitter") do
+		local host = emitter.Parent
+		if host:IsA("BasePart") and emitter.SpreadAngle.X < 90 and emitter.SpreadAngle.Y < 90 then
+			directed += 1
+			local direction = FACES[emitter.EmissionDirection](host.CFrame)
+			check("directed particles rise", direction.Y > 0.9, host:GetFullName() .. " emits along " .. tostring(direction))
+		end
+	end
+	check("there are rising particles", directed > 0, directed)
 
 	local parts = #descendants(map, "BasePart")
 	check("part budget", parts <= PART_BUDGET, parts)

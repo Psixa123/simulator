@@ -41,6 +41,14 @@ local Icons = {
 	Gift = { Id = 126027840891767, Emoji = "🎁" }, -- small gift
 	Boost = { Id = 75840590772147, Emoji = "🚀" }, -- rocket
 	Close = { Id = 87698644308982, Emoji = "✖️" }, -- cross
+	-- Zone emblems (Zone_<Zones key>, assets/ui/icons3d/Zone_*.png): the medallions on the zone title card
+	Zone_Hub = { Id = 133610062922415, Emoji = "🏠" }, -- domed lab on a cloud, assets/ui/icons3d/Zone_Hub.png
+	Zone_Meadows = { Id = 116632794687034, Emoji = "🌤️" }, -- sun over clover hills, assets/ui/icons3d/Zone_Meadows.png
+	Zone_Thunder = { Id = 134290172168455, Emoji = "⛈️" }, -- thundercloud and bolt, assets/ui/icons3d/Zone_Thunder.png
+	Zone_Dunes = { Id = 120624641542430, Emoji = "🏜️" }, -- dunes, sun and cactus, assets/ui/icons3d/Zone_Dunes.png
+	Zone_Frost = { Id = 119712892235288, Emoji = "🏔️" }, -- snowy peak and snowflake, assets/ui/icons3d/Zone_Frost.png
+	Zone_Volcano = { Id = 89497526966054, Emoji = "🌋" }, -- volcano, assets/ui/icons3d/Zone_Volcano.png
+	Zone_Sky = { Id = 84996680465372, Emoji = "🌌" }, -- ringed planet, assets/ui/icons3d/Zone_Sky.png
 }
 
 -- Other names that mean the same icon (panel and menu keys, config names)

@@ -41,10 +41,14 @@ for _, name in ORDER do
 end
 Registry.HatchOverlay = require(UIFolder:WaitForChild("Overlays"):WaitForChild("Hatch"))
 
+-- One controller failing to set up must never stop the others (the vacuum above all) from starting
 for _, name in ORDER do
 	local controller = Registry[name]
 	if controller.Init then
-		controller.Init()
+		local ok, err = xpcall(controller.Init, debug.traceback)
+		if not ok then
+			warn(string.format("[Client] %s failed to initialise: %s", name, tostring(err)))
+		end
 	end
 end
 
@@ -52,7 +56,9 @@ end
 -- Loading screen (shown until the server has sent our data)
 ---------------------------------------------------------------------------
 local Interface = Registry.InterfaceController
-Interface.HudGui.Enabled = false
+if Interface.HudGui then
+	Interface.HudGui.Enabled = false
+end
 
 local loading = UI.Create("Frame", {
 	Name = "Loading",
@@ -131,8 +137,13 @@ Registry.DataController.Load()
 ---------------------------------------------------------------------------
 local Panels = UIFolder:WaitForChild("Panels")
 for _, name in PANELS do
-	local panel = require(Panels:WaitForChild(name)).Build()
-	Interface.RegisterPanel(name, panel)
+	-- a panel that fails to build is left out (its button does nothing); the game still starts
+	local ok, err = xpcall(function()
+		Interface.RegisterPanel(name, require(Panels:WaitForChild(name)).Build())
+	end, debug.traceback)
+	if not ok then
+		warn(string.format("[Client] the %s panel failed to build: %s", name, tostring(err)))
+	end
 end
 
 for _, name in ORDER do
@@ -143,7 +154,9 @@ for _, name in ORDER do
 end
 
 loaded = true
-Interface.HudGui.Enabled = true
+if Interface.HudGui then
+	Interface.HudGui.Enabled = true
+end
 for _, descendant in loading:GetDescendants() do
 	if descendant:IsA("TextLabel") then
 		UI.Tween(descendant, 0.5, { TextTransparency = 1 })
@@ -176,7 +189,13 @@ local function enableAdmin()
 		return
 	end
 	adminReady = true
-	Interface.RegisterPanel("Admin", require(Panels:WaitForChild("Admin")).Build())
+	local built, buildError = xpcall(function()
+		Interface.RegisterPanel("Admin", require(Panels:WaitForChild("Admin")).Build())
+	end, debug.traceback)
+	if not built then
+		warn("[Client] the Admin panel failed to build: " .. tostring(buildError))
+		return
+	end
 	Registry.HudController.ShowAdminButton(toggleAdmin)
 
 	-- "/admin" in the chat opens it too (a chat problem must never take the panel down with it)
