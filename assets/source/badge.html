@@ -284,23 +284,23 @@
 
   // ------------------------------------------------------------- compose
   function compose() {
-  if (RAW[id]) return RAW[id]();
-  const design = (D[id] || D.VIP)();
-  let c = "";
-  c += sky(1024, 1024, design.bg, 0.5, 0.4);
-  c += rays(512, 470, 900, 18, "#ffffff", 0.12);
-  // soft inner vignette so the art pops inside the circular crop
-  const vignette = rad([[0, "#000000", 0], [0.72, "#000000", 0], [1, "#000000", 0.35]], 0.5, 0.5, 0.72);
-  c += `<defs>${vignette.def}</defs>`;
-  c += design.art;
-  if (design.sparkles) {
-    const spots = Array.isArray(design.sparkles) ? design.sparkles : [[170, 520, 30], [860, 600, 26], [240, 200, 22], [820, 160, 28], [150, 780, 20], [880, 820, 22]];
-    for (const [x, y, r] of spots) {
-      c += sparkle(x, y, r, "#ffffff", 0.95);
+    if (RAW[id]) return RAW[id]();
+    const design = (D[id] || D.VIP)();
+    let c = "";
+    c += sky(1024, 1024, design.bg, 0.5, 0.4);
+    c += rays(512, 470, 900, 18, "#ffffff", 0.12);
+    // soft inner vignette so the art pops inside the circular crop
+    const vignette = rad([[0, "#000000", 0], [0.72, "#000000", 0], [1, "#000000", 0.35]], 0.5, 0.5, 0.72);
+    c += `<defs>${vignette.def}</defs>`;
+    c += design.art;
+    if (design.sparkles) {
+      const spots = Array.isArray(design.sparkles) ? design.sparkles : [[170, 520, 30], [860, 600, 26], [240, 200, 22], [820, 160, 28], [150, 780, 20], [880, 820, 22]];
+      for (const [x, y, r] of spots) {
+        c += sparkle(x, y, r, "#ffffff", 0.95);
+      }
     }
-  }
-  c += `<rect width="1024" height="1024" fill="${vignette.url}"/>`;
-  return c;
+    c += `<rect width="1024" height="1024" fill="${vignette.url}"/>`;
+    return c;
   }
 
   document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 1024 1024">${baseDefs()}${compose()}</svg>`;
