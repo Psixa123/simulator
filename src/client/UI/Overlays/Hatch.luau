@@ -122,17 +122,16 @@ local REVEAL = { -- no egg: a ball of light gathers on the pad and bursts
 -- Cracks on the egg, by stage: polylines in egg units (x: half widths, y: half heights from the
 -- centre, down is +); stage 3 is the belt the egg breaks along
 local CRACKS = {
-	{ 1, { { 0.08, -0.66 }, { 0.22, -0.54 }, { 0.12, -0.42 }, { 0.3, -0.3 } } },
-	{ 2, { { 0.08, -0.66 }, { -0.08, -0.56 }, { 0.0, -0.44 }, { -0.18, -0.32 }, { -0.1, -0.2 } } },
-	{ 2, { { 0.12, -0.42 }, { 0.0, -0.36 } } },
-	{ 3, { { -0.84, 0.0 }, { -0.62, -0.13 }, { -0.42, 0.02 }, { -0.22, -0.12 }, { -0.02, 0.03 }, { 0.2, -0.11 }, { 0.42, 0.03 }, { 0.62, -0.1 }, { 0.84, 0.02 } } },
-	{ 3, { { -0.1, -0.2 }, { -0.22, -0.12 } } },
-	{ 3, { { 0.3, -0.3 }, { 0.2, -0.11 } } },
+	{ 1, { { 0.34, -0.6 }, { 0.18, -0.5 }, { 0.3, -0.39 }, { 0.12, -0.28 } } },
+	{ 2, { { 0.12, -0.28 }, { -0.04, -0.19 }, { 0.06, -0.09 } } },
+	{ 2, { { 0.18, -0.5 }, { 0.42, -0.45 } } },
+	{ 3, { { 0.06, -0.09 }, { 0.24, 0.03 }, { 0.44, -0.09 }, { 0.64, 0.03 }, { 0.86, -0.05 } } },
+	{ 3, { { 0.06, -0.09 }, { -0.1, 0.04 }, { -0.28, -0.08 }, { -0.46, 0.04 }, { -0.66, -0.09 }, { -0.86, 0.02 } } },
 }
 
--- Frames only round into pills, so an ellipse is three overlapping pills: { long side, short side }
--- factors (fitted to a 4:1 ellipse, within 1.5 px at 200 px wide)
-local ELLIPSE = { { 0.988, 0.509 }, { 0.877, 0.761 }, { 0.661, 0.973 } }
+-- Frames only round into pills, so an ellipse is five overlapping pills: { long side, short side }
+-- factors, widest first (fitted to a 4:1 ellipse: within 1 px at 200 px wide)
+local ELLIPSE = { { 0.993, 0.456 }, { 0.911, 0.681 }, { 0.819, 0.807 }, { 0.655, 0.935 }, { 0.52, 1 } }
 
 local CONFETTI_COLORS = {
 	Theme.Sets.Bolt.Top,
@@ -221,16 +220,18 @@ local function transparencyGradient(rotation: number, points)
 	return gradient
 end
 
--- Pills making an ellipse w x h centred on (x, y). `paint(layer, v0, v1, u0, u1)` colours each pill;
--- v0..v1 / u0..u1 are where its edges sit across the ellipse (0..1), to line gradients up.
-local function ellipse(parent: Instance, name: string, x: number, y: number, w: number, h: number, z: number, paint)
+-- Pills making an ellipse w x h centred on (x, y), every pill grown by `grow` px (a grown pill is
+-- still a pill, so an ellipse grown by 3 px outlines the same ellipse evenly). `paint(layer, v0, v1,
+-- u0, u1)` colours each pill; v0..v1 / u0..u1 are where its edges sit across the shape (0..1).
+local function ellipse(parent: Instance, name: string, x: number, y: number, w: number, h: number, z: number, paint, grow: number?)
 	local layers = {}
 	local tall = h > w
+	local extra = 2 * (grow or 0)
 	for _, spec in ELLIPSE do
 		local fw, fh = if tall then spec[2] else spec[1], if tall then spec[1] else spec[2]
 		local layer = box({
 			Name = name,
-			Size = UDim2.fromOffset(w * fw, h * fh),
+			Size = UDim2.fromOffset(w * fw + extra, h * fh + extra),
 			Position = UDim2.fromOffset(x, y),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			ZIndex = z,
@@ -312,7 +313,7 @@ local function candy(parent: Instance, set, props)
 	return body, face
 end
 
--- Four-point sparkle (two crossed rounded bars)
+-- Twinkle: a tall and a short rounded bar crossed, with a dot in the middle
 local function sparkle(parent: Instance, size: number, color: Color3, z: number)
 	local holder = box({
 		Name = "Sparkle",
@@ -323,11 +324,11 @@ local function sparkle(parent: Instance, size: number, color: Color3, z: number)
 		Visible = false,
 		Parent = parent,
 	})
-	for index = 1, 2 do
+	for _, spec in { { 0.2, 1 }, { 0.72, 0.2 }, { 0.4, 0.4 } } do
 		box({
 			Name = "Bar",
 			BackgroundColor3 = color,
-			Size = if index == 1 then UDim2.new(0.22, 0, 1, 0) else UDim2.new(1, 0, 0.22, 0),
+			Size = UDim2.fromScale(spec[1], spec[2]),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			ZIndex = z,
@@ -533,6 +534,7 @@ local function openSession()
 		PromptsWere = true,
 		Connections = {},
 	}
+	session = s -- from here on finishSession can always take it all down again
 	-- A panel opening (auto hatch stopped and reopened the Egg panel) ends a lingering backdrop
 	table.insert(
 		s.Connections,
@@ -553,7 +555,6 @@ local function openSession()
 			end
 		end)
 	)
-	session = s
 	return s
 end
 
@@ -667,7 +668,7 @@ local function buildRibbon(parent: Instance, title: string, setName: string, cou
 		chip = candy(holder, bolt, {
 			Name = "Count",
 			Size = UDim2.fromOffset(58, 44),
-			Position = UDim2.new(0.5, bandWidth / 2 - 4, 0.5, -26),
+			Position = UDim2.new(0.5, bandWidth / 2 + 12, 0.5, -28),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Rotation = 10,
 			Radius = 16,
@@ -713,22 +714,25 @@ local function buildPad(parent: Instance)
 		end
 		return sky.Bottom:Lerp(sky.Lip, (u - 0.65) / 0.35)
 	end
-	-- Ink silhouette (top face + side + bottom rim), then the side, then the top face
-	ellipse(pad, "Outline", cx, cy, 2 * (PAD_A + outline), 2 * (PAD_B + outline), 1, solid(INK))
-	ellipse(pad, "Outline", cx, cy + PAD_DEPTH, 2 * (PAD_A + outline), 2 * (PAD_B + outline), 1, solid(INK))
+	-- Everything is the face ellipse grown outwards: the Ink rim around the face (2 px), the side
+	-- (the same width as the rim) and the Ink silhouette around it all (3 px more)
+	local faceW, faceH = 2 * PAD_A - 4, 2 * PAD_B - 4
+	local rim, silhouette = 2, 2 + outline
+	ellipse(pad, "Outline", cx, cy, faceW, faceH, 1, solid(INK), silhouette)
+	ellipse(pad, "Outline", cx, cy + PAD_DEPTH, faceW, faceH, 1, solid(INK), silhouette)
 	box({
 		Name = "Outline",
 		BackgroundColor3 = INK,
-		Size = UDim2.fromOffset(2 * (PAD_A + outline), PAD_DEPTH),
+		Size = UDim2.fromOffset(faceW * ELLIPSE[1][1] + 2 * silhouette, PAD_DEPTH),
 		Position = UDim2.fromOffset(cx, cy),
 		AnchorPoint = Vector2.new(0.5, 0),
 		ZIndex = 1,
 		Parent = pad,
 	})
-	ellipse(pad, "Side", cx, cy + PAD_DEPTH, 2 * PAD_A, 2 * PAD_B, 2, horizontal(sideColor))
+	ellipse(pad, "Side", cx, cy + PAD_DEPTH, faceW, faceH, 2, horizontal(sideColor), rim)
 	box({
 		Name = "Side",
-		Size = UDim2.fromOffset(2 * PAD_A, PAD_DEPTH),
+		Size = UDim2.fromOffset(faceW * ELLIPSE[1][1] + 2 * rim, PAD_DEPTH),
 		Position = UDim2.fromOffset(cx, cy),
 		AnchorPoint = Vector2.new(0.5, 0),
 		ZIndex = 2,
@@ -759,11 +763,12 @@ local function buildPad(parent: Instance)
 		})
 		table.insert(lights, light)
 	end
-	ellipse(pad, "Rim", cx, cy, 2 * PAD_A, 2 * PAD_B, 4, solid(INK))
-	ellipse(pad, "Face", cx, cy, 2 * PAD_A - 5, 2 * PAD_B - 5, 5, vertical(Theme.Cloud, Theme.Haze))
-	-- The glowing ring on the face (a coloured ellipse with a face-coloured one inside)
-	local ring = ellipse(pad, "Ring", cx, cy + 1, 2 * PAD_A * 0.76, 2 * PAD_B * 0.76, 6, solid(NEUTRAL_GLOW))
-	ellipse(pad, "RingInside", cx, cy + 1, 2 * PAD_A * 0.64, 2 * PAD_B * 0.64, 7, vertical(Theme.Mist, Theme.Cloud))
+	ellipse(pad, "Rim", cx, cy, faceW, faceH, 4, solid(INK), rim)
+	ellipse(pad, "Face", cx, cy, faceW, faceH, 5, vertical(Theme.Cloud, Theme.Haze))
+	-- The glowing ring on the face: a coloured ellipse with a face-coloured one 5 px inside it
+	local ringW, ringH = faceW * 0.66, faceH * 0.62
+	local ring = ellipse(pad, "Ring", cx, cy + 1, ringW, ringH, 6, solid(NEUTRAL_GLOW), 5)
+	ellipse(pad, "RingInside", cx, cy + 1, ringW, ringH, 7, vertical(Theme.Mist, Theme.Cloud))
 	-- Contact shadow of the egg / pet
 	local shadow = box({
 		Name = "Shadow",
@@ -775,7 +780,7 @@ local function buildPad(parent: Instance)
 		Parent = pad,
 	})
 	local shadowScale = scaler(shadow)
-	local shade = ellipse(shadow, "Shade", 48, 12, 96, 24, 1, solid(INK, 0.78))
+	local shade = ellipse(shadow, "Shade", 48, 12, 84, 18, 1, solid(INK, 0.78), 2)
 	return { Frame = pad, Scale = scaler(pad, 0), Lights = lights, Ring = ring, Shadow = shadow, ShadowScale = shadowScale, Shade = shade }
 end
 
@@ -876,7 +881,7 @@ local function buildCard(slot: Frame, entry, def, rarity, tier: string)
 	Icons.New("Energy", { Name = "Icon", Size = UDim2.fromOffset(26, 26), LayoutOrder = 1, ZIndex = 3, Parent = bonus })
 	local bonusText = UI.Text({
 		Name = "Text",
-		Text = '<font color="#1F8F38">' .. Format.Bonus(Formulas.PetBonus(entry.Id, tier)) .. "</font> Energy",
+		Text = '<font color="#1F8F38">' .. Format.Bonus(Formulas.PetBonus(def.Id, tier)) .. "</font> Energy",
 		Rich = true,
 		TextSize = 21,
 		Size = UDim2.new(0, 0, 1, 0),
@@ -1115,7 +1120,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 		Parent = stage,
 	})
 	local petScale = scaler(petHolder, 0)
-	local petView = Viewport.Pet(entry.Id, tier, {
+	local petView = Viewport.Pet(def.Id, tier, {
 		Name = "Pet",
 		Size = UDim2.fromScale(1, 1),
 		Zoom = 1.25,
@@ -1162,7 +1167,10 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 	if egg then
 		local shellTop = egg.Color:Lerp(WHITE, 0.25)
 		for shardIndex = 1, 14 do
-			local w, h = rng:NextNumber(14, 30), rng:NextNumber(10, 20)
+			-- a few big pieces of shell and a spray of small ones
+			local big = shardIndex <= 4
+			local w = if big then rng:NextNumber(32, 46) else rng:NextNumber(14, 26)
+			local h = if big then rng:NextNumber(22, 30) else rng:NextNumber(10, 18)
 			local shard = box({
 				Name = "Shard",
 				Size = UDim2.fromOffset(w, h),
@@ -1170,18 +1178,29 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 				ZIndex = 3,
 				Visible = false,
 				Parent = fx,
-				UI.Corner(4),
+				UI.Corner(h * 0.45),
 				UI.Gradient(shellTop, egg.Color),
 			})
 			local stroke = UI.Stroke(2, INK)
 			stroke.Parent = shard
+			-- the white inside of the shell along one edge, and a spot on the bigger pieces
+			local inside = box({
+				Name = "Inside",
+				BackgroundColor3 = Theme.Cloud,
+				Size = UDim2.new(0.8, 0, 0.3, 0),
+				Position = UDim2.new(0.5, 0, 1, -2),
+				AnchorPoint = Vector2.new(0.5, 1),
+				ZIndex = 3,
+				Parent = shard,
+				UI.Round(),
+			})
 			local spot = nil
-			if shardIndex % 3 == 0 then
+			if big then
 				spot = box({
 					Name = "Spot",
 					BackgroundColor3 = egg.Accent,
-					Size = UDim2.fromOffset(h * 0.5, h * 0.5),
-					Position = UDim2.fromScale(0.55, 0.5),
+					Size = UDim2.fromOffset(h * 0.42, h * 0.42),
+					Position = UDim2.fromScale(0.3, 0.38),
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					ZIndex = 3,
 					Parent = shard,
@@ -1190,11 +1209,12 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 			end
 			-- Thrown up and out, a bit more to the sides than straight up
 			local angle = math.rad(rng:NextNumber(-170, -10))
-			local speed = rng:NextNumber(330, 640)
+			local speed = if big then rng:NextNumber(300, 460) else rng:NextNumber(360, 660)
 			table.insert(shards, {
 				Frame = shard,
 				Stroke = stroke,
 				Spot = spot,
+				Inside = inside,
 				X = rng:NextNumber(-EGG_WIDTH * 0.3, EGG_WIDTH * 0.3),
 				Y = rng:NextNumber(-EGG_HEIGHT * 0.25, EGG_HEIGHT * 0.2),
 				VX = math.cos(angle) * speed,
@@ -1212,7 +1232,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 			Frame = sparkle(fx, rng:NextNumber(18, 30), if sparkleIndex % 3 == 0 then Theme.Sets.Bolt.Top else WHITE, 4),
 			Angle = angle,
 			Reach = rng:NextNumber(110, 175),
-			Spin = rng:NextNumber(-200, 200),
+			Spin = rng:NextNumber(-40, 40),
 			Delay = rng:NextNumber(0, 0.08),
 		})
 	end
@@ -1238,6 +1258,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 		Tier = tier,
 		Color = rarity.Color,
 		Rainbow = rarity.Order >= 6 or tier == "Rainbow",
+		RingSize = if multi then 380 else 540,
 		Frame = frame,
 		Scale = scaler(frame),
 		Rays = rays,
@@ -1503,7 +1524,7 @@ local function drawSlot(slot, T, u: number, clock: number, crackTimes)
 			local k = progress(tau, (index - 1) * 0.08, 0.5)
 			setVisible(ring.Frame, k > 0 and k < 1)
 			if k > 0 and k < 1 then
-				local size = lerp(110, 540, outCubic(k))
+				local size = lerp(110, slot.RingSize, outCubic(k))
 				ring.Frame.Size = UDim2.fromOffset(size, size)
 				ring.Stroke.Thickness = lerp(14, 2, k)
 				ring.Stroke.Transparency = k * k
@@ -1521,6 +1542,7 @@ local function drawSlot(slot, T, u: number, clock: number, crackTimes)
 				local fade = progress(tau, shard.Life - 0.25, 0.25)
 				shard.Frame.BackgroundTransparency = fade
 				shard.Stroke.Transparency = fade
+				shard.Inside.BackgroundTransparency = fade
 				if shard.Spot then
 					shard.Spot.BackgroundTransparency = fade
 				end
@@ -1590,7 +1612,7 @@ local function drawSlot(slot, T, u: number, clock: number, crackTimes)
 	setVisible(slot.Pad.Shadow, padShadowAlpha > 0.02)
 	slot.Pad.ShadowScale.Scale = math.max(padShadow, 0.001)
 	for _, layer in slot.Pad.Shade do
-		layer.BackgroundTransparency = 1 - 0.22 * padShadowAlpha
+		layer.BackgroundTransparency = 1 - 0.13 * padShadowAlpha
 	end
 	return glowColor, glowK, colorK
 end
@@ -1604,7 +1626,13 @@ local function runPlay(play, result, options)
 		return
 	end
 	local interface = Registry.InterfaceController
-	local sounds = Registry.SoundController
+	-- a missing sound must never stop the animation
+	local function sound(name: string, pitch: number?, volume: number?)
+		local controller = Registry.SoundController
+		if controller and controller.Play then
+			pcall(controller.Play, name, pitch, volume)
+		end
+	end
 	local eggId = if result.Egg and Pets.Eggs[result.Egg] then result.Egg else nil
 	local quick = options.Quick == true or (eggId ~= nil and options.Hold ~= nil and options.Hold < 1.5)
 	local T = if not eggId then REVEAL elseif quick then QUICK else NORMAL
@@ -1626,32 +1654,44 @@ local function runPlay(play, result, options)
 	end
 	local bottomSpace = if quick then 112 else 54
 	local availableHeight = screenHeight - safeTop - bottomSpace
+	-- a little bigger than designed where there's room (a lot bigger on a portrait phone)
+	local largest = if screenHeight > screenWidth then 1.6 else 1.15
+	local ribbonHeight = RIBBON_HEIGHT
 	local function fit(columns: number, rows: number)
 		local width = columns * SLOT_WIDTH + (columns - 1) * SLOT_GAP
 		local height = rows * SLOT_HEIGHT + (rows - 1) * SLOT_GAP
-		return math.min(1, (screenWidth - 24) / width, (availableHeight - RIBBON_HEIGHT - 12) / height), width, height
+		return math.min(largest, (screenWidth - 24) / width, (availableHeight - ribbonHeight - 12) / height), width, height
 	end
-	local k, rowWidth, rowHeight = fit(count, 1)
-	local vertical = false
-	local kColumn, columnWidth, columnHeight = fit(1, count)
-	if count > 1 and kColumn > k + 0.05 then
-		vertical = true
-		k, rowWidth, rowHeight = kColumn, columnWidth, columnHeight
+	local k, rowWidth, rowHeight, vertical
+	local function layout()
+		k, rowWidth, rowHeight = fit(count, 1)
+		vertical = false
+		local kColumn, columnWidth, columnHeight = fit(1, count)
+		if count > 1 and kColumn > k + 0.05 then
+			vertical = true
+			k, rowWidth, rowHeight = kColumn, columnWidth, columnHeight
+		end
+		k = math.max(k, 0.3)
 	end
-	k = math.max(k, 0.3)
-	local groupHeight = RIBBON_HEIGHT + 4 + rowHeight * k
+	layout()
+	-- the ribbon grows and shrinks with the slots (within reason)
+	local ribbonScale = math.clamp(k, 0.75, 1.3)
+	ribbonHeight = RIBBON_HEIGHT * ribbonScale
+	layout()
+	local groupHeight = ribbonHeight + 4 + rowHeight * k
 	local groupTop = safeTop + math.max((availableHeight - groupHeight) / 2, 4)
-	local ribbonY = groupTop + RIBBON_HEIGHT / 2
-	local rowTop = groupTop + RIBBON_HEIGHT + 4
+	local ribbonY = groupTop + ribbonHeight / 2
+	local rowTop = groupTop + ribbonHeight + 4
 
 	local frame = box({ Name = "Play", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 4, Parent = s.Root })
 	play.Frame = frame
 	local shake = box({ Name = "Shake", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 1, Parent = frame })
 
 	local title = options.Title or (eggId and Pets.Eggs[eggId].Name) or "NEW PET!"
-	local ribbon = buildRibbon(shake, title, options.Ribbon or (if eggId then "Sky" else "Pink"), count, screenWidth)
+	local ribbon = buildRibbon(shake, title, options.Ribbon or (if eggId then "Sky" else "Pink"), count, screenWidth / ribbonScale)
 	ribbon.Frame.Position = UDim2.fromOffset(screenWidth / 2, ribbonY)
 	ribbon.Frame.Visible = false
+	ribbon.Scale.Scale = ribbonScale
 
 	local row = box({
 		Name = "Row",
@@ -1701,7 +1741,7 @@ local function runPlay(play, result, options)
 	if bestOrder >= 4 then
 		stamp = buildStamp(shake, best.Rarity)
 		stamp.Frame.Position = UDim2.fromOffset(screenWidth / 2, ribbonY + 6)
-		local stampScale = math.min(1, (screenWidth - 24) / 600)
+		local stampScale = math.min(ribbonScale, (screenWidth - 24) / 600)
 		stamp.Scale.Scale = stampScale
 		stamp.BaseScale = stampScale
 		confetti = buildConfetti(box({ Name = "Confetti", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 2, Parent = frame }), screenWidth, rng)
@@ -1749,31 +1789,31 @@ local function runPlay(play, result, options)
 	for index, slot in slots do
 		if eggId then
 			at(T.Land + slot.Delay, false, function()
-				sounds.Play("Pop", 0.7, if index == 1 then 0.8 else 0.5)
+				sound("Pop", 0.7, if index == 1 then 0.8 else 0.5)
 			end)
 		end
 		at(T.Pop + slot.Delay, true, function()
-			sounds.Play("Hatch", 1 + (index - 1) * 0.06, if index == 1 then 1 else 0.6)
+			sound("Hatch", 1 + (index - 1) * 0.06, if index == 1 then 1 else 0.6)
 		end)
 	end
 	if eggId then
 		for index, tick in T.Ticks do
 			local step = (index - 1) / math.max(#T.Ticks - 1, 1)
 			at(tick[1], false, function()
-				sounds.Play("Pop", 1 + step * 0.32, 0.55 + step * 0.45)
+				sound("Pop", 1 + step * 0.32, 0.55 + step * 0.45)
 			end)
 		end
 	else
 		at(T.Charge, false, function()
-			sounds.Play("Pop", 0.8, 0.7)
+			sound("Pop", 0.8, 0.7)
 		end)
 	end
 	at(bestPop + 0.12, true, function()
-		sounds.Play("Success", 0.9 + bestOrder * 0.06)
+		sound("Success", 0.9 + bestOrder * 0.06)
 	end)
 	if stamp then
 		at(stampTime + 0.16, true, function()
-			sounds.Play("Thunder", 1.1, 1.4)
+			sound("Thunder", 1.1, 1.4)
 		end)
 	end
 	table.sort(events, function(a, b)
@@ -1806,6 +1846,9 @@ local function runPlay(play, result, options)
 	}
 
 	local hold = options.Hold or (if bestOrder >= 5 then T.Hold + 1.4 elseif bestOrder >= 4 then T.Hold + 0.8 else T.Hold)
+	if quick and bestOrder >= 5 then
+		hold = math.max(hold, 2.4) -- even auto hatch stops a moment for a Legendary
+	end
 	local closing = false -- whether the backdrop goes with this play (else it lingers for the next one)
 	local outroLevel, outroFade = 1, nil
 	local shakeStarts = {}
@@ -1855,8 +1898,14 @@ local function runPlay(play, result, options)
 		-- Ribbon drops in with a bounce, then the count chip pops on
 		local ribbonK = if warm and quick then 1 else progress(clock, T.Ribbon, T.RibbonTime)
 		setVisible(ribbon.Frame, ribbonK > 0)
-		ribbon.Frame.Position = UDim2.fromOffset(screenWidth / 2, ribbonY - 170 * (1 - outBack(ribbonK, 2.2)))
+		ribbon.Frame.Position = UDim2.fromOffset(screenWidth / 2, ribbonY - (ribbonY + 60) * (1 - outBack(ribbonK, 2.2)))
 		ribbon.Frame.Rotation = 5 * math.sin(ribbonK * math.pi * 2) * (1 - ribbonK)
+		if stamp then
+			-- the stamp takes the ribbon's place: it ducks away as the stamp comes down
+			local away = progress(clock, stampTime + 0.06, 0.14)
+			ribbon.Scale.Scale = math.max(ribbonScale * (1 - inQuad(away)), 0.001)
+			setVisible(ribbon.Frame, ribbonK > 0 and away < 1)
+		end
 		for index, star in ribbon.Stars do
 			star.Rotation = (clock * 50 * (if index == 1 then -1 else 1)) % 360
 		end
@@ -1896,7 +1945,6 @@ local function runPlay(play, result, options)
 					setVisible(star, settle > 0 and twinkle > 0)
 					local starScale = star:FindFirstChildOfClass("UIScale") or scaler(star)
 					starScale.Scale = math.max(twinkle, 0.001)
-					star.Rotation = clock * 60
 				end
 			end
 		end
@@ -1947,8 +1995,9 @@ local function runPlay(play, result, options)
 		if outroStart then
 			if not outroFade then
 				outroFade = fadeTargets(frame)
-				if bestOrder >= 4 and not play.Aborted then
-					Registry.EffectsController.Confetti(40 + bestOrder * 15) -- keeps celebrating in the world
+				local effects = Registry.EffectsController
+				if bestOrder >= 4 and not play.Aborted and effects and effects.Confetti then
+					pcall(effects.Confetti, 40 + bestOrder * 15) -- keeps celebrating in the world
 				end
 			end
 			local fade = outQuad(outroK)
@@ -1956,7 +2005,11 @@ local function runPlay(play, result, options)
 				target[1][target[2]] = lerp(target[3], 1, fade)
 			end
 			rowScale.Scale = k * (1 - 0.14 * fade)
-			ribbon.Scale.Scale = 1 - 0.14 * fade
+			if stamp then
+				stamp.Scale.Scale = stamp.BaseScale * (1 - 0.14 * fade)
+			else
+				ribbon.Scale.Scale = ribbonScale * (1 - 0.14 * fade)
+			end
 			if outroK >= 1 then
 				break
 			end
