@@ -23,6 +23,16 @@ local Viewport = require(script.Parent.Parent.Viewport)
 
 local EggPanel = {}
 
+-- What the PromptController (incubators open this panel when you walk up) reads: the egg shown and
+-- whether a hatch (or auto hatching) is running. Build replaces these.
+function EggPanel.CurrentEgg(): string?
+	return nil
+end
+
+function EggPanel.IsBusy(): boolean
+	return false
+end
+
 local INK = Theme.Ink
 local WHITE = Color3.new(1, 1, 1)
 local SETS = Theme.Sets
@@ -31,7 +41,13 @@ local player = Players.LocalPlayer
 local TILE_WIDTH, TILE_HEIGHT = 112, 140
 local COLUMN_HEIGHT = 196
 
+-- Still at the egg's incubator (after a hatch the panel comes back): the PromptController's rule, the
+-- one that opens and closes the panel as you walk up and away
 local function nearEgg(eggId: string): boolean
+	local prompts = Registry.PromptController
+	if prompts and prompts.IsNearEgg then
+		return prompts.IsNearEgg(eggId)
+	end
 	local egg = Pets.Eggs[eggId]
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -142,6 +158,13 @@ function EggPanel.Build()
 	local hatchOne, hatchThree, autoButton
 	local oneTagLabel, threeTag, threeTagLabel
 	local stopButton: TextButton? = nil
+
+	function EggPanel.CurrentEgg(): string?
+		return currentEgg
+	end
+	function EggPanel.IsBusy(): boolean
+		return busy
+	end
 
 	local function setAuto(enabled: boolean)
 		auto = enabled

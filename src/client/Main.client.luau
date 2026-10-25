@@ -29,6 +29,7 @@ local ORDER = {
 	"ZoneController",
 	"HazardController",
 	"WorldController",
+	"PromptController",
 	"MegaStormController",
 	"ObjectiveController",
 	"RadarController",
