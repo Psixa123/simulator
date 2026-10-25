@@ -10,6 +10,7 @@
 -- they aren't allowed. The window takes a portrait shape (two columns) on tall screens.
 
 local ContentProvider = game:GetService("ContentProvider")
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -93,11 +94,11 @@ local AURORA_BOTTOM = Color3.fromHex("8A5CF0")
 -- Layouts: Wide (landscape screens) and Tall (portrait); sizes in offset px of the window
 ---------------------------------------------------------------------------
 local GAP = 12
-local SCROLL_PAD = { Top = 20, Right = 14, Bottom = 12, Left = 4 } -- room for tags above the first row
+local SCROLL_PAD = { Top = 20, Right = 14, Bottom = 12, Left = 8 } -- room for tags above the first row
 
 local LAYOUTS = {
 	Wide = { Window = Vector2.new(680, 590), Columns = { Passes = 3, Boosts = 3, Volts = 4 }, Featured = 228, TabWidth = 132 },
-	Tall = { Window = Vector2.new(590, 1000), Columns = { Passes = 2, Boosts = 2, Volts = 2 }, Featured = 262, TabWidth = 128 },
+	Tall = { Window = Vector2.new(590, 1000), Columns = { Passes = 2, Boosts = 2, Volts = 2 }, Featured = 262, TabWidth = 128, Tall = true },
 }
 
 -- Portrait screens (a phone held upright, a narrow desktop window) get the Tall layout. The size is
@@ -113,14 +114,18 @@ local function chooseLayout()
 	end
 	local uiScale = root and root:FindFirstChildOfClass("UIScale")
 	local scale = if uiScale and uiScale.Scale > 0 then uiScale.Scale else 1
-	local width, height = size.X / scale, size.Y / scale
-	if width < 900 and height > width * 1.2 then
-		local layout = table.clone(LAYOUTS.Tall)
-		-- as tall as the screen allows (the top bar, the cloud puffs and a margin stay free)
-		layout.Window = Vector2.new(layout.Window.X, math.clamp(math.floor(height - 58 / scale - 150), 600, 1000))
-		return layout
-	end
-	return LAYOUTS.Wide
+	local ok, inset = pcall(function()
+		return GuiService:GetGuiInset()
+	end)
+	local topBar = if ok and typeof(inset) == "Vector2" then inset.Y else 58
+	local width = size.X / scale
+	local height = (size.Y - topBar) / scale -- below the Roblox top bar
+	local layout = table.clone(if width < 900 and height > width * 1.2 then LAYOUTS.Tall else LAYOUTS.Wide)
+	-- As tall as the screen allows at full size (InterfaceController fits a window with its cloud puffs and
+	-- shadow, 50 px, plus a 16 px margin): a landscape phone gets a shorter window instead of a smaller one
+	local tallest = math.floor(height - 66)
+	layout.Window = Vector2.new(layout.Window.X, math.clamp(tallest - (if layout.Tall then 90 else 0), 470, layout.Window.Y))
+	return layout
 end
 
 -- Card measurements for a card `width` px wide. Info = "Description" (3-4 lines) or "Volts" (an amount)
@@ -486,8 +491,8 @@ local function itemCard(parent: Instance, order: number, m, spec, onClick: () ->
 			Name = "Tag",
 			Text = spec.Tag.Text,
 			Set = spec.Tag.Set,
-			Size = UDim2.fromOffset(math.min(math.floor(m.Width * 0.62), 150), if m.Width >= 240 then 34 else 30),
-			Position = UDim2.fromOffset(-4, -9),
+			Size = UDim2.fromOffset(math.clamp(math.floor(m.Width * 0.62), 112, 150), if m.Width >= 240 then 34 else 30),
+			Position = UDim2.fromOffset(-2, -9),
 			Rotation = -5,
 			ZIndex = 8,
 			Parent = cell,
@@ -640,7 +645,7 @@ local function featuredCard(parent: Instance, width: number, height: number, pro
 		MinTextSize = 10,
 		Wrapped = true,
 		Stroke = INK,
-		StrokeThickness = 1.5,
+		StrokeThickness = 1.25,
 		X = Enum.TextXAlignment.Left,
 		Y = Enum.TextYAlignment.Top,
 		Size = UDim2.fromOffset(textWidth, descriptionHeight),
@@ -669,7 +674,7 @@ local function featuredCard(parent: Instance, width: number, height: number, pro
 		Text = "EXCLUSIVE",
 		Set = "Storm",
 		Size = UDim2.fromOffset(if tall then 150 else 140, if tall then 36 else 32),
-		Position = UDim2.fromOffset(-6, -10),
+		Position = UDim2.fromOffset(-3, -10),
 		Rotation = -5,
 		ZIndex = 8,
 		Parent = cell,

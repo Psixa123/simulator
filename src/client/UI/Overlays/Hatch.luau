@@ -64,10 +64,10 @@ local RIBBON_HEIGHT = 84 -- the title ribbon above the slots (with its tails and
 -- Stage geometry (offsets inside the slot)
 local CENTER_X = SLOT_WIDTH / 2
 local PAD_Y = 262 -- centre of the pad's top face
-local PAD_A, PAD_B, PAD_DEPTH = 100, 25, 26 -- top face half width / half height, side height
-local EGG_VIEW = 290 -- egg viewport side (room for the wobble)
-local EGG_ZOOM = 1.7 -- the egg is EGG_VIEW / EGG_ZOOM tall
-local EGG_HEIGHT = EGG_VIEW / EGG_ZOOM
+local PAD_A, PAD_B, PAD_DEPTH = 106, 26, 26 -- top face half width / half height, side height
+local EGG_VIEW_W, EGG_VIEW_H = 300, 226 -- egg viewport (wide: room for the wobble)
+local EGG_HEIGHT = 176 -- on screen: the camera frames the egg's height at EGG_VIEW_H / zoom
+local EGG_ZOOM = EGG_VIEW_H / EGG_HEIGHT
 local EGG_WIDTH = EGG_HEIGHT * 0.78
 local EGG_Y = PAD_Y + 4 - EGG_HEIGHT / 2 -- egg centre: its bottom rests on the pad
 local PET_VIEW = 270
@@ -130,8 +130,9 @@ local CRACKS = {
 	{ 3, { { 0.3, -0.3 }, { 0.2, -0.11 } } },
 }
 
--- Frames only round into pills, so an ellipse is four overlapping pills: { width, height } factors
-local ELLIPSE = { { 0.968, 0.495 }, { 0.871, 0.79 }, { 0.687, 0.927 }, { 0.5, 0.988 } }
+-- Frames only round into pills, so an ellipse is three overlapping pills: { long side, short side }
+-- factors (fitted to a 4:1 ellipse, within 1.5 px at 200 px wide)
+local ELLIPSE = { { 0.988, 0.509 }, { 0.877, 0.761 }, { 0.661, 0.973 } }
 
 local CONFETTI_COLORS = {
 	Theme.Sets.Bolt.Top,
@@ -220,14 +221,16 @@ local function transparencyGradient(rotation: number, points)
 	return gradient
 end
 
--- Four pills making an ellipse w x h centred on (x, y). `paint(layer, v0, v1, u0, u1)` colours each
--- pill; v0..v1 / u0..u1 are where its edges sit across the ellipse (0..1), to line gradients up.
+-- Pills making an ellipse w x h centred on (x, y). `paint(layer, v0, v1, u0, u1)` colours each pill;
+-- v0..v1 / u0..u1 are where its edges sit across the ellipse (0..1), to line gradients up.
 local function ellipse(parent: Instance, name: string, x: number, y: number, w: number, h: number, z: number, paint)
 	local layers = {}
+	local tall = h > w
 	for _, spec in ELLIPSE do
+		local fw, fh = if tall then spec[2] else spec[1], if tall then spec[1] else spec[2]
 		local layer = box({
 			Name = name,
-			Size = UDim2.fromOffset(w * spec[1], h * spec[2]),
+			Size = UDim2.fromOffset(w * fw, h * fh),
 			Position = UDim2.fromOffset(x, y),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			ZIndex = z,
@@ -235,7 +238,7 @@ local function ellipse(parent: Instance, name: string, x: number, y: number, w: 
 			UI.Round(),
 		})
 		if paint then
-			paint(layer, (1 - spec[2]) / 2, (1 + spec[2]) / 2, (1 - spec[1]) / 2, (1 + spec[1]) / 2)
+			paint(layer, (1 - fh) / 2, (1 + fh) / 2, (1 - fw) / 2, (1 + fw) / 2)
 		end
 		table.insert(layers, layer)
 	end
@@ -475,7 +478,7 @@ local function openSession()
 	})
 	-- A soft pool of light behind the stage (placed by each play)
 	local pool = {}
-	for index = 1, 4 do
+	for index = 1, 7 do
 		table.insert(
 			pool,
 			box({
@@ -584,13 +587,13 @@ end
 ---------------------------------------------------------------------------
 local function buildRibbon(parent: Instance, title: string, setName: string, count: number, maxWidth: number)
 	local set = Theme.Set(setName)
-	local bandWidth = math.clamp(textWidth(title, 34) + 120, 300, math.max(maxWidth - 96, 220))
+	local bandWidth = math.clamp(textWidth(title, 34) + 120, 300, math.max(maxWidth - 130, 220))
 	local holder = box({
 		Name = "Ribbon",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(bandWidth + 96, RIBBON_HEIGHT),
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		ZIndex = 2,
+		ZIndex = 4,
 		Parent = parent,
 	})
 	local scale = scaler(holder)
@@ -599,26 +602,26 @@ local function buildRibbon(parent: Instance, title: string, setName: string, cou
 		local tail = box({
 			Name = if side < 0 then "TailLeft" else "TailRight",
 			BackgroundColor3 = WHITE,
-			Size = UDim2.fromOffset(74, 44),
-			Position = UDim2.new(0.5, side * (bandWidth / 2 + 4), 0.5, 13),
+			Size = UDim2.fromOffset(84, 46),
+			Position = UDim2.new(0.5, side * (bandWidth / 2 - 36), 0.5, 18),
 			AnchorPoint = Vector2.new(if side < 0 then 1 else 0, 0.5),
-			Rotation = side * 7,
+			Rotation = side * -6,
 			ZIndex = 1,
 			Parent = holder,
 			UI.Corner(12),
 			UI.Stroke(Theme.Outline, INK),
 			UI.Gradient(set.Bottom, set.Lip),
 		})
-		-- the fold: a darker corner where the tail goes behind the band
+		-- the fold: the tail's inner end is darker where it turns behind the band
 		box({
 			Name = "Fold",
 			BackgroundColor3 = set.Stroke,
-			Size = UDim2.fromOffset(26, 30),
-			Position = UDim2.new(if side < 0 then 1 else 0, side * -2, 0, 1),
+			Size = UDim2.fromOffset(46, 46),
+			Position = UDim2.fromScale(if side < 0 then 1 else 0, 0),
 			AnchorPoint = Vector2.new(if side < 0 then 1 else 0, 0),
 			ZIndex = 1,
 			Parent = tail,
-			UI.Corner(8),
+			UI.Corner(12),
 		})
 	end
 	local band, face = candy(holder, set, {
@@ -711,6 +714,7 @@ local function buildPad(parent: Instance)
 		return sky.Bottom:Lerp(sky.Lip, (u - 0.65) / 0.35)
 	end
 	-- Ink silhouette (top face + side + bottom rim), then the side, then the top face
+	ellipse(pad, "Outline", cx, cy, 2 * (PAD_A + outline), 2 * (PAD_B + outline), 1, solid(INK))
 	ellipse(pad, "Outline", cx, cy + PAD_DEPTH, 2 * (PAD_A + outline), 2 * (PAD_B + outline), 1, solid(INK))
 	box({
 		Name = "Outline",
@@ -756,7 +760,7 @@ local function buildPad(parent: Instance)
 		table.insert(lights, light)
 	end
 	ellipse(pad, "Rim", cx, cy, 2 * PAD_A, 2 * PAD_B, 4, solid(INK))
-	ellipse(pad, "Face", cx, cy, 2 * (PAD_A - outline), 2 * (PAD_B - outline), 5, vertical(Theme.Cloud, Theme.Haze))
+	ellipse(pad, "Face", cx, cy, 2 * PAD_A - 5, 2 * PAD_B - 5, 5, vertical(Theme.Cloud, Theme.Haze))
 	-- The glowing ring on the face (a coloured ellipse with a face-coloured one inside)
 	local ring = ellipse(pad, "Ring", cx, cy + 1, 2 * PAD_A * 0.76, 2 * PAD_B * 0.76, 6, solid(NEUTRAL_GLOW))
 	ellipse(pad, "RingInside", cx, cy + 1, 2 * PAD_A * 0.64, 2 * PAD_B * 0.64, 7, vertical(Theme.Mist, Theme.Cloud))
@@ -771,8 +775,8 @@ local function buildPad(parent: Instance)
 		Parent = pad,
 	})
 	local shadowScale = scaler(shadow)
-	ellipse(shadow, "Shade", 48, 12, 96, 24, 1, solid(INK, 0.78))
-	return { Frame = pad, Scale = scaler(pad, 0), Lights = lights, Ring = ring, Shadow = shadow, ShadowScale = shadowScale }
+	local shade = ellipse(shadow, "Shade", 48, 12, 96, 24, 1, solid(INK, 0.78))
+	return { Frame = pad, Scale = scaler(pad, 0), Lights = lights, Ring = ring, Shadow = shadow, ShadowScale = shadowScale, Shade = shade }
 end
 
 local function buildCard(slot: Frame, entry, def, rarity, tier: string)
@@ -939,20 +943,21 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 
 	-- Layered glow around the egg
 	local glow = {}
-	for glowIndex, spec in { { 330, 0.1 }, { 256, 0.12 }, { 196, 0.14 }, { 146, 0.17 }, { 104, 0.2 } } do
+	for glowIndex = 1, 9 do
+		local size = lerp(350, 96, (glowIndex - 1) / 8)
 		table.insert(glow, {
 			Frame = box({
 				Name = "Glow" .. glowIndex,
 				BackgroundColor3 = NEUTRAL_GLOW,
 				BackgroundTransparency = 1,
-				Size = UDim2.fromOffset(spec[1], spec[1]),
+				Size = UDim2.fromOffset(size, size),
 				Position = UDim2.fromOffset(CENTER_X, GLOW_Y),
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				ZIndex = 2,
 				Parent = stage,
 				UI.Round(),
 			}),
-			Alpha = spec[2],
+			Alpha = 0.075,
 		})
 	end
 	-- A column of light rising from the pad
@@ -979,19 +984,22 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 		for side = -1, 1, 2 do
 			for puffIndex = 1, 2 do
 				local size = if puffIndex == 1 then 30 else 20
+				local puffFrame = box({
+					Name = "Dust",
+					BackgroundColor3 = Theme.Cloud,
+					BackgroundTransparency = 1,
+					Size = UDim2.fromOffset(size, size),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					ZIndex = 6,
+					Visible = false,
+					Parent = stage,
+					UI.Round(),
+				})
+				local puffStroke = UI.Stroke(2, Theme.HazeDeep)
+				puffStroke.Parent = puffFrame
 				table.insert(dust, {
-					Frame = box({
-						Name = "Dust",
-						BackgroundColor3 = Theme.Cloud,
-						BackgroundTransparency = 1,
-						Size = UDim2.fromOffset(size, size),
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						ZIndex = 6,
-						Visible = false,
-						Parent = stage,
-						UI.Round(),
-						UI.Stroke(2, Theme.HazeDeep),
-					}),
+					Frame = puffFrame,
+					Stroke = puffStroke,
 					Side = side,
 					Reach = if puffIndex == 1 then 62 else 92,
 					Size = size,
@@ -1004,7 +1012,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 	local eggHolder = box({
 		Name = "EggHolder",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(EGG_VIEW, EGG_VIEW),
+		Size = UDim2.fromOffset(EGG_VIEW_W, EGG_VIEW_H),
 		Position = UDim2.fromOffset(CENTER_X, EGG_Y),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		ZIndex = 7,
@@ -1014,7 +1022,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 	local eggScale = scaler(eggHolder)
 	local eggView, cracks, crackSegments, heat, orb = nil, nil, {}, {}, {}
 	if egg then
-		eggView = Viewport.Egg(eggId, {
+		eggView = Viewport.Egg(eggId :: string, {
 			Name = "Egg",
 			Size = UDim2.fromScale(1, 1),
 			Zoom = EGG_ZOOM,
@@ -1025,7 +1033,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 		cracks = box({
 			Name = "Cracks",
 			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(EGG_VIEW, EGG_VIEW),
+			Size = UDim2.fromOffset(EGG_VIEW_W, EGG_VIEW_H),
 			Position = UDim2.new(0.5, 0, 0.5, EGG_HEIGHT / 2),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			ZIndex = 2,
@@ -1074,7 +1082,7 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 			end
 		end
 		-- White heat over the egg just before it pops
-		heat = ellipse(eggHolder, "Heat", EGG_VIEW / 2, EGG_VIEW / 2 + 4, EGG_WIDTH * 0.92, EGG_HEIGHT * 0.94, 3, solid(WHITE, 1))
+		heat = ellipse(eggHolder, "Heat", EGG_VIEW_W / 2, EGG_VIEW_H / 2 + 4, EGG_WIDTH * 0.9, EGG_HEIGHT * 0.92, 3, solid(WHITE, 1))
 	else
 		for orbIndex, spec in { { 1, 0.16 }, { 0.72, 0.2 }, { 0.48, 0.32 }, { 0.3, 0.9 } } do
 			table.insert(orb, {
@@ -1439,7 +1447,7 @@ local function drawSlot(slot, T, u: number, clock: number, crackTimes)
 				puff.Frame.Size = UDim2.fromOffset(size, size)
 				puff.Frame.Position = UDim2.fromOffset(CENTER_X + puff.Side * puff.Reach * outCubic(k), PAD_Y + 2 - 16 * outQuad(k))
 				puff.Frame.BackgroundTransparency = lerp(0.05, 1, k)
-				puff.Frame:FindFirstChildOfClass("UIStroke").Transparency = lerp(0.2, 1, k)
+				puff.Stroke.Transparency = lerp(0.2, 1, k)
 			end
 		end
 		-- the shadow grows as the egg comes down
@@ -1581,10 +1589,8 @@ local function drawSlot(slot, T, u: number, clock: number, crackTimes)
 	end
 	setVisible(slot.Pad.Shadow, padShadowAlpha > 0.02)
 	slot.Pad.ShadowScale.Scale = math.max(padShadow, 0.001)
-	for _, layer in slot.Pad.Shadow:GetChildren() do
-		if layer:IsA("Frame") then
-			layer.BackgroundTransparency = 1 - 0.22 * padShadowAlpha
-		end
+	for _, layer in slot.Pad.Shade do
+		layer.BackgroundTransparency = 1 - 0.22 * padShadowAlpha
 	end
 	return glowColor, glowK, colorK
 end
@@ -1664,7 +1670,7 @@ local function runPlay(play, result, options)
 	})
 	local rowScale = scaler(row, k)
 
-	local rng = Random.new(os.clock() * 1000)
+	local rng = Random.new(math.floor(os.clock() * 1000) % 1000003)
 	local slots = {}
 	local best = nil
 	for index, entry in results do
@@ -1685,7 +1691,7 @@ local function runPlay(play, result, options)
 		then Vector2.new(SLOT_WIDTH * k + 520, rowHeight * k + 260)
 		else Vector2.new(rowWidth * k + 460, 560 * k + 120)
 	for index, layer in s.Pool do
-		local factor = 1 - (index - 1) * 0.2
+		local factor = 1 - (index - 1) * 0.12
 		layer.Size = UDim2.fromOffset(poolSize.X * factor, poolSize.Y * factor)
 		layer.Position = UDim2.fromOffset(poolCenter.X, poolCenter.Y)
 	end
@@ -1800,7 +1806,7 @@ local function runPlay(play, result, options)
 	}
 
 	local hold = options.Hold or (if bestOrder >= 5 then T.Hold + 1.4 elseif bestOrder >= 4 then T.Hold + 0.8 else T.Hold)
-	local closing = waiting == 0 and not quick -- the backdrop goes with this play (else it lingers)
+	local closing = false -- whether the backdrop goes with this play (else it lingers for the next one)
 	local outroLevel, outroFade = 1, nil
 	local shakeStarts = {}
 	for _, slot in slots do
@@ -1822,6 +1828,7 @@ local function runPlay(play, result, options)
 		end
 		if not outroStart and (dismissed or clock >= lastPop + hold) then
 			outroStart = clock
+			closing = waiting == 0 and not quick
 		end
 
 		-- Sounds and moments (ones jumped over by a skip stay quiet)
@@ -1873,7 +1880,7 @@ local function runPlay(play, result, options)
 		end
 		for index, layer in s.Pool do
 			layer.BackgroundColor3 = poolColor
-			layer.BackgroundTransparency = 1 - (0.07 + 0.03 * index) * s.Level * clamp01(0.6 + 0.4 * poolK)
+			layer.BackgroundTransparency = 1 - 0.065 * s.Level * clamp01(0.6 + 0.4 * poolK)
 		end
 
 		-- Stamp slams down: big -> a hair too small -> settles
@@ -1973,7 +1980,7 @@ function Hatch.Play(result, options)
 	waiting -= 1
 	playing = true
 
-	local play = { Aborted = false }
+	local play = { Aborted = false, Frame = nil :: Frame?, Connections = nil :: { RBXScriptConnection }? }
 	current = play
 	local ok, err = xpcall(runPlay, debug.traceback, play, result or {}, options)
 	if not ok then

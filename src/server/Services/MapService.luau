@@ -1509,7 +1509,10 @@ local function coolingArea(parent: Instance, position: Vector3, radius: number)
 		LightEmission = 1,
 	})
 
-	local anchor = part(props({ Name = "SignAnchor", Size = Vector3.one, CFrame = CFrame.new(position.X + radius, 3, position.Z), Transparency = 1 }))
+	-- the label hangs over the ring's edge toward the main path (a station's path), not in its buildings
+	-- (at the sell pad, +X is inside the sell machine)
+	local side = if math.abs(position.Z) > 1 then Vector3.new(0, 0, -math.sign(position.Z)) else Vector3.xAxis
+	local anchor = part(props({ Name = "SignAnchor", Size = Vector3.one, CFrame = CFrame.new(Vector3.new(position.X, 3.5, position.Z) + side * radius), Transparency = 1 }))
 	local gui = billboard(anchor, UDim2.fromOffset(170, 36), Vector3.zero, 90)
 	textLabel(gui, { Text = "❄️ COOL ZONE", TextColor3 = rgb(170, 225, 255) })
 end
