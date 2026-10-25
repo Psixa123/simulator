@@ -5,8 +5,8 @@
 --   result  = { Egg = eggId?, Results = { { Id = petId, New = boolean?, Golden = boolean?, Rainbow = boolean? } } }
 --   options = { Title = string?, Hold = seconds?, Ribbon = candy set name?, Quick = boolean?,
 --               FreezeAt = seconds? (preview renders only: the animation clock stops there) }
---   A Hold under 1.5 s (auto hatch passes 1.1) plays the quick version, and the dimmed backdrop stays
---   up between back-to-back hatches.
+--   A Hold under 1.5 s (auto hatch passes 1.1) plays the quick version (about 1.75 s in all; a
+--   Legendary still gets 2.4 s), and the dimmed backdrop stays up between back-to-back hatches.
 -- Hatch.IsPlaying() -> boolean
 -- Hatch.Reveal(petId, tier, title) shows a single pet without an egg (rewards, drops).
 --
@@ -336,6 +336,7 @@ local function sparkle(parent: Instance, size: number, color: Color3, z: number)
 			UI.Round(),
 		})
 	end
+	scaler(holder)
 	return holder
 end
 
@@ -588,7 +589,7 @@ end
 ---------------------------------------------------------------------------
 local function buildRibbon(parent: Instance, title: string, setName: string, count: number, maxWidth: number)
 	local set = Theme.Set(setName)
-	local bandWidth = math.clamp(textWidth(title, 34) + 120, 300, math.max(maxWidth - 130, 220))
+	local bandWidth = math.clamp(textWidth(title, 34) + 136, 300, math.max(maxWidth - 130, 220))
 	local holder = box({
 		Name = "Ribbon",
 		BackgroundTransparency = 1,
@@ -642,7 +643,7 @@ local function buildRibbon(parent: Instance, title: string, setName: string, cou
 		MinTextSize = 16,
 		Stroke = set.Stroke,
 		StrokeThickness = 3,
-		Size = UDim2.new(1, -96, 1, -10),
+		Size = UDim2.new(1, -116, 1, -10),
 		Position = UDim2.new(0.5, 0, 0.5, 2),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		ZIndex = 3,
@@ -654,8 +655,8 @@ local function buildRibbon(parent: Instance, title: string, setName: string, cou
 			stars,
 			Icons.New("Star", {
 				Name = "Star",
-				Size = UDim2.fromOffset(34, 34),
-				Position = UDim2.new(0.5, side * (bandWidth / 2 - 30), 0.5, -2),
+				Size = UDim2.fromOffset(32, 32),
+				Position = UDim2.new(0.5, side * (bandWidth / 2 - 32), 0.5, -2),
 				ZIndex = 3,
 				Parent = band,
 			})
@@ -1228,8 +1229,10 @@ local function buildSlot(row: Frame, index: number, entry, eggId: string?, multi
 	local sparkles = {}
 	for sparkleIndex = 1, 10 do
 		local angle = (sparkleIndex - 1) / 10 * math.pi * 2 + rng:NextNumber(-0.25, 0.25)
+		local twinkle = sparkle(fx, rng:NextNumber(18, 30), if sparkleIndex % 3 == 0 then Theme.Sets.Bolt.Top else WHITE, 4)
 		table.insert(sparkles, {
-			Frame = sparkle(fx, rng:NextNumber(18, 30), if sparkleIndex % 3 == 0 then Theme.Sets.Bolt.Top else WHITE, 4),
+			Frame = twinkle,
+			Scale = twinkle:FindFirstChildOfClass("UIScale"),
 			Angle = angle,
 			Reach = rng:NextNumber(110, 175),
 			Spin = rng:NextNumber(-40, 40),
@@ -1333,7 +1336,7 @@ local function buildStamp(parent: Instance, rarity)
 	for index, spec in { { -250, -34, 34 }, { 262, -26, 40 }, { -214, 40, 24 }, { 228, 44, 28 } } do
 		local star = sparkle(holder, spec[3], if index % 2 == 0 then Theme.Sets.Bolt.Top else WHITE, 3)
 		star.Position = UDim2.new(0.5, spec[1], 0.5, spec[2])
-		table.insert(sparkles, star)
+		table.insert(sparkles, { Frame = star, Scale = star:FindFirstChildOfClass("UIScale") })
 	end
 	return { Frame = holder, Scale = scale, Sparkles = sparkles }
 end
@@ -1555,9 +1558,7 @@ local function drawSlot(slot, T, u: number, clock: number, crackTimes)
 				local reach = star.Reach * outCubic(k)
 				star.Frame.Position = UDim2.fromOffset(CENTER_X + math.cos(star.Angle) * reach, EGG_Y + math.sin(star.Angle) * reach)
 				star.Frame.Rotation = star.Spin * k
-				local size = math.sin(k * math.pi)
-				local scale = star.Frame:FindFirstChildOfClass("UIScale") or scaler(star.Frame)
-				scale.Scale = math.max(size, 0.001)
+				star.Scale.Scale = math.max(math.sin(k * math.pi), 0.001)
 			end
 		end
 		for _, star in slot.Stars do
@@ -1687,11 +1688,6 @@ local function runPlay(play, result, options)
 	play.Frame = frame
 	local shake = box({ Name = "Shake", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 1, Parent = frame })
 
-	local title = options.Title or (eggId and Pets.Eggs[eggId].Name) or "NEW PET!"
-	local ribbon = buildRibbon(shake, title, options.Ribbon or (if eggId then "Sky" else "Pink"), count, screenWidth / ribbonScale)
-	ribbon.Frame.Position = UDim2.fromOffset(screenWidth / 2, ribbonY)
-	ribbon.Frame.Visible = false
-	ribbon.Scale.Scale = ribbonScale
 
 	local row = box({
 		Name = "Row",
@@ -1724,6 +1720,13 @@ local function runPlay(play, result, options)
 	local bestOrder = best.Rarity.Order
 	local lastPop = T.Pop + (count - 1) * T.Stagger
 	local bestPop = T.Pop + best.Delay
+
+	local title = options.Title or (eggId and Pets.Eggs[eggId].Name) or "NEW PET!"
+	local ribbonSet = options.Ribbon or (if eggId then "Sky" elseif bestOrder >= 6 then "Storm" else "Pink")
+	local ribbon = buildRibbon(shake, title, ribbonSet, count, screenWidth / ribbonScale)
+	ribbon.Frame.Position = UDim2.fromOffset(screenWidth / 2, ribbonY)
+	ribbon.Frame.Visible = false
+	ribbon.Scale.Scale = ribbonScale
 
 	-- The soft light behind the stage
 	local poolCenter = Vector2.new(screenWidth / 2, rowTop + (if vertical then rowHeight * k / 2 else (GLOW_Y + 30) * k))
@@ -1942,9 +1945,8 @@ local function runPlay(play, result, options)
 				stamp.Scale.Scale = size * stamp.BaseScale
 				for index, star in stamp.Sparkles do
 					local twinkle = math.sin(clock * 5 + index * 1.9)
-					setVisible(star, settle > 0 and twinkle > 0)
-					local starScale = star:FindFirstChildOfClass("UIScale") or scaler(star)
-					starScale.Scale = math.max(twinkle, 0.001)
+					setVisible(star.Frame, settle > 0 and twinkle > 0)
+					star.Scale.Scale = math.max(twinkle, 0.001)
 				end
 			end
 		end
