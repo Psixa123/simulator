@@ -685,7 +685,13 @@ function placeBillboards(camera) {
   const guiScale = height / 1080; // Roblox gui pixels on a 1080p screen
   for (const b of billboards) {
     const g = b.gui;
-    const p = new THREE.Vector3(...g.Position).add(new THREE.Vector3(...g.StudsOffsetWorldSpace));
+    // Despite its name, Roblox applies StudsOffsetWorldSpace in the adornee part's own axes (a rotated
+    // part, e.g. a Cylinder rolled upright, turns the offset with it)
+    const p = new THREE.Vector3(...g.Position);
+    const [ox, oy, oz] = g.StudsOffsetWorldSpace;
+    const r = g.part ? g.part.cframe : null;
+    if (r) p.add(new THREE.Vector3(r[3] * ox + r[4] * oy + r[5] * oz, r[6] * ox + r[7] * oy + r[8] * oz, r[9] * ox + r[10] * oy + r[11] * oz));
+    else p.add(new THREE.Vector3(ox, oy, oz));
     const so = g.StudsOffset;
     p.addScaledVector(right, so[0]).addScaledVector(up, so[1]).addScaledVector(back, so[2]);
     const distance = p.distanceTo(camera.position);

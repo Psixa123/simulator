@@ -1,5 +1,5 @@
 --!nonstrict
--- Client side of the Mega Storm event: HUD widget/banner, storm animation, lightning,
+-- Client side of the Mega Storm event: the HUD's storm timer and side card (HudController.SetStorm), storm animation, lightning,
 -- a gentle camera sway, announcements and reward popups. The Rainbow Hurricane cycles its colours.
 
 local Players = game:GetService("Players")
@@ -53,12 +53,14 @@ end
 local function updateHud()
 	local phase = state:GetAttribute("Phase") or "Idle"
 	local now = Registry.DataController.Now()
-	local info = { Phase = phase, Name = stormType().Name }
+	local current = stormType()
+	local info = { Phase = phase, Name = current.Name, Pet = current.Pet }
 	if phase == "Active" then
-		local remaining = (state:GetAttribute("EndTime") or now) - now
+		local remaining = math.max(0, (state:GetAttribute("EndTime") or now) - now)
 		info.Timer = Format.Time(remaining)
 		info.Health = state:GetAttribute("Health") or 0
 		info.MaxHealth = state:GetAttribute("MaxHealth") or 1
+		info.Damage = contribution -- our own estimate (the HUD prefers the server's MegaDamage attribute)
 		info.Info = "⏱ " .. Format.Time(remaining) .. "   •   Your damage: " .. Format.Number(contribution)
 	else
 		info.Timer = Format.Time((state:GetAttribute("NextTime") or now) - now)

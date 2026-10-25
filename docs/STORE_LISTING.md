@@ -10,7 +10,11 @@ Everything to type into the Creator Dashboard, with the icon for each item. The 
   set the name, description and price.
 
 Icons are 512×512 PNGs (Roblox shows pass icons in a circle; the art stays inside it). They are rendered from
-`assets/source/store_icons.html` with `python tools/render_art.py gamepasses products`.
+`assets/source/badge.html` with `python tools/render_art.py gamepasses products`.
+
+The in-game Shop shows the same pictures as its card art. They are uploaded separately, as plain images, by
+`python tools/roblox/upload_store_icons.py`, which writes each id into the item's `Image` field (see
+`tools/roblox/README.md`). Run it again with `--only <Key> --force` after re-rendering an icon.
 
 ## Gamepasses
 
@@ -41,3 +45,7 @@ Volts packs give a number of full tanks of your best zone's energy, so they stay
 | `EnergyBoost` | 2x Energy (30 min) | 49 | Double energy from all weather for 30 minutes. Stacks with the 2x Energy pass. | `assets/products/EnergyBoost.png` |
 | `LuckBoost` | 2x Luck (30 min) | 49 | Double hatch luck for 30 minutes. | `assets/products/LuckBoost.png` |
 | `SummonMegaStorm` | Summon Mega Storm | 99 | Summon a Mega Storm for the whole server! It arrives in 20 seconds, or right after any storm that is already on its way. | `assets/products/SummonMegaStorm.png` |
+| `AuroraGryphon` | Aurora Gryphon | 2,000 | An exclusive pet with glowing aurora wings: +600% energy. Every purchase adds one more to your team. | `assets/products/AuroraGryphon.png` |
+
+The Aurora Gryphon is the lobby shop pet: the display stand in the hub and the featured card at the top of the
+Shop sell it. Every purchase gives one more Aurora Gryphon (granted even when pet storage is full).

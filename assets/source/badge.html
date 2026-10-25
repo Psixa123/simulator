@@ -16,8 +16,11 @@
   // Roblox shows pass icons cropped to a circle, so everything important stays inside
   // a centered circle of radius ~430.
   //   badge.html?id=VIP   -> one icon (ids match Monetization.luau keys)
-  const id = new URLSearchParams(location.search).get("id") || "VIP";
-  const SIZE = 512;
+  //   badge.html?id=ShopRays&size=512, ?id=Robux&size=128 -> transparent pieces the in-game Shop draws
+  //   its cards with (assets/ui/shop, see RAW below)
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id") || "VIP";
+  const SIZE = Number(params.get("size")) || 512;
 
   // ------------------------------------------------------------- designs
   const D = {};
@@ -155,7 +158,133 @@
       ribbon(512, 870, 540, 130, "SUMMON", { size: 100, c1: "#ff7ac0", c2: "#c93a8f", rot: -3 }),
   });
 
+  // Lobby shop pet (Monetization.Products.AuroraGryphon): the gryphon from tools/pets/pet_geometry.py drawn
+  // flat - blue round body, tufted ears, gold eagle beak and talons, snowy chest ruff, mint wings with
+  // aurora-violet flight feathers, an aurora plume tail and a starlight freckle - under aurora curtains
+  D.AuroraGryphon = () => ({
+    bg: ["#ffd9f4", "#ff72c6", "#7a2486"],
+    art:
+      aurora() +
+      gryphon(512, 486, 1.06) +
+      ribbon(512, 858, 600, 130, "EXCLUSIVE", { size: 88, c1: "#b48cff", c2: "#5b3ee0", rot: -3 }),
+    sparkles: [[100, 120, 26], [930, 130, 24], [130, 600, 30], [915, 690, 22], [120, 790, 20], [905, 880, 20]],
+  });
+
+  function aurora() {
+    // Soft curtains of light behind the art: mint and violet bands, blurred
+    const band = (y, amp, color, width, opacity, phase) => {
+      let d = "";
+      for (let x = -40; x <= 1064; x += 24) {
+        const yy = y + Math.sin(x / 150 + phase) * amp + Math.sin(x / 61 + phase * 2) * amp * 0.25;
+        d += (x === -40 ? "M" : " L") + x + "," + yy.toFixed(1);
+      }
+      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" opacity="${opacity}" filter="url(#softGlow)"/>`;
+    };
+    return band(250, 60, "#8dffe0", 90, 0.55, 0.4) + band(330, 70, "#c9a2ff", 70, 0.5, 2.1) + band(190, 40, "#ffffff", 34, 0.35, 1.3);
+  }
+
+  function gryphon(x, y, s) {
+    const S = (w) => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+    const body = rad([[0, "#a9b8ff"], [0.42, "#5a72e6"], [1, "#2c3a9e"]], 0.36, 0.3, 0.8);
+    const mint = lin([[0, "#c8fff0"], [0.5, "#6ff2c8"], [1, "#2fc59a"]], 0, 0, 1, 1);
+    const violet = lin([[0, "#d9b8ff"], [1, "#8a5cf0"]], 0, 0, 1, 1);
+    const gold = lin([[0, "#fff38a"], [0.55, "#ffd23c"], [1, "#ff9d1e"]]);
+    const plume = lin([[0, "#c8fff0"], [0.5, "#78f0cc"], [1, "#a77bff"]], 0, 0, 1, 1);
+    const clip = uid("gclip");
+    const R = 200;
+    let back = "", front = "";
+
+    // Wings: fans of mint feathers over longer violet flight feathers, up and out from the shoulders
+    const wing = (side) => {
+      let out = `<g transform="translate(${side * 140},-70) scale(${side},1)">`;
+      const angles = [-70, -44, -18, 8];
+      for (const [i, a] of angles.entries()) {
+        const len = 270 - i * 22;
+        out += `<g transform="rotate(${a})"><path d="M0,-36 C${len * 0.45},-70 ${len},-58 ${len + 24},0 C${len},58 ${len * 0.45},70 0,36 Z" fill="url(#${violet.id})" ${S(12)}/></g>`;
+      }
+      for (const [i, a] of angles.entries()) {
+        const len = 200 - i * 18;
+        out += `<g transform="rotate(${a})"><path d="M0,-32 C${len * 0.45},-62 ${len},-50 ${len + 18},0 C${len},50 ${len * 0.45},62 0,32 Z" fill="url(#${mint.id})" ${S(10)}/>` +
+          `<path d="M${len * 0.3},-8 L${len * 0.86},-5" stroke="#ffffff" stroke-width="10" stroke-linecap="round" opacity="0.6"/></g>`;
+      }
+      return out + `</g>`;
+    };
+    back += wing(-1) + wing(1);
+
+    // Lion tail ending in an aurora plume, behind the body on the right
+    back += `<path d="M120,160 C230,220 330,190 330,110" fill="none" ${S(46)}/>` +
+      `<path d="M120,160 C230,220 330,190 330,110" fill="none" stroke="#3c50c4" stroke-width="22" stroke-linecap="round"/>` +
+      `<g transform="translate(334,104) rotate(38) scale(1.1)"><path d="M0,30 C-48,10 -46,-56 -10,-96 C-4,-60 14,-60 22,-92 C52,-50 46,12 0,30 Z" fill="url(#${plume.id})" ${S(10)}/>` +
+      `<path d="M-6,8 C-20,-14 -18,-40 -6,-62" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.6"/></g>`;
+
+    // Tufted ears (white inside)
+    const ear = (side) =>
+      `<g transform="scale(${side},1)"><path d="M-150,-120 C-160,-190 -150,-250 -138,-292 C-104,-250 -64,-210 -42,-176 Z" fill="#4a62d6" ${S(12)}/>` +
+      `<path d="M-128,-150 C-132,-196 -128,-228 -124,-250 C-104,-220 -84,-198 -72,-180 Z" fill="#f4f6ff"/></g>`;
+    back += ear(-1) + ear(1);
+
+    // Body (a round ball, the head is the body) with a rim shade and a highlight
+    let ball = `<circle r="${R}" fill="${body.url}" ${S(14)}/>`;
+    ball += `<clipPath id="${clip}"><circle r="${R}"/></clipPath>`;
+    ball += `<g clip-path="url(#${clip})">`;
+    ball += `<circle cx="${R * 0.28}" cy="${R * 0.32}" r="${R * 1.02}" fill="none" stroke="#1f2a80" stroke-width="${R * 0.34}" opacity="0.35"/>`;
+    // snowy chest ruff: a scalloped bib under the beak
+    const ruff = [[-92, 150, 54], [-36, 162, 58], [28, 162, 58], [86, 150, 54], [-130, 120, 40], [128, 120, 40], [0, 128, 62]];
+    ball += ruff.map(([cx, cy, r]) => `<circle cx="${cx}" cy="${cy}" r="${r + 8}" fill="${INK}"/>`).join("");
+    ball += ruff.map(([cx, cy, r]) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#f4f6ff"/>`).join("");
+    ball += ruff.map(([cx, cy, r]) => `<circle cx="${cx - 4}" cy="${cy + 10}" r="${r * 0.7}" fill="#cfd6ff"/>`).join("");
+    ball += ruff.map(([cx, cy, r]) => `<circle cx="${cx}" cy="${cy - 4}" r="${r * 0.72}" fill="#ffffff"/>`).join("");
+    ball += `</g>`;
+    ball += `<circle r="${R}" fill="none" ${S(14)}/>`;
+    ball += `<ellipse cx="-92" cy="-108" rx="46" ry="26" fill="#ffffff" opacity="0.5" transform="rotate(-36 -92 -108)"/>`;
+    ball += `<circle cx="-142" cy="-46" r="11" fill="#ffffff" opacity="0.45"/>`;
+
+    // Face: big shiny eyes, blush, gold eagle beak, starlight freckle on the brow
+    const eye = (ex) =>
+      `<ellipse cx="${ex}" cy="10" rx="36" ry="44" fill="${INK}"/>` +
+      `<circle cx="${ex - 11}" cy="-6" r="15" fill="#ffffff"/><circle cx="${ex + 14}" cy="26" r="7" fill="#ffffff"/>`;
+    front += eye(-74) + eye(74);
+    front += `<ellipse cx="-128" cy="62" rx="26" ry="15" fill="#ff8fc8" opacity="0.8"/><ellipse cx="128" cy="62" rx="26" ry="15" fill="#ff8fc8" opacity="0.8"/>`;
+    front += `<path d="M-38,46 C-34,26 34,26 38,46 C34,74 14,96 0,112 C-14,96 -34,74 -38,46 Z" fill="${gold.url}" ${S(10)}/>`;
+    front += `<path d="M-30,56 C-12,64 12,64 30,56" fill="none" stroke="#d97a12" stroke-width="7" stroke-linecap="round"/>`;
+    front += `<path d="M-18,40 C-8,36 4,36 10,40" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" opacity="0.7"/>`;
+    front += `<g transform="translate(0,-106)"><path d="M0,-34 Q6,-6 34,0 Q6,6 0,34 Q-6,6 -34,0 Q-6,-6 0,-34 Z" fill="${gold.url}" ${S(8)}/></g>`;
+
+    // Gold talons
+    const foot = (fx) =>
+      `<g transform="translate(${fx},${R - 8})">` +
+      [-26, 0, 26].map((tx) => `<path d="M${tx - 14},-6 L${tx - 12},26 Q${tx},40 ${tx + 12},26 L${tx + 14},-6 Z" fill="${gold.url}" ${S(9)}/>`).join("") +
+      `</g>`;
+    front += foot(-62) + foot(62);
+
+    return `<defs>${body.def}${mint.def}${violet.def}${gold.def}${plume.def}</defs><g transform="translate(${x},${y}) scale(${s})">${back}${ball}${front}</g>`;
+  }
+
+  // Pieces for the in-game Shop (transparent, drawn over a colour in the game):
+  //   ShopRays - white sunburst rays and a soft centre glow, darker edges (the badges' background, tinted
+  //              by the card colour underneath)
+  //   Robux    - the Robux glyph in white for the price buttons
+  const RAW = {
+    ShopRays: () => {
+      const glow = rad([[0, "#ffffff", 0.75], [0.35, "#ffffff", 0.3], [0.7, "#ffffff", 0]], 0.5, 0.5, 0.5);
+      const edge = rad([[0, "#000000", 0], [0.7, "#000000", 0], [1, "#000000", 0.28]], 0.5, 0.5, 0.72);
+      return `<defs>${glow.def}${edge.def}</defs>` + rays(512, 512, 900, 18, "#ffffff", 0.3) +
+        `<rect width="1024" height="1024" fill="${glow.url}"/><rect width="1024" height="1024" fill="${edge.url}"/>`;
+    },
+    Robux: () => {
+      const hex = [];
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 2;
+        hex.push(`${(512 + Math.cos(a) * 400).toFixed(1)},${(512 + Math.sin(a) * 400).toFixed(1)}`);
+      }
+      return `<polygon points="${hex.join(" ")}" fill="none" stroke="#ffffff" stroke-width="150" stroke-linejoin="round"/>` +
+        `<rect x="392" y="392" width="240" height="240" rx="34" fill="#ffffff"/>`;
+    },
+  };
+
   // ------------------------------------------------------------- compose
+  function compose() {
+  if (RAW[id]) return RAW[id]();
   const design = (D[id] || D.VIP)();
   let c = "";
   c += sky(1024, 1024, design.bg, 0.5, 0.4);
@@ -165,13 +294,16 @@
   c += `<defs>${vignette.def}</defs>`;
   c += design.art;
   if (design.sparkles) {
-    for (const [x, y, r] of [[170, 520, 30], [860, 600, 26], [240, 200, 22], [820, 160, 28], [150, 780, 20], [880, 820, 22]]) {
+    const spots = Array.isArray(design.sparkles) ? design.sparkles : [[170, 520, 30], [860, 600, 26], [240, 200, 22], [820, 160, 28], [150, 780, 20], [880, 820, 22]];
+    for (const [x, y, r] of spots) {
       c += sparkle(x, y, r, "#ffffff", 0.95);
     }
   }
   c += `<rect width="1024" height="1024" fill="${vignette.url}"/>`;
+  return c;
+  }
 
-  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 1024 1024">${baseDefs()}${c}</svg>`;
+  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 1024 1024">${baseDefs()}${compose()}</svg>`;
 </script>
 </body>
 </html>

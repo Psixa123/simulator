@@ -420,6 +420,35 @@ function InterfaceController.BigText(text: string, color: Color3?, subtitle: str
 	end)
 end
 
+---------------------------------------------------------------------------
+-- HUD visibility
+---------------------------------------------------------------------------
+-- Full-screen moments (the egg opening) hide the HUD. Each caller hides it under its own key and
+-- shows it again with the same key; the HUD comes back once no key is left (and only if it was
+-- showing before, so the loading screen's hidden HUD stays hidden).
+local hudHiders = {} -- [key] = true
+local hudWasEnabled = true
+
+function InterfaceController.SetHudHidden(key: string, hidden: boolean)
+	local gui = InterfaceController.HudGui
+	local wasHidden = next(hudHiders) ~= nil
+	hudHiders[key] = if hidden then true else nil
+	local isHidden = next(hudHiders) ~= nil
+	if not gui or wasHidden == isHidden then
+		return
+	end
+	if isHidden then
+		hudWasEnabled = gui.Enabled
+		gui.Enabled = false
+	else
+		gui.Enabled = hudWasEnabled
+	end
+end
+
+function InterfaceController.IsHudHidden(): boolean
+	return next(hudHiders) ~= nil
+end
+
 function InterfaceController.Init()
 	local hudGui, hudRoot = makeGui("HUD", 1, false)
 	local panelGui, panelRoot = makeGui("Panels", 5, true)

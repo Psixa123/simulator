@@ -321,8 +321,8 @@ function MapContracts.Init()
 			check("Gate" .. zoneId .. " prompt host tagged ZoneBarrier", host ~= nil)
 			if door then
 				check("Gate" .. zoneId .. " door on the path at ZoneStart", near(door.Position.X, x, 0.1) and math.abs(door.Position.Z) < 0.1, door.Position)
-				local info = door:FindFirstChild("LockInfo")
-				check("Gate" .. zoneId .. " door has the LockInfo billboard", info ~= nil and info:IsA("BillboardGui"))
+				-- the price and Power needed are on the gate prompt's zone card (client PromptController)
+				check("Gate" .. zoneId .. " door has no LockInfo billboard", door:FindFirstChild("LockInfo") == nil)
 			end
 			local list = promptsWith("GateZone", zoneId)
 			check("one GateZone=" .. zoneId .. " prompt", #list == 1, #list)

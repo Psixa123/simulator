@@ -15,7 +15,7 @@
 --   SellPad models at MapLayout.SellPad (PadGlow tagged "Pulse"); egg stations at MapLayout.EggStation with
 --   a PromptHost > ProximityPrompt (EggId) and the egg model (tag "Spin"); hub prompts with a Panel
 --   attribute; gates: Barrier/Door parts and the PromptHost tagged "ZoneBarrier" (Zone attribute), the
---   prompt tagged "GatePrompt" (GateZone attribute), Door > LockInfo billboard; the forecast SurfaceGui
+--   prompt tagged "GatePrompt" (GateZone attribute; the client draws it as the zone card); the forecast SurfaceGui
 --   tagged "ForecastGui", the arena BillboardGui tagged "ArenaGui", pylon caps tagged "ArenaPylon";
 --   Ashfall Volcano CoolingArea models at Hazards.CoolingSpots; MapService.Leaderboards[kind].
 -- The ground is at y = -0.5 and the weather fields' tops at y = 0 (lightning warnings are drawn at y = 0).
@@ -85,7 +85,6 @@ local SKY = hex("5CC8FF")
 local SKY_DEEP = hex("2F86F2")
 local BOLT = hex("FFE15A")
 local BOLT_DEEP = hex("FFAA1F")
-local RAIN = hex("54E0FF")
 local STORM = hex("A98BFF")
 local STORM_DEEP = hex("6B4BE6")
 local LEAF = hex("7BE36A")
@@ -1290,28 +1289,128 @@ local function lamp(parent: Instance, position: Vector3, toward: Vector3, paints
 	place("LampPost", parent, CFrame.new(position.X, GROUND_Y, position.Z) * CFrame.Angles(0, yaw, 0), { Paints = paints, Scale = scale or 1.15 })
 end
 
+-- The sell station's pad. EconomyService sells the whole tank of anyone standing within
+-- MapLayout.SellPadRadius of its centre, so the glowing ring (PadGlow, tag "Pulse") is exactly that circle.
+-- A low two-step dais (white step, Ink rim: 0.45-stud steps anyone walks up) with the ring, an Ink centre
+-- with a neon bolt, rising sparkles, an arrow spinning and bobbing over the middle (above head height), and
+-- a "⚡ SELL" sign on two posts at the side, facing the path (+Z). Everything is placed from the pad's own
+-- position; there is no BillboardGui: StudsOffsetWorldSpace turns with its adornee, and on the glow cylinder
+-- (rolled so its X axis points up) it laid the old label 7 studs to the side, half in the ground.
+local SELL_DAIS = MapLayout.SellPadRadius + 2.5 -- outer radius of the dais
+local SELL_SIGN = Vector3.new(-16.2, 0, -2.5) -- the sign, from the pad's centre (the sell machine stands at +X)
+local SELL_MACHINE = Vector3.new(17.5, 0, -2) -- the SellMachine prop, from the pad's centre
+
+-- A flat triangle a, b, c from two WedgeParts `thickness` thick (split along the altitude onto the longest edge)
+local function wedgeTriangle(parent: Instance, a: Vector3, b: Vector3, c: Vector3, thickness: number, props)
+	local ab, ac, bc = b - a, c - a, c - b
+	local abd, acd, bcd = ab:Dot(ab), ac:Dot(ac), bc:Dot(bc)
+	if abd > acd and abd > bcd then
+		c, a = a, c
+	elseif acd > bcd and acd > abd then
+		a, b = b, a
+	end
+	ab, ac, bc = b - a, c - a, c - b
+	local right = ac:Cross(ab).Unit
+	local up = bc:Cross(right).Unit
+	local back = bc.Unit
+	local height = math.abs(ab:Dot(up))
+	for _, half in { { (a + b) / 2, math.abs(ab:Dot(back)), 1 }, { (a + c) / 2, math.abs(ac:Dot(back)), -1 } } do
+		local piece = {}
+		for key, value in props do
+			piece[key] = value
+		end
+		piece.Size = Vector3.new(thickness, height, half[2])
+		piece.CFrame = CFrame.fromMatrix(half[1], right * half[3], up, back * half[3])
+		piece.Parent = parent
+		part(piece, "WedgePart")
+	end
+end
+
+-- A flat neon lightning bolt lying on the pad's centre (`top` = the surface under it), upright as seen from
+-- the path: a zig-zag hexagon (u to the right, v toward the back) cut into four triangles
+local BOLT_SHAPE = { { 0.1, 1 }, { -0.9, -0.2 }, { 0, -0.2 }, { -0.1, -1 }, { 0.9, 0.2 }, { 0, 0.2 } }
+local function sellBolt(parent: Instance, center: Vector3, top: number, color: Color3, scale: number)
+	local points = {}
+	for index, point in BOLT_SHAPE do
+		points[index] = Vector3.new(center.X + point[1] * scale, top + 0.06, center.Z - point[2] * scale)
+	end
+	local props = { Name = "Bolt", Color = color, Material = M.Neon, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false }
+	for _, triangle in { { 1, 2, 3 }, { 1, 3, 6 }, { 3, 4, 5 }, { 3, 5, 6 } } do
+		wedgeTriangle(parent, points[triangle[1]], points[triangle[2]], points[triangle[3]], 0.12, props)
+	end
+end
+
+-- A down-pointing arrow (two flat ones crossed, so it reads from every side) that spins and bobs (tag "Spin")
+local function sellArrow(parent: Instance, center: Vector3, color: Color3)
+	local arrow = model("Arrow", parent)
+	local headWidth, headHeight, shaftWidth, shaftHeight, thick = 3.4, 2, 1.4, 1.9, 0.75
+	local headTop = (headHeight + shaftHeight) / 2 - shaftHeight -- the head's flat top, from the centre
+	for _, turn in { 0, math.pi / 2 } do
+		local base = CFrame.new(center) * CFrame.Angles(0, turn, 0)
+		local ghost = { CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false }
+		local function piece(name: string, size: Vector3, cframe: CFrame, className: string?)
+			local props = { Name = name, Size = size, CFrame = cframe, Color = color, Material = M.Neon, Parent = arrow }
+			for key, value in ghost do
+				props[key] = value
+			end
+			return part(props, className)
+		end
+		piece("Shaft", Vector3.new(shaftWidth, shaftHeight, thick), base * CFrame.new(0, headTop + shaftHeight / 2, 0))
+		-- each half of the head is a WedgePart turned so its right angle sits at the top of the middle
+		for _, side in { -1, 1 } do
+			local position = Vector3.new(side * headWidth / 4, headTop - headHeight / 2, 0)
+			local cframe = CFrame.fromMatrix(position, Vector3.new(0, 0, -side), Vector3.new(0, -1, 0), Vector3.new(-side, 0, 0))
+			piece("Head", Vector3.new(thick, headHeight, headWidth / 2), base * cframe, "WedgePart")
+		end
+	end
+	arrow.WorldPivot = CFrame.new(center)
+	CollectionService:AddTag(arrow, "Spin")
+	arrow:SetAttribute("SpinSpeed", 1.4)
+	arrow:SetAttribute("BobHeight", 0.6)
+	return arrow
+end
+
 local function sellPad(parent: Instance, position: Vector3, color: Color3)
 	local pad = model("SellPad", parent)
-	local y = GROUND_Y
-	cylinder({ Name = "PadBase", Position = Vector3.new(position.X, y + 0.3, position.Z), Height = 0.8, Diameter = 19.5, Color = INK, Parent = pad })
-	local glow = cylinder({ Name = "PadGlow", Position = Vector3.new(position.X, y + 0.45, position.Z), Height = 0.8, Diameter = 15.5, Color = color, Material = M.Neon, Transparency = 0.1, Parent = pad, Tags = { "Pulse" } })
-	cylinder({ Name = "PadCenter", Position = Vector3.new(position.X, y + 0.55, position.Z), Height = 0.8, Diameter = 9, Color = INK, Parent = pad })
+	local radius = MapLayout.SellPadRadius
+	local function at(height: number): Vector3
+		return Vector3.new(position.X, GROUND_Y + height, position.Z)
+	end
+
+	-- the dais: step top +0.45, rim top +0.9, ring top +1, centre top +1.1 (above the ground at GROUND_Y)
+	cylinder({ Name = "PadStep", Position = at(-0.05), Height = 1, Diameter = SELL_DAIS * 2, Color = BODY, CastShadow = false, Parent = pad })
+	cylinder({ Name = "PadBase", Position = at(0.2), Height = 1.4, Diameter = radius * 2 + 2.4, Color = INK, CastShadow = false, Parent = pad })
+	local glow = cylinder({ Name = "PadGlow", Position = at(0.6), Height = 0.8, Diameter = radius * 2, Color = color, Material = M.Neon, Transparency = 0.1, CastShadow = false, Parent = pad, Tags = { "Pulse" } })
+	cylinder({ Name = "PadCenter", Position = at(0.7), Height = 0.8, Diameter = radius * 2 - 5.4, Color = INK, CastShadow = false, Parent = pad })
+	sellBolt(pad, at(0), GROUND_Y + 1.1, color, 3.6)
 	emitter(glow, {
 		Texture = SPARKLE,
 		Color = ColorSequence.new(color),
-		Size = NumberSequence.new(0.5, 0),
-		Lifetime = NumberRange.new(1, 1.6),
-		Rate = 10,
+		Size = NumberSequence.new(0.6, 0),
+		Lifetime = NumberRange.new(1.2, 1.8),
+		Rate = 14,
 		Speed = NumberRange.new(3, 6),
 		EmissionDirection = Enum.NormalId.Right, -- the cylinder's X axis points up
 		SpreadAngle = Vector2.new(8, 8),
 		LightEmission = 1,
 	})
-	pointLight(glow, color, 1.5, 16)
+	pointLight(glow, color, 1.5, 18)
 
-	local gui = billboard(glow, UDim2.fromOffset(230, 92), Vector3.new(0, 7, 0), 140)
-	textLabel(gui, { Text = "⚡ SELL", TextColor3 = BOLT, Size = UDim2.fromScale(1, 0.62), Stroke = 3 })
-	textLabel(gui, { Text = "Stand here to sell your energy", Font = Enum.Font.GothamBold, Size = UDim2.fromScale(1, 0.3), Position = UDim2.fromScale(0, 0.66), Stroke = 2 })
+	-- the arrow: its tip stays above a player's head on the pad (~GROUND_Y + 6.4)
+	local arrow = sellArrow(pad, at(9.6), LEAF)
+	pointLight(arrow:FindFirstChild("Shaft") :: BasePart, LEAF, 1, 12)
+
+	-- the sign on two posts, Ink feet and glowing caps
+	local sign = at(0) + SELL_SIGN
+	local front = CFrame.new(sign) * facing(0, 1)
+	for _, side in { -1, 1 } do
+		local post = (front * CFrame.new(side * 3.7, 0, 0)).Position
+		cylinder({ Name = "SignFoot", Position = post + Vector3.new(0, 0.2, 0), Height = 1.4, Diameter = 2.3, Color = INK, Parent = pad })
+		cylinder({ Name = "SignPost", Position = post + Vector3.new(0, 7.2, 0), Height = 12.8, Diameter = 1.15, Color = BODY, Parent = pad })
+		ball(post + Vector3.new(0, 13.9, 0), 1.9, color, { Name = "SignCap", Material = M.Neon, CanCollide = false, CastShadow = false, Parent = pad })
+	end
+	signBoard(pad, "Sign", front * CFrame.new(0, 10.3, -0.75), 10.6, 4, "⚡ SELL", LEAF, { Enum.NormalId.Front }, 30)
+	signBoard(pad, "Hint", front * CFrame.new(0, 7.15, -0.75), 9.4, 1.9, "STAND ON THE PAD", INK, { Enum.NormalId.Front }, 30)
 	return pad
 end
 
@@ -1328,7 +1427,7 @@ local function sellStation(parent: Instance, zoneId: number, biome)
 	local pad = MapLayout.SellPad(zoneId)
 	sellPad(parent, pad, BOLT)
 	weatherLab(parent, pad + Vector3.new(0, 0, -26), if zoneId == 0 then 1 else 0.92, nil)
-	place("SellMachine", parent, CFrame.new(pad.X + 16.5, GROUND_Y, pad.Z - 2) * facing(0, 1), { Scale = 1.05, Collide = true })
+	place("SellMachine", parent, CFrame.new(pad.X + SELL_MACHINE.X, GROUND_Y, pad.Z + SELL_MACHINE.Z) * facing(0, 1), { Scale = 1.05, Collide = true })
 end
 
 local function eggStation(parent: Instance, zoneId: number)
@@ -1452,7 +1551,7 @@ local function gate(parent: Instance, zoneId: number)
 		})
 	end
 
-	local door = part({
+	part({
 		Name = "Door",
 		Size = Vector3.new(1.5, 28, 32),
 		CFrame = CFrame.new(x, 14, 0),
@@ -1464,12 +1563,8 @@ local function gate(parent: Instance, zoneId: number)
 		Attributes = { Zone = zoneId },
 	})
 
-	local gui = billboard(door, UDim2.fromOffset(300, 140), Vector3.new(-2, -2, 0), 110)
-	gui.Name = "LockInfo"
-	textLabel(gui, { Text = "🔒 " .. zone.Name, Size = UDim2.fromScale(1, 0.36), Stroke = 3 })
-	textLabel(gui, { Text = "⚡ " .. Format.Number(zone.Cost) .. " Volts", TextColor3 = BOLT, Size = UDim2.fromScale(1, 0.3), Position = UDim2.fromScale(0, 0.38), Stroke = 3 })
-	textLabel(gui, { Text = "💨 Needs " .. Format.Number(zone.MinPower) .. " Power", TextColor3 = RAIN, Size = UDim2.fromScale(1, 0.26), Position = UDim2.fromScale(0, 0.7), Stroke = 3 })
-
+	-- the price and the Power it needs are on the prompt's zone card (client PromptController), so the
+	-- door has no billboard of its own
 	local host = promptHost(gateModel, Vector3.new(x - 1.5, 4, 0))
 	local instance = prompt(host, "Unlock", zone.Name .. "  •  ⚡" .. Format.Number(zone.Cost), 0.5, 16)
 	instance:SetAttribute("GateZone", zoneId)
@@ -2522,7 +2617,7 @@ local function buildHub(parent: Instance)
 	kiosk(hub, stations.Rewards, -Vector3.zAxis, "Daily Rewards", "🎁", CORAL, "Rewards")
 	weatherLab(hub, stations.WeatherLab, 1, nil)
 	sellPad(hub, MapLayout.HubSellPad, BOLT)
-	place("SellMachine", hub, CFrame.new(MapLayout.HubSellPad.X + 16.5, GROUND_Y, MapLayout.HubSellPad.Z - 2) * facing(0, 1), { Scale = 1.05, Collide = true })
+	place("SellMachine", hub, CFrame.new(MapLayout.HubSellPad.X + SELL_MACHINE.X, GROUND_Y, MapLayout.HubSellPad.Z + SELL_MACHINE.Z) * facing(0, 1), { Scale = 1.05, Collide = true })
 	rebirthShrine(hub, stations.Rebirth)
 	forecastBoard(hub, stations.Forecast, -Vector3.zAxis)
 

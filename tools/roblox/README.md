@@ -7,6 +7,7 @@ official Open Cloud API. Claude can run them from a cloud session, and you can r
 |--------|--------------|
 | `upload_pets.py` | Uploads `assets/models/StormlingPets.glb` as a Model on your account (or group), waits for Roblox to approve it and writes its id into `GameConfig.PetMeshAssetId`. When a server starts, `PetMeshService` inserts that model into `ReplicatedStorage.PetMeshes`, so every pet uses its mesh model. Run it again after changing the pets (it uploads a new model). |
 | `upload_icons.py` | Uploads the 3D UI icons (`assets/ui/icons3d/<Key>.png`) as Image assets and writes each id into `src/client/UI/Icons.luau`. Icons still at `Id = 0` are uploaded; `--force` re-uploads, `--only Volts,Pets` limits it. The game shows each icon's emoji until its id is set and Roblox has approved the image. |
+| `upload_store_icons.py` | Uploads the store badges (`assets/gamepasses/<Key>.png`, `assets/products/<Key>.png`) as Image assets and writes each id into that pass/product's `Image` field in `src/shared/Config/Monetization.luau`; the in-game Shop shows them as its card art. Also uploads the Shop's own pieces (`assets/ui/shop/*.png`: the sunburst and the Robux glyph) into the `ART` table of `src/client/UI/Panels/Shop.luau`. See [Store art](#store-art). |
 | `upload_model.py` | The same upload for any model file and `GameConfig` key, e.g. the world prop pack (see [World props and other models](#world-props-and-other-models)). `upload_pets.py` is this script with the pet pack filled in. |
 | `publish_place.py` | Builds the place with Rojo and publishes it to your game (or only saves a version with `--saved`). |
 
@@ -71,6 +72,27 @@ or `ReplicatedStorage` wins. With `WorldPropsAssetId = 0`, or if the model can't
 builds its props from parts. `--dry-run`, `--update`, `--no-config` and `--no-wait` work as for
 `upload_pets.py`; without `--config-key` the id is only printed. Upload the pack again whenever
 `build_world_pack.py` changes it, so the meshes match `WorldPropsData.luau`.
+
+## Store art
+
+The Shop panel draws every pass and product as a card with its badge (the same picture as its Creator Dashboard
+icon, rendered by `tools/render_art.py` from `assets/source/badge.html`). The game can only show pictures that
+are uploaded to Roblox, so:
+
+```powershell
+python tools/render_art.py gamepasses products shop    # after changing badge.html
+python tools/roblox/upload_store_icons.py --dry-run     # what would be uploaded
+python tools/roblox/upload_store_icons.py               # upload every picture that has no id yet
+python tools/roblox/upload_store_icons.py --only AuroraGryphon,VIP --force   # upload these again
+```
+
+- A badge is uploaded for every key of `Monetization.Gamepasses` / `Monetization.Products` that has a PNG; the
+  script adds `Image = <id>, -- <picture>` under the entry's `Id` line (or updates it) and saves each id as soon
+  as its upload is done, so an interrupted run keeps what it finished.
+- Until Roblox has approved a picture (usually a few minutes) the card shows the sunburst with the item's 3D icon.
+- The pass and product icons on the Creator Dashboard are separate: upload the same PNGs there when you create
+  each item (`docs/STORE_LISTING.md`).
+- Commit the changed `Monetization.luau` / `Shop.luau`, then publish.
 
 ## Good to know
 

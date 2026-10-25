@@ -1,10 +1,11 @@
 --!nonstrict
 -- The always-visible interface, laid out like docs/ui_mockup.png (STYLE_GUIDE section 2, "HUD layout"):
---   top centre  currency capsules (Volts with a "+", Climate Shifts); the Mega Storm boss bar and the
---               tank-full offer stack under them, and toasts drop in below that
+--   top centre  currency capsules (Volts with a "+", Climate Shifts); the tank-full offer under them, and
+--               toasts drop in below that
 --   left        round weather-badge menu buttons: two columns, one on narrow phones
 --   bottom      the objective, stat chips, AUTO, the storm jar (Storm Tank) and the big SELL button
---   right       round timers: active boosts and the Mega Storm countdown (radar alerts sit above them)
+--   right       round timers: active boosts and the Mega Storm countdown (radar alerts sit above them);
+--               during a Mega Storm its compact card sits just left of them
 -- Nothing goes in the top-left / top-right corners (Roblox chat and player list): the menu moves below
 -- the desktop chat window, the timers stay low on the right, and SELL keeps clear of the phone jump button.
 
@@ -121,7 +122,7 @@ end
 ---------------------------------------------------------------------------
 -- Builders
 ---------------------------------------------------------------------------
--- Top centre: the currency capsules, the Mega Storm boss bar and the tank-full offer, stacked
+-- Top centre: the currency capsules and the tank-full offer, stacked
 -- (toasts go below)
 local function buildTopStack()
 	topStack = UI.Create("Frame", {
@@ -671,52 +672,178 @@ local function card(name: string, size: UDim2, order: number)
 	return holder
 end
 
--- Boss bar under the capsules while a Mega Storm is active: health, your damage and the top 3
-local function buildStormBanner()
-	local banner = card("MegaStormBanner", UDim2.fromOffset(390, 172), 2)
-	local name = UI.Text({ Name = "Name", Text = "", TextSize = 22, Scaled = true, Size = UDim2.new(1, -90, 0, 26), Position = UDim2.new(0.5, 0, 0, 10), AnchorPoint = Vector2.new(0.5, 0), ZIndex = 2, Parent = banner })
-	Icons.New("MegaStorm", { Name = "Icon", Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(28, 22), ZIndex = 3, Parent = banner })
-	local health = UI.ProgressBar({ Name = "Health", Color = "Coral", Size = UDim2.new(1, -28, 0, 28), Position = UDim2.fromOffset(14, 40), MaxTextSize = 17, ZIndex = 2, Parent = banner })
-	local info = UI.Text({ Name = "Info", Text = "", Font = Theme.BodyFont, TextSize = 13, Scaled = true, Color = Theme.InkSoft, Size = UDim2.new(1, -28, 0, 16), Position = UDim2.fromOffset(14, 74), ZIndex = 2, Parent = banner })
+-- The Mega Storm card, shown while a storm is active: a compact card on the right, just left of the timer
+-- column and level with its bottom (the Mega Storm "GO!" timer is the lowest timer), so it stays out of
+-- the middle of the screen, clear of the Roblox player list (top right) and the phone jump button (under
+-- the column). The storm emblem sticks out of its left edge; then the storm's name and time left, the HP
+-- bar, your rank and damage, and what the top 3 can win. 96 units tall: even with no boost timers the
+-- radar alerts (they stack 12 above the timer column) end where it begins.
+local STORM_CARD = Vector2.new(286, 96)
 
-	local rows = {}
-	for rank = 1, #MEDALS do
-		local row = UI.Create("Frame", {
-			Name = "Leader" .. rank,
-			BackgroundColor3 = Theme.Haze,
-			Size = UDim2.new(1, -28, 0, 22),
-			Position = UDim2.fromOffset(14, 70 + rank * 25),
-			ZIndex = 2,
-			Parent = banner,
-			UI.Round(),
-		})
-		local who = UI.Text({
-			Name = "Who",
-			Text = "",
-			TextSize = 15,
-			Scaled = true,
-			X = Enum.TextXAlignment.Left,
-			Size = UDim2.new(1, -100, 1, -4),
-			Position = UDim2.fromOffset(10, 2),
-			ZIndex = 3,
-			Parent = row,
-		})
-		local damage = UI.Text({
-			Name = "Damage",
-			Text = "",
-			TextSize = 15,
-			Scaled = true,
-			Color = SETS.Sunset.Stroke,
-			X = Enum.TextXAlignment.Right,
-			Size = UDim2.new(0, 86, 1, -4),
-			Position = UDim2.new(1, -10, 0, 2),
-			AnchorPoint = Vector2.new(1, 0),
-			ZIndex = 3,
-			Parent = row,
-		})
-		rows[rank] = { Frame = row, Who = who, Damage = damage }
+local function buildStormBanner()
+	local banner = UI.Create("Frame", {
+		Name = "MegaStormBanner",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(STORM_CARD.X, STORM_CARD.Y),
+		Position = UDim2.new(1, -(EDGE + BUTTON + 12 + STORM_CARD.X), 1, -(TIMERS_BOTTOM + STORM_CARD.Y)),
+		Visible = false,
+		Parent = root,
+	})
+	UI.Create("Frame", {
+		Name = "Shadow",
+		BackgroundColor3 = INK,
+		BackgroundTransparency = Theme.ShadeTransparency,
+		Position = UDim2.fromOffset(0, 5),
+		Size = UDim2.fromScale(1, 1),
+		Parent = banner,
+		UI.Corner(20),
+	})
+	UI.Create("Frame", {
+		Name = "Body",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(3, 3),
+		Size = UDim2.new(1, -6, 1, -6),
+		Parent = banner,
+		UI.Corner(17),
+		UI.Gradient(Theme.Cloud, Theme.Mist),
+		UI.Stroke(3, INK),
+	})
+	-- the emblem: a Storm-purple disc with the Mega Storm icon, half out of the card
+	local emblem = UI.Create("Frame", {
+		Name = "Emblem",
+		BackgroundColor3 = INK,
+		Size = UDim2.fromOffset(62, 62),
+		Position = UDim2.new(0, -18, 0.5, 0),
+		AnchorPoint = Vector2.new(0, 0.5),
+		ZIndex = 3,
+		Parent = banner,
+		UI.Round(),
+	})
+	UI.Create("Frame", {
+		Name = "Fill",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(3, 3),
+		Size = UDim2.new(1, -6, 1, -6),
+		ZIndex = 3,
+		Parent = emblem,
+		UI.Round(),
+		UI.Gradient(SETS.Storm.Tint, SETS.Storm.Tint2),
+	})
+	Icons.New("MegaStorm", { Name = "Icon", Size = UDim2.fromOffset(50, 50), ZIndex = 4, Parent = emblem })
+
+	local x = 52 -- the text column starts right of the emblem
+	local name = UI.Text({
+		Name = "Name",
+		Text = "",
+		TextSize = 20,
+		Scaled = true,
+		MinTextSize = 11,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -(x + 86), 0, 21),
+		Position = UDim2.fromOffset(x, 9),
+		ZIndex = 2,
+		Parent = banner,
+	})
+	-- time left: an Ink chip in the top right corner
+	local chip = UI.Create("Frame", {
+		Name = "Time",
+		BackgroundColor3 = INK,
+		Size = UDim2.fromOffset(74, 24),
+		Position = UDim2.new(1, -11, 0, 8),
+		AnchorPoint = Vector2.new(1, 0),
+		ZIndex = 2,
+		Parent = banner,
+		UI.Round(),
+	})
+	local timer = UI.Text({
+		Name = "Text",
+		Text = "",
+		TextSize = 17,
+		Scaled = true,
+		Color = Color3.new(1, 1, 1),
+		Size = UDim2.new(1, -10, 1, -6),
+		Position = UDim2.new(0.5, 0, 0.5, 1),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 3,
+		Parent = chip,
+	})
+	local health = UI.ProgressBar({
+		Name = "Health",
+		Color = "Coral",
+		Size = UDim2.new(1, -(x + 11), 0, 24),
+		Position = UDim2.fromOffset(x - 2, 34),
+		MaxTextSize = 15,
+		ZIndex = 2,
+		Parent = banner,
+	})
+	local you = UI.Text({
+		Name = "You",
+		Text = "",
+		Font = Theme.BodyFont,
+		TextSize = 15,
+		Scaled = true,
+		MinTextSize = 9,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -(x + 12), 0, 15),
+		Position = UDim2.fromOffset(x, 60),
+		ZIndex = 2,
+		Parent = banner,
+	})
+	Icons.New("Gift", { Name = "RewardIcon", Size = UDim2.fromOffset(16, 16), Position = UDim2.fromOffset(x + 8, 83), ZIndex = 2, Parent = banner })
+	local reward = UI.Text({
+		Name = "Reward",
+		Text = "",
+		Font = Theme.BodyFont,
+		TextSize = 14,
+		Scaled = true,
+		MinTextSize = 8,
+		Color = SETS.Storm.Bottom,
+		X = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, -(x + 32), 0, 14),
+		Position = UDim2.fromOffset(x + 20, 76),
+		ZIndex = 2,
+		Parent = banner,
+	})
+	stormBanner = { Frame = banner, Name = name, Timer = timer, Health = health, You = you, Reward = reward }
+end
+
+-- Keeps the Mega Storm card beside the timer column (which moves up on tablets), above the objective and
+-- stats when they are wide enough to reach under it (phones in portrait), and above any radar alerts
+-- (RadarController stacks them up from just above the timer column) that would otherwise cover it
+local function placeStormBanner()
+	local scale = hudScale()
+	local size = root.AbsoluteSize / scale
+	if size.X <= 0 or not timerColumn then
+		return
 	end
-	stormBanner = { Frame = banner, Name = name, Health = health, Info = info, Rows = rows }
+	local origin = root.AbsolutePosition
+	local right = size.X - EDGE - BUTTON - 12
+	local left = right - STORM_CARD.X
+	local function span(item: GuiObject): (number, number, number, number)
+		local x0, y0 = (item.AbsolutePosition.X - origin.X) / scale, (item.AbsolutePosition.Y - origin.Y) / scale
+		return x0, x0 + item.AbsoluteSize.X / scale, y0, y0 + item.AbsoluteSize.Y / scale
+	end
+	-- level with the column's bottom (it is anchored by its bottom right corner); without touch controls
+	-- (no jump button under the column) 24 lower, so a full Roblox player list (top right) can't reach it
+	local bottom = size.Y + timerColumn.Position.Y.Offset + (if isPhone() then 0 else 24)
+	for _, item in { objectiveFrame, statsRow, tankHolder } do
+		if item and item.Visible then
+			local x0, x1, y0 = span(item)
+			if x1 > left - 26 and x0 < right then -- the emblem sticks out 18 to the left
+				bottom = math.min(bottom, y0 - 10)
+			end
+		end
+	end
+	local radar = root:FindFirstChild("RadarAlerts")
+	local layout = radar and radar:FindFirstChildOfClass("UIListLayout")
+	if radar and radar:IsA("GuiObject") and radar.Visible and layout and layout.AbsoluteContentSize.Y > 0 then
+		local x0, x1, _, y1 = span(radar)
+		local y0 = y1 - layout.AbsoluteContentSize.Y / scale -- the alerts fill the holder from its bottom
+		if x1 > left - 26 and x0 < right and y1 > bottom - STORM_CARD.Y and y0 < bottom then
+			bottom = y0 - 10
+		end
+	end
+	stormBanner.Frame.Position = UDim2.fromOffset(math.max(left, 30), bottom - STORM_CARD.Y)
 end
 
 ---------------------------------------------------------------------------
@@ -926,7 +1053,9 @@ local function readLeaders()
 	return leaders
 end
 
-local function refreshLeaders(timer: string, fallbackInfo: string?)
+-- Your rank and damage on the Mega Storm card, and what you could win (MegaStormService: when the storm
+-- is defeated, the top 3 get ExclusiveChances at the storm's pet, everyone else who helped a small chance)
+local function refreshLeaders(state)
 	local list = readLeaders()
 	local myRank = nil
 	for rank, entry in list do
@@ -937,28 +1066,25 @@ local function refreshLeaders(timer: string, fallbackInfo: string?)
 	end
 
 	local damage = player:GetAttribute("MegaDamage")
-	if type(damage) == "number" then
-		local mine = if myRank then "You: #" .. myRank .. " with " .. Format.Number(damage) .. " damage" else "Your damage: " .. Format.Number(damage)
-		stormBanner.Info.Text = "⏱ " .. timer .. "   •   " .. mine
-	else
-		stormBanner.Info.Text = fallbackInfo or ""
+	if type(damage) ~= "number" then
+		damage = state.Damage -- MegaStormController's own estimate until the server's arrives
 	end
+	if myRank then
+		stormBanner.You.Text = (MEDALS[myRank] or "🏅") .. " You: #" .. myRank .. "  •  " .. Format.Number(damage or 0) .. " dmg"
+	elseif type(damage) == "number" and damage > 0 then
+		stormBanner.You.Text = "💨 You: " .. Format.Number(damage) .. " dmg"
+	else
+		stormBanner.You.Text = "💨 Vacuum the storm to join in!"
+	end
+	stormBanner.You.TextColor3 = if myRank then SETS.Sky.Bottom else INK
 
-	for rank, row in stormBanner.Rows do
-		local entry = list[rank]
-		if entry then
-			row.Frame.Visible = true
-			row.Who.Text = MEDALS[rank] .. " " .. entry.Name
-			row.Who.TextColor3 = if entry.UserId == player.UserId then SETS.Sky.Bottom else INK
-			row.Damage.Text = Format.Number(entry.Damage)
-		elseif rank == 1 then
-			row.Frame.Visible = true
-			row.Who.Text = "🌪️ Vacuum the storm to top the leaderboard!"
-			row.Who.TextColor3 = Theme.InkSoft
-			row.Damage.Text = ""
-		else
-			row.Frame.Visible = false
-		end
+	local pet = state.Pet and Pets.Pets[state.Pet]
+	local petName = if pet then pet.Name else "an exclusive pet"
+	local chance = myRank and GameConfig.MegaStorm.ExclusiveChances[myRank]
+	if chance then
+		stormBanner.Reward.Text = string.format("#%d: %d%% shot at %s!", myRank, math.round(chance * 100), petName)
+	else
+		stormBanner.Reward.Text = "Top 3 can win " .. petName .. "!"
 	end
 end
 
@@ -1072,7 +1198,7 @@ local function stormProgress(phase: string): number
 	return 1 - math.clamp((nextTime - now) / config.Interval, 0, 1)
 end
 
--- state = { Phase, Name, Timer, Health, MaxHealth, Info }
+-- state = { Phase, Name, Timer, Health, MaxHealth, Info, Damage, Pet } (MegaStormController.updateHud)
 function HudController.SetStorm(state)
 	local widget = stormWidget
 	widget.Phase = state.Phase
@@ -1086,11 +1212,16 @@ function HudController.SetStorm(state)
 		stormTimer.SetText("GO!")
 		stormTimer.SetColor("Coral")
 		stormTimer.SetProgress(state.Health / math.max(state.MaxHealth, 1))
-		stormBanner.Frame.Visible = true
+		if not stormBanner.Frame.Visible then
+			stormBanner.Frame.Visible = true
+			UI.Pop(stormBanner.Frame, 0.8)
+		end
 		hideOffer()
 		stormBanner.Name.Text = string.upper(state.Name)
+		stormBanner.Timer.Text = "⏱ " .. widget.Timer
 		stormBanner.Health.Set(state.Health / math.max(state.MaxHealth, 1), Format.Number(state.Health) .. " HP")
-		refreshLeaders(widget.Timer, state.Info)
+		refreshLeaders(state)
+		placeStormBanner()
 	elseif state.Phase == "Warning" then
 		local flash = math.floor(os.clock() * 3) % 2 == 0
 		stormTimer.SetText(if flash then "GO!" else widget.Timer)
