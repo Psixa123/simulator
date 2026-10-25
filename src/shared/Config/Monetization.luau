@@ -191,10 +191,9 @@ Monetization.Products = {
 	},
 	-- Lobby shop pet (the display stand in the hub and the Shop's featured card). Every purchase gives one
 	-- Aurora Gryphon (Pets.Pets.AuroraGryphon, +600%); it is granted even when pet storage is full.
-	-- Id = 0 until the developer product is created: Creator Dashboard -> Monetization -> Developer Products
-	-- -> "Aurora Gryphon", R$2,000 -> paste its id here. Studio simulates the purchase while it is 0.
+	-- Developer product "Aurora Gryphon" (Creator Dashboard -> Monetization -> Developer Products), R$2,000.
 	AuroraGryphon = {
-		Id = 0,
+		Id = 3722233930,
 		Order = 0,
 		Category = "Featured",
 		Name = "Aurora Gryphon",
