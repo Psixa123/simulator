@@ -1,8 +1,9 @@
 --!nonstrict
 -- Tracks which zone the player is in: blends lighting/atmosphere per biome, shows the zone
--- title, runs ambient weather (rain, sand, snow, embers, stars), lightning in Thunder Valley,
--- and opens the gates the player has unlocked. Hazards can tweak a zone's lighting through
--- ZoneController.LightingFilter (HazardController uses it for sandstorm haze).
+-- title card (UI/Overlays/ZoneTitle: the zone's name, flavour and hazard; "Locked" when you bump
+-- into a gate you haven't unlocked), runs ambient weather (rain, sand, snow, embers, stars),
+-- lightning in Thunder Valley, and opens the gates the player has unlocked. Hazards can tweak a
+-- zone's lighting through ZoneController.LightingFilter (HazardController uses it for sandstorm haze).
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -18,6 +19,7 @@ local MapLayout = require(Shared.Config.MapLayout)
 local WeatherModels = require(Shared.Models.WeatherModels)
 
 local Registry = require(script.Parent.Parent.Registry)
+local ZoneTitle = require(script.Parent.Parent.UI.Overlays.ZoneTitle)
 
 local ZoneController = {}
 ZoneController.Current = -1
@@ -28,6 +30,7 @@ local BLEND = TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InO
 local ZONE_SETTLE = 0.6 -- a new zone must hold this long before we switch (no flicker at borders)
 local TITLE_REPEAT = 8 -- stepping back into the zone you just left within this many seconds skips its title
 local MAX_REWIND = 6 -- hours ClockTime may step back; longer gaps blend forward past midnight
+local LOCKED_REPEAT = 12 -- seconds before bumping into the same locked gate shows its card again
 
 local player = Players.LocalPlayer
 local clouds: Clouds
@@ -39,6 +42,8 @@ local clockValue: NumberValue
 local clockTween: Tween? = nil
 local pendingZone, pendingSince = nil, 0
 local leftZone, leftAt = nil, 0
+local lockedShownAt = {} -- [zoneId] = os.clock() of its last "Locked" card
+local watchedBarriers = setmetatable({}, { __mode = "k" }) -- barriers with a Touched handler
 
 local function blend(instance: Instance?, props)
 	if instance then
@@ -158,20 +163,35 @@ local function enterZone(zoneId: number)
 	local quickReturn = zoneId == leftZone and now - leftAt < TITLE_REPEAT
 	leftZone, leftAt = previous, now
 	if not quickReturn then
-		local subtitle = zone.Description
-		if not seenZones[zoneId] then
-			seenZones[zoneId] = true
-		else
-			subtitle = nil
-		end
-		Registry.InterfaceController.BigText(zone.Icon .. " " .. string.upper(zone.Name), zone.Color, subtitle, if subtitle then 3 else 1.8)
+		-- The title card names the zone (its flavour line the first time) and its hazard
+		local seen = seenZones[zoneId] == true
+		seenZones[zoneId] = true
+		ZoneTitle.Show(zoneId, "Enter", { Repeat = seen })
 	end
-	Registry.HazardController.ShowZoneHazard(zoneId)
 end
 
 ---------------------------------------------------------------------------
 -- Gates
 ---------------------------------------------------------------------------
+-- Bumping into a locked gate shows what the zone needs (once in a while per zone)
+local function onBarrierTouched(barrier: BasePart, hit: BasePart)
+	local character = player.Character
+	local data = Registry.DataController.Data
+	local zoneId = barrier:GetAttribute("Zone")
+	if not character or not hit:IsDescendantOf(character) or not data or type(zoneId) ~= "number" then
+		return
+	end
+	if data.Zone >= zoneId or not Zones[zoneId] then
+		return
+	end
+	local now = os.clock()
+	if now - (lockedShownAt[zoneId] or -math.huge) < LOCKED_REPEAT then
+		return
+	end
+	lockedShownAt[zoneId] = now
+	ZoneTitle.Show(zoneId, "Locked")
+end
+
 local function applyBarrier(instance: Instance)
 	local data = Registry.DataController.Data
 	local zoneId = instance:GetAttribute("Zone")
@@ -180,6 +200,12 @@ local function applyBarrier(instance: Instance)
 	end
 	local unlocked = data.Zone >= zoneId
 	local isHost = instance.Name == "PromptHost"
+	if not isHost and not watchedBarriers[instance] then
+		watchedBarriers[instance] = true
+		instance.Touched:Connect(function(hit)
+			onBarrierTouched(instance, hit)
+		end)
+	end
 	if not isHost then
 		instance.CanCollide = not unlocked
 		instance.Transparency = if unlocked then 1 else 0

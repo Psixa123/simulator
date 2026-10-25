@@ -39,9 +39,13 @@ MODULES = {
     "Weather": "src/shared/Config/Weather.luau",
     "Formulas": "src/shared/Formulas.luau",
     "Format": "src/shared/Util/Format.luau",
+    # Purchase.spec.luau: the lobby shop pet's receipt through the real MonetizationService and PetService
+    "MonetizationService": "src/server/Services/MonetizationService.luau",
+    "PetService": "src/server/Services/PetService.luau",
+    "MapLayout": "src/shared/Config/MapLayout.luau",
 }
 OPTIONAL = {"WorldPropsData"}
-SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau", "WorldProps.spec.luau", "Admin.spec.luau"]
+SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau", "WorldProps.spec.luau", "Admin.spec.luau", "Purchase.spec.luau"]
 MAP_SPEC = "MapContracts.luau"
 
 

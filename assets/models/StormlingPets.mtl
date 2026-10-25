@@ -2716,13 +2716,6 @@ Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-newmtl AuroraGryphon.Accent
-Kd 0.3765 0.9647 0.7843
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
 newmtl AuroraGryphon.Eye
 Kd 0.1098 0.1020 0.1490
 Ka 0 0 0
@@ -2775,6 +2768,13 @@ d 1.00
 illum 2
 newmtl AuroraGryphon.Accent@WingR
 Kd 0.3765 0.9647 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl AuroraGryphon.Body@Wag
+Kd 0.2902 0.3843 0.8392
 Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60

@@ -1,25 +1,31 @@
 --!nonstrict
--- Zone title card: the Sky Lab banner that names a zone when you walk into it, unlock it or reach one
--- you haven't unlocked yet. The zone's 3D emblem (Icons "Zone_<Key>", assets/ui/icons3d, modelled in
--- SketchUp by tools/icons/sketchup_zone_emblems.py) overlaps the left end of a candy plaque in the
--- zone's colours with a rolled right end; the name is big Fredoka with a white-to-tint fill and an Ink
--- outline over a darker drop; a caption pill ("ZONE 2" chip + the zone's flavour or what it needs) and,
--- in zones with a hazard, a hazard pill hang under it. It slides and scales in with a little overshoot,
--- a shine sweeps across, and it fades out after a few seconds. Titles queue: a newer one cuts the one
--- on screen short (it still shows for MIN_HOLD), so two never overlap.
+-- Zone title card: the Sky Lab banner that names a zone when you walk into it, unlock it or bump into
+-- one you haven't unlocked yet.
+--
+--   ZONE 2                    <- kicker chip over the plaque ("ZONE 2 UNLOCKED!", "ZONE 2 • LOCKED")
+--   (emblem)[ THUNDER VALLEY ]) <- plaque in the zone's colours with a rolled right end; the zone's 3D
+--      [ A dark valley ... ]     emblem (Icons "Zone_<Key>", tools/icons/sketchup_zone_emblems.py) over
+--      [ HAZARD  Lightning ...]  its left end; the name in big Fredoka with a white-to-tint fill and an
+--                                Ink outline over a darker drop
+--   ... and a Cloud caption card hanging under the plaque: the zone's flavour line, its hazard, or what
+--   it pays / needs. It drops and scales in with a little overshoot, the emblem spins in, the caption
+--   card slides out from under the plaque, a shine sweeps across, and it fades out after a few seconds.
+--   Titles queue: a newer one cuts the one on screen short (it still shows for MIN_HOLD), so two
+--   never overlap.
 --
 --   ZoneTitle.Show(zoneId, "Enter")     -- ZoneController: you walked into a zone
 --   ZoneTitle.Show(zoneId, "Unlocked")  -- EffectsController: you unlocked a zone
---   ZoneTitle.Show(zoneId, "Locked")    -- a zone you haven't unlocked yet: what it needs
---   options = { Caption = string?, Duration = seconds?, Hazard = boolean? (default: Enter shows it),
---               Repeat = true (a zone seen before: shorter) }
+--   ZoneTitle.Show(zoneId, "Locked")    -- ZoneController: you bumped into a zone's locked gate
+--   options = { Caption = string? (instead of the flavour line), Duration = seconds?,
+--               Hazard = boolean? (default: Enter shows it), Repeat = true (a zone seen before: just the
+--               name and its hazard, shown shorter) }
 --
--- Placement: the card sits under the currency capsules, in the HUD's top stack (HudController's
--- "TopCenter", under the capsules and the Mega Storm bar). An empty spacer the card's height goes in
--- that stack while a title shows, so the stack grows and the toasts (placed under it) slide down
--- below the card; the card itself is drawn on the Overlay gui at the spacer's spot, so it also shows
--- over an open panel (e.g. unlocking a zone from the Teleport panel). Same scale as the HUD, so it
--- scales for phones like the rest of the interface.
+-- Placement: under the currency capsules, in the HUD's top stack (HudController's "TopCenter", under
+-- the capsules and the Mega Storm bar). An empty spacer the card's height goes in that stack while a
+-- title shows, so the stack grows and the toasts (placed under it) slide down below the card; the card
+-- itself is drawn on the Overlay gui at the spacer's spot, so it also shows over an open panel (e.g.
+-- unlocking a zone from the Teleport panel). Same scale as the HUD, with the small print kept at least
+-- ~12 px tall on phones.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
@@ -52,30 +58,47 @@ local PALETTES = {
 	Sky = { "CF8CFF", "8146E8" },
 }
 
-local HOLD = { Enter = 2.6, Repeat = 1.9, Unlocked = 3.4, Locked = 2.8 } -- seconds fully shown
+-- Hazard chip colours by hazard kind (Shared/Hazards)
+local HAZARD_SETS = {
+	Lightning = "Bolt",
+	Sandstorm = "Sunset",
+	Cold = "Rain",
+	Heat = "Coral",
+	LowGravity = "Storm",
+}
+
+local HOLD = { Enter = 2.6, Repeat = 1.8, Unlocked = 3.4, Locked = 2.6 } -- seconds fully shown
 local MIN_HOLD = 0.9 -- a title cut short by a newer one still shows this long
 local IN_TIME = 0.5
 local OUT_TIME = 0.3
 
 -- Layout in HUD units (px at 1280x720)
-local MAX_WIDTH = 600
-local EMBLEM = 104
-local EMBLEM_X = 54 -- emblem centre from the card's left edge
-local PLAQUE_X = 44 -- plaque's left edge (hidden under the emblem)
-local PLAQUE_H = 62 -- face + lip
+-- Widest card: on desktop it stays narrow so only the emblem's edge reaches the chat window; phones
+-- (smaller scale, bigger small print, no chat window) allow more, landscape phones the most
+local MAX_WIDTH = 560
+local PHONE_WIDTH = 640
+local WIDE_WIDTH = 720 -- landscape phones
+local EMBLEM = 112
+local EMBLEM_X = 58 -- emblem centre from the card's left edge
+local PLAQUE_X = 50 -- the plaque's left edge (under the emblem)
+local PLAQUE_H = 64 -- face + lip
 local LIP = 6
 local CORNER = 18
-local NAME_X = 110 -- the name starts right of the emblem (from the card's left edge)
-local NAME_PAD = 36 -- room right of the name, for the roll
-local NAME_SIZE = 40
+local NAME_X = 120 -- the name area starts right of the emblem
+local NAME_PAD = 42 -- room right of the name area, for the roll
+local NAME_SIZE = 42
+local MIN_AREA = 220
 local ROLL_W = 24
 local ROLL_OUT = 10 -- how far the roll sticks out past the plaque's right end
-local KICKER_H = 28
-local PILL_H = 30
-local PILL_GAP = 6
+local CARD_INSET_L = 26 -- the caption card starts this far left of the name area (under the emblem)
+local CARD_INSET_R = 16 -- and ends this far inside the plaque's right end
+local CARD_TUCK = 12 -- how far its top hides under the plaque
+local CARD_PAD = 14
+local ROW_GAP = 14 -- between rows (a divider line sits in the middle)
+local SMALL_PX = 12.5 -- the small print is at least this many screen px tall
 
 local queue = {}
-local current = nil -- the entry on screen: { ZoneId, Kind, Hurry }
+local current = nil -- the entry on screen: { ZoneId, Kind, Hurried }
 local running = false
 
 ---------------------------------------------------------------------------
@@ -88,25 +111,54 @@ local function frame(name: string, props)
 	return object
 end
 
-local function textWidth(text: string, size: number, font: Enum.Font): number
-	local ok, bounds = pcall(TextService.GetTextSize, TextService, text, size, font, Vector2.new(4096, 4096))
+-- Text bounds (wrapped at `width` when given)
+local function measure(text: string, size: number, font: Enum.Font, width: number?): Vector2
+	local ok, bounds = pcall(TextService.GetTextSize, TextService, text, size, font, Vector2.new(width or 4096, 4096))
 	if ok and typeof(bounds) == "Vector2" then
-		return bounds.X
+		return bounds
 	end
-	return (utf8.len(text) or #text) * size * 0.6
+	local natural = (utf8.len(text) or #text) * size * 0.58
+	if width and natural > width then
+		return Vector2.new(width, math.ceil(natural / width) * size * 1.2)
+	end
+	return Vector2.new(natural, size * 1.2)
 end
 
-local function hex(code: string): Color3
-	return Color3.fromHex(code)
+local function textWidth(text: string, size: number, font: Enum.Font): number
+	return measure(text, size, font).X
 end
 
-local function palette(zone)
+-- A width for `text` no wider than `maxWidth` whose lines come out about equally long (no lone word
+-- on the last line). Returns width, height.
+local function balancedWrap(text: string, size: number, font: Enum.Font, maxWidth: number): (number, number)
+	local natural = textWidth(text, size, font)
+	if natural <= maxWidth then
+		return math.ceil(natural) + 2, measure(text, size, font).Y
+	end
+	local lines = math.ceil(natural / maxWidth)
+	local lineHeight = measure("Ag", size, font).Y
+	local width = math.min(maxWidth, math.ceil(natural / lines + size))
+	local height = measure(text, size, font, width).Y
+	-- Word breaks can push a word onto an extra line: widen until it fits in `lines`
+	while height > lineHeight * lines + 1 and width < maxWidth do
+		width = math.min(maxWidth, width + size)
+		height = measure(text, size, font, width).Y
+	end
+	return width, height
+end
+
+local function palette(zone, locked: boolean)
 	local pair = PALETTES[zone.Key]
 	local top, bottom
 	if pair then
-		top, bottom = hex(pair[1]), hex(pair[2])
+		top, bottom = Color3.fromHex(pair[1]), Color3.fromHex(pair[2])
 	else
 		top, bottom = zone.Color:Lerp(WHITE, 0.15), Theme.Shade(zone.Color, 0.72)
+	end
+	if locked then
+		-- A locked zone keeps its colours, a little dimmer
+		top = top:Lerp(Theme.Sets.Ink.Top, 0.18)
+		bottom = bottom:Lerp(Theme.Sets.Ink.Bottom, 0.18)
 	end
 	return {
 		Top = top,
@@ -117,15 +169,15 @@ local function palette(zone)
 	}
 end
 
--- Interface units across the screen (the HUD's width / its scale)
-local function screenUnits(): number
+-- Interface units across the screen (the Overlay's width / its scale) and that scale
+local function screenUnits(): (number, number)
 	local interface = Registry.InterfaceController
 	local root = interface and interface.OverlayRoot
-	local scale = (interface and interface.OverlayScale) or 1
+	local scale = math.max((interface and interface.OverlayScale) or 1, 0.01)
 	if root and root.AbsoluteSize.X > 0 then
-		return root.AbsoluteSize.X / math.max(scale, 0.01)
+		return root.AbsoluteSize.X / scale, scale
 	end
-	return 1280
+	return 1280, scale
 end
 
 local function topStack(): Frame?
@@ -134,64 +186,13 @@ local function topStack(): Frame?
 	return hud and hud:FindFirstChild("TopCenter")
 end
 
--- A candy pill (lip, gradient face, shine) with white text in an outline of the set's dark colour.
--- Returns the holder (size w x h, the lip included).
-local function candyChip(parent: Instance, text: string, top: Color3, bottom: Color3, size: number, z: number)
-	local lipColor = Theme.Shade(bottom, 0.62)
-	local width = textWidth(text, size, Theme.Font) + 26
+-- A small candy chip (Ink outline, lip, gradient face, shine) with white text outlined in the set's
+-- dark colour - or, with cloud = true, a Cloud chip with text in `ink`. Returns the holder (w x h).
+local function chip(parent: Instance, text: string, top: Color3, bottom: Color3, size: number, z: number, cloud: boolean?, ink: Color3?)
 	local height = size + 14
+	local width = math.ceil(textWidth(text, size, Theme.Font) + size * 1.4)
 	local holder = frame("Chip", { BackgroundTransparency = 1, Size = UDim2.fromOffset(width, height), ZIndex = z, Parent = parent })
-	local lip = frame("Lip", {
-		BackgroundColor3 = lipColor,
-		Size = UDim2.fromScale(1, 1),
-		ZIndex = z,
-		Parent = holder,
-		UI.Round(),
-		UI.Stroke(2.5, INK),
-	})
-	local face = frame("Face", {
-		BackgroundColor3 = WHITE,
-		Size = UDim2.new(1, 0, 1, -4),
-		ZIndex = z + 1,
-		Parent = lip,
-		UI.Round(),
-		UI.Gradient(top, bottom),
-	})
-	frame("Shine", {
-		BackgroundColor3 = WHITE,
-		BackgroundTransparency = 0.72,
-		Position = UDim2.fromOffset(6, 2),
-		Size = UDim2.new(1, -12, 0.36, 0),
-		ZIndex = z + 2,
-		Parent = face,
-		UI.Round(),
-	})
-	UI.Text({
-		Name = "Label",
-		Text = text,
-		TextSize = size,
-		Stroke = Theme.Shade(bottom, 0.5),
-		StrokeThickness = 2,
-		Size = UDim2.new(1, -8, 1, 0),
-		Position = UDim2.fromOffset(4, 0),
-		ZIndex = z + 3,
-		Parent = face,
-	})
-	return holder
-end
-
--- A Cloud pill with a coloured chip on the left and Ink text: { Frame, Width }
-local function infoPill(parent: Instance, name: string, chipText: string, chipTop: Color3, chipBottom: Color3, text: string, size: number, maxWidth: number, z: number)
-	local chipSize = size - 1
-	local chipWidth = textWidth(chipText, chipSize, Theme.Font) + 26
-	local textSize = size
-	local available = maxWidth - chipWidth - 30
-	while textWidth(text, textSize, Theme.BodyFont) > available and textSize > 12 do
-		textSize -= 1
-	end
-	local width = math.min(chipWidth + 18 + textWidth(text, textSize, Theme.BodyFont) + 14, maxWidth)
-	local height = PILL_H
-	local holder = frame(name, { BackgroundTransparency = 1, Size = UDim2.fromOffset(width, height), ZIndex = z, Parent = parent })
+	local t = 2.5
 	frame("Shadow", {
 		BackgroundColor3 = INK,
 		BackgroundTransparency = Theme.ShadeTransparency,
@@ -201,36 +202,46 @@ local function infoPill(parent: Instance, name: string, chipText: string, chipTo
 		Parent = holder,
 		UI.Round(),
 	})
-	frame("Body", {
-		BackgroundColor3 = WHITE,
-		Size = UDim2.fromScale(1, 1),
+	local lip = frame("Lip", {
+		BackgroundColor3 = if cloud then Theme.HazeDeep else Theme.Shade(bottom, 0.62),
+		Position = UDim2.fromOffset(t, t),
+		Size = UDim2.new(1, -2 * t, 1, -2 * t),
 		ZIndex = z + 1,
 		Parent = holder,
 		UI.Round(),
-		UI.Gradient(Theme.Cloud, Theme.Mist),
-		UI.Stroke(2, INK),
+		UI.Stroke(t, INK),
 	})
-	local chip = candyChip(holder, chipText, chipTop, chipBottom, chipSize, z + 2)
-	chip.Size = UDim2.fromOffset(chipWidth, height - 8)
-	chip.Position = UDim2.fromOffset(4, 4)
-	local label = chip:FindFirstChild("Label", true)
-	if label then
-		label.TextSize = chipSize - 2
+	local face = frame("Face", {
+		BackgroundColor3 = WHITE,
+		Size = UDim2.new(1, 0, 1, -3),
+		ZIndex = z + 2,
+		Parent = lip,
+		UI.Round(),
+		if cloud then UI.Gradient(Theme.Cloud, Theme.Mist) else UI.Gradient(top, bottom),
+	})
+	if not cloud then
+		frame("Shine", {
+			BackgroundColor3 = WHITE,
+			BackgroundTransparency = 0.72,
+			Position = UDim2.fromOffset(5, 2),
+			Size = UDim2.new(1, -10, 0.36, 0),
+			ZIndex = z + 3,
+			Parent = face,
+			UI.Round(),
+		})
 	end
 	UI.Text({
-		Name = "Text",
+		Name = "Label",
 		Text = text,
-		Font = Theme.BodyFont,
-		TextSize = textSize,
-		Scaled = true,
-		MinTextSize = 10,
-		X = Enum.TextXAlignment.Left,
-		Size = UDim2.new(1, -(chipWidth + 18), 1, -6),
-		Position = UDim2.fromOffset(chipWidth + 12, 3),
-		ZIndex = z + 2,
-		Parent = holder,
+		TextSize = size,
+		Color = if cloud then (ink or INK) else WHITE,
+		Stroke = if cloud then nil else Theme.Shade(bottom, 0.5),
+		StrokeThickness = 2,
+		Size = UDim2.new(1, 0, 1, 1),
+		ZIndex = z + 4,
+		Parent = face,
 	})
-	return holder, width
+	return holder
 end
 
 ---------------------------------------------------------------------------
@@ -240,43 +251,229 @@ local function zoneLabel(zoneId: number): string
 	return if zoneId == 0 then "HOME BASE" else "ZONE " .. tostring(zoneId)
 end
 
-local function captionFor(zoneId: number, zone, kind: string): string
-	if kind == "Unlocked" then
-		if (zone.Value or 0) > 1 then
-			return "Weather here pays " .. Format.Number(zone.Value) .. "x Volts!"
-		end
-		return zone.Description
-	elseif kind == "Locked" then
-		local parts = {}
-		if (zone.Cost or 0) > 0 then
-			table.insert(parts, "Unlock for " .. Format.Number(zone.Cost) .. " Volts")
-		end
-		if (zone.MinPower or 0) > 0 then
-			table.insert(parts, "needs " .. Format.Number(zone.MinPower) .. " Power")
-		end
-		return if #parts > 0 then table.concat(parts, "  •  ") else "Locked"
-	end
-	return zone.Description
-end
-
--- The hazard pill: { Chip, Text, Top, Bottom } or nil
-local function hazardFor(zoneId: number)
+-- The hazard row: { Kind = "Hazard", Chip, Text, Set } or nil
+local function hazardRow(zoneId: number)
 	local hazard = Hazards.Get(zoneId)
 	if not hazard then
 		return nil
 	end
 	local data = Registry.DataController and Registry.DataController.Data
 	if hazard.Kind == "Cold" and data and Hazards.ResistsCold(data, hazard) then
-		local leaf = Theme.Sets.Leaf
-		return { Chip = "WARM", Text = (string.gsub(Hazards.Describe(hazard, data), "^%S+%s+", "")), Top = leaf.Top, Bottom = leaf.Bottom }
+		return { Kind = "Hazard", Chip = "WARM BOOTS", Text = "Your Storm Boots keep the cold away!", Set = Theme.Sets.Leaf }
 	end
-	local color = hazard.Color or Theme.Sets.Sunset.Bottom
 	return {
-		Chip = hazard.Icon .. " " .. string.upper(hazard.Name),
+		Kind = "Hazard",
+		Chip = string.upper(hazard.Name),
 		Text = hazard.Description,
-		Top = color:Lerp(WHITE, 0.2),
-		Bottom = Theme.Shade(color, 0.78),
+		Set = Theme.Sets[HAZARD_SETS[hazard.Kind] or "Sunset"],
 	}
+end
+
+-- Kicker chip text + style, and the caption card's rows
+local function contentFor(zoneId: number, zone, kind: string, options)
+	options = options or {}
+	local kicker
+	if kind == "Unlocked" then
+		kicker = { Text = zoneLabel(zoneId) .. " UNLOCKED!", Set = Theme.Sets.Bolt }
+	elseif kind == "Locked" then
+		kicker = { Text = zoneLabel(zoneId) .. "  •  LOCKED", Set = Theme.Sets.Coral }
+	else
+		kicker = { Text = zoneLabel(zoneId), Cloud = true }
+	end
+
+	local rows = {}
+	local flavour = options.Caption
+	if not flavour and kind ~= "Locked" and not (kind == "Enter" and options.Repeat) then
+		-- (the hub's "Home base: ..." without the words the kicker already says)
+		flavour = string.gsub(zone.Description or "", "^[Hh]ome base:%s*(%a)", string.upper)
+	end
+	if flavour and flavour ~= "" then
+		table.insert(rows, { Kind = "Text", Text = flavour })
+	end
+	if kind == "Unlocked" and (zone.Value or 0) > 1 then
+		table.insert(rows, { Kind = "Stats", Items = { { Icon = "Volts", Text = "Weather here pays " .. Format.Number(zone.Value) .. "x Volts!" } } })
+	elseif kind == "Locked" then
+		local items = {}
+		if (zone.Cost or 0) > 0 then
+			table.insert(items, { Icon = "Volts", Text = Format.Number(zone.Cost) .. " Volts" })
+		end
+		if (zone.MinPower or 0) > 0 then
+			table.insert(items, { Icon = "Power", Text = Format.Number(zone.MinPower) .. " Power" })
+		end
+		if #items > 0 then
+			table.insert(rows, { Kind = "Stats", Label = "Unlock with", Items = items })
+		end
+	end
+	local showHazard = if options.Hazard ~= nil then options.Hazard else kind == "Enter"
+	local hazard = showHazard and hazardRow(zoneId) or nil
+	if hazard then
+		table.insert(rows, hazard)
+	end
+	return kicker, rows
+end
+
+---------------------------------------------------------------------------
+-- Caption card rows: measure (natural width; height at a width) and build
+---------------------------------------------------------------------------
+local function rowNatural(row, size: number): number
+	if row.Kind == "Text" then
+		return textWidth(row.Text, size, Theme.BodyFont)
+	elseif row.Kind == "Stats" then
+		local width = if row.Label then textWidth(row.Label, size, Theme.BodyFont) + 12 else 0
+		for index, item in row.Items do
+			width += (size + 12) + 6 + textWidth(item.Text, size + 1, Theme.Font) + (if index > 1 then 22 else 0)
+		end
+		return width
+	else
+		local chipWidth = textWidth(row.Chip, size - 2, Theme.Font) + (size - 2) * 1.4
+		return chipWidth + 10 + textWidth(row.Text, size - 1, Theme.BodyFont)
+	end
+end
+
+-- Lays a row out in `width`: returns its height and a build function(parent, y, z)
+local function layoutRow(row, size: number, width: number)
+	if row.Kind == "Text" then
+		local textSize = size
+		local w, h = balancedWrap(row.Text, textSize, Theme.BodyFont, width)
+		while h > textSize * 2.6 and textSize > size - 3 do -- three lines: a little smaller first
+			textSize -= 1
+			w, h = balancedWrap(row.Text, textSize, Theme.BodyFont, width)
+		end
+		return h, function(parent, y, z)
+			UI.Text({
+				Name = "Flavour",
+				Text = row.Text,
+				Font = Theme.BodyFont,
+				TextSize = textSize,
+				Wrapped = true,
+				Color = Theme.InkSoft,
+				Size = UDim2.fromOffset(w + 2, h + 2),
+				Position = UDim2.new(0.5, 0, 0, y - 1),
+				AnchorPoint = Vector2.new(0.5, 0),
+				ZIndex = z,
+				Parent = parent,
+			})
+		end
+	elseif row.Kind == "Stats" then
+		local textSize = size + 1
+		while rowNatural(row, textSize - 1) > width and textSize > 11 do
+			textSize -= 1
+		end
+		local icon = textSize + 11
+		local total = rowNatural(row, textSize - 1)
+		return icon, function(parent, y, z)
+			local holder = frame("Stats", {
+				BackgroundTransparency = 1,
+				Size = UDim2.fromOffset(total, icon),
+				Position = UDim2.new(0.5, 0, 0, y),
+				AnchorPoint = Vector2.new(0.5, 0),
+				ZIndex = z,
+				Parent = parent,
+			})
+			local x = 0
+			if row.Label then
+				local w = textWidth(row.Label, textSize - 1, Theme.BodyFont)
+				UI.Text({
+					Name = "Label",
+					Text = row.Label,
+					Font = Theme.BodyFont,
+					TextSize = textSize - 1,
+					Color = Theme.InkSoft,
+					Size = UDim2.fromOffset(w + 2, icon),
+					Position = UDim2.fromOffset(x, 0),
+					ZIndex = z,
+					Parent = holder,
+				})
+				x += w + 12
+			end
+			for index, item in row.Items do
+				if index > 1 then
+					x += 22
+				end
+				Icons.New(item.Icon, {
+					Name = "Icon" .. index,
+					Size = UDim2.fromOffset(icon, icon),
+					Position = UDim2.fromOffset(x, 0),
+					AnchorPoint = Vector2.zero,
+					ZIndex = z + 1,
+					Parent = holder,
+				})
+				x += icon + 6
+				local w = textWidth(item.Text, textSize, Theme.Font)
+				UI.Text({
+					Name = "Text" .. index,
+					Text = item.Text,
+					TextSize = textSize,
+					Color = INK,
+					X = Enum.TextXAlignment.Left,
+					Size = UDim2.fromOffset(w + 4, icon),
+					Position = UDim2.fromOffset(x, 1),
+					ZIndex = z,
+					Parent = holder,
+				})
+				x += w
+			end
+		end
+	end
+
+	-- Hazard: [CHIP] text on one line; else the chip left of the text in two lines; else the chip over
+	-- the text
+	local chipSize = size - 2
+	local textSize = size - 1
+	local chipWidth = math.ceil(textWidth(row.Chip, chipSize, Theme.Font) + chipSize * 1.4)
+	local chipHeight = chipSize + 14
+	local natural = textWidth(row.Text, textSize, Theme.BodyFont)
+	local lineHeight = measure("Ag", textSize, Theme.BodyFont).Y
+	local mode, textW, textH = "Inline", math.ceil(natural) + 2, lineHeight
+	if chipWidth + 10 + natural > width then
+		local room = width - chipWidth - 10
+		local w, h = balancedWrap(row.Text, textSize, Theme.BodyFont, room)
+		if room >= width * 0.45 and h <= lineHeight * 2 + 1 then
+			mode, textW, textH = "Side", w, h
+		else
+			mode = "Stacked"
+			textW, textH = balancedWrap(row.Text, textSize, Theme.BodyFont, width)
+		end
+	end
+	local stacked = mode == "Stacked"
+	local height = if stacked then chipHeight + 5 + textH else math.max(chipHeight, textH)
+	return height, function(parent, y, z)
+		local set = row.Set
+		local total = if stacked then width else chipWidth + 10 + textW
+		local holder = frame("Hazard", {
+			BackgroundTransparency = 1,
+			Size = UDim2.fromOffset(total, height),
+			Position = UDim2.new(0.5, 0, 0, y),
+			AnchorPoint = Vector2.new(0.5, 0),
+			ZIndex = z,
+			Parent = parent,
+		})
+		holder:SetAttribute("Layout", mode)
+		local tag = chip(holder, row.Chip, set.Top, set.Bottom, chipSize, z)
+		tag.Name = "Tag"
+		if stacked then
+			tag.AnchorPoint = Vector2.new(0.5, 0)
+			tag.Position = UDim2.new(0.5, 0, 0, 0)
+		else
+			tag.Position = UDim2.fromOffset(0, math.floor((height - chipHeight) / 2))
+		end
+		UI.Text({
+			Name = "Text",
+			Text = row.Text,
+			Font = Theme.BodyFont,
+			TextSize = textSize,
+			Wrapped = mode ~= "Inline",
+			Color = INK,
+			X = if stacked then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left,
+			Size = UDim2.fromOffset(textW + 2, textH + 2),
+			Position = if stacked
+				then UDim2.new(0.5, 0, 0, chipHeight + 4)
+				else UDim2.fromOffset(chipWidth + 10, math.floor((height - textH) / 2) - 1),
+			AnchorPoint = if stacked then Vector2.new(0.5, 0) else Vector2.zero,
+			ZIndex = z,
+			Parent = holder,
+		})
+	end
 end
 
 ---------------------------------------------------------------------------
@@ -284,33 +481,38 @@ end
 ---------------------------------------------------------------------------
 local function build(zoneId: number, kind: string, options)
 	local zone = Zones.Get(zoneId)
-	local colors = palette(zone)
-	local units = screenUnits()
-	local compact = units < 900 -- phones in portrait: a bit bigger small print
-	local maxWidth = math.min(MAX_WIDTH, units - 24)
+	local locked = kind == "Locked"
+	local colors = palette(zone, locked)
+	local units, scale = screenUnits()
+	local phone = scale < 0.8
+	-- Phones show no chat window: a landscape phone (wide, short) gets a wider, flatter card
+	local widest = if not phone then MAX_WIDTH elseif units >= 1000 then WIDE_WIDTH else PHONE_WIDTH
+	local maxWidth = math.min(widest, units - 24)
+	local small = math.max(16, math.ceil(SMALL_PX / scale)) -- caption text size
+	local kickerSize = math.max(16, math.ceil((SMALL_PX - 0.5) / scale))
+	local kicker, rows = contentFor(zoneId, zone, kind, options)
 
-	-- Name: as big as fits
+	-- Name: as big as fits; the name area grows for the caption (up to the widest card)
+	local areaMax = maxWidth - NAME_X - NAME_PAD - ROLL_OUT
 	local name = string.upper(zone.Name)
 	local nameSize = NAME_SIZE
 	local nameWidth = textWidth(name, nameSize, Theme.Font)
-	local plaqueRoom = maxWidth - PLAQUE_X - ROLL_OUT - (NAME_X - PLAQUE_X) - NAME_PAD
-	while nameWidth > plaqueRoom and nameSize > 24 do
+	while nameWidth > areaMax - 8 and nameSize > 24 do
 		nameSize -= 2
 		nameWidth = textWidth(name, nameSize, Theme.Font)
 	end
-	nameWidth = math.min(nameWidth, plaqueRoom)
-	local plaqueWidth = math.max((NAME_X - PLAQUE_X) + nameWidth + NAME_PAD, 240)
-	local bannerWidth = PLAQUE_X + plaqueWidth + ROLL_OUT
+	local cardExtra = CARD_INSET_L + NAME_PAD - CARD_INSET_R - 2 * CARD_PAD -- inner width - area width
+	local wanted = 0
+	for _, row in rows do
+		wanted = math.max(wanted, rowNatural(row, small))
+	end
+	local areaW = math.clamp(math.max(nameWidth + 8, MIN_AREA, wanted - cardExtra), 0, areaMax)
+	local plaqueW = (NAME_X - PLAQUE_X) + areaW + NAME_PAD
+	local bannerWidth = PLAQUE_X + plaqueW + ROLL_OUT
 
-	local kicker = kind == "Unlocked" or kind == "Locked"
-	local plaqueY = if kicker then 20 else 8
+	local kickerH = kickerSize + 14
+	local plaqueY = math.floor(kickerH / 2) + 3
 	local emblemY = plaqueY + (PLAQUE_H - LIP) / 2 + 2
-
-	-- Pills under the plaque
-	local pillSize = if compact then 18 else 16
-	local captionText = (options and options.Caption) or captionFor(zoneId, zone, kind)
-	local showHazard = if options and options.Hazard ~= nil then options.Hazard else kind == "Enter"
-	local hazard = showHazard and hazardFor(zoneId) or nil
 
 	local card = frame("ZoneTitle", {
 		BackgroundTransparency = 1,
@@ -325,17 +527,77 @@ local function build(zoneId: number, kind: string, options)
 	cardScale.Name = "FitScale"
 	cardScale.Parent = card
 
-	-- Everything that slides / scales in together
+	-- Everything that drops / scales in together
 	local banner = frame("Banner", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = Z, Parent = card })
 	local bannerScale = Instance.new("UIScale")
 	bannerScale.Parent = banner
+
+	-- Caption card (behind the plaque, its top tucked under it)
+	local captionHolder = nil
+	local captionY = plaqueY + PLAQUE_H - CARD_TUCK
+	local height = emblemY + EMBLEM / 2
+	if #rows > 0 then
+		local cardX = NAME_X - CARD_INSET_L
+		local cardW = PLAQUE_X + plaqueW - CARD_INSET_R - cardX
+		local inner = cardW - 2 * CARD_PAD
+		local laid = {}
+		local y = CARD_TUCK + 8
+		for index, row in rows do
+			if index > 1 then
+				y += ROW_GAP
+			end
+			local rowHeight, make = layoutRow(row, small, inner)
+			table.insert(laid, { Y = y, Make = make })
+			y += rowHeight
+		end
+		local cardH = y + 10
+		captionHolder = frame("Caption", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(cardX, captionY),
+			Size = UDim2.fromOffset(cardW, cardH),
+			ZIndex = Z,
+			Parent = banner,
+		})
+		frame("Shadow", {
+			BackgroundColor3 = INK,
+			BackgroundTransparency = Theme.ShadeTransparency,
+			Position = UDim2.fromOffset(0, 4),
+			Size = UDim2.fromScale(1, 1),
+			ZIndex = Z,
+			Parent = captionHolder,
+			UI.Corner(16),
+		})
+		local body = frame("Body", {
+			BackgroundColor3 = WHITE,
+			Position = UDim2.fromOffset(1, 1),
+			Size = UDim2.new(1, -2, 1, -2),
+			ZIndex = Z + 1,
+			Parent = captionHolder,
+			UI.Corner(15),
+			UI.Gradient(Theme.Cloud, Theme.Mist),
+			UI.Stroke(2.5, INK),
+		})
+		for index, entry in laid do
+			if index > 1 then
+				frame("Divider", {
+					BackgroundColor3 = Theme.Haze,
+					Position = UDim2.new(0, 18, 0, entry.Y - ROW_GAP / 2 - 1),
+					Size = UDim2.new(1, -36, 0, 2),
+					ZIndex = Z + 2,
+					Parent = body,
+				})
+			end
+			entry.Make(body, entry.Y - 1, Z + 3)
+		end
+		height = math.max(height, captionY + cardH + 4)
+	end
 
 	-- Plaque: drop shadow, lip with the Ink outline, the gradient face with a shine
 	local plaque = frame("Plaque", {
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(PLAQUE_X, plaqueY),
-		Size = UDim2.fromOffset(plaqueWidth, PLAQUE_H),
-		ZIndex = Z,
+		Size = UDim2.fromOffset(plaqueW, PLAQUE_H),
+		ZIndex = Z + 5,
 		Parent = banner,
 	})
 	frame("Shadow", {
@@ -343,14 +605,14 @@ local function build(zoneId: number, kind: string, options)
 		BackgroundTransparency = Theme.ShadeTransparency,
 		Position = UDim2.fromOffset(0, 5),
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = Z,
+		ZIndex = Z + 5,
 		Parent = plaque,
 		UI.Corner(CORNER),
 	})
 	local lip = frame("Lip", {
 		BackgroundColor3 = colors.Lip,
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = Z + 1,
+		ZIndex = Z + 6,
 		Parent = plaque,
 		UI.Corner(CORNER),
 		UI.Stroke(3, INK),
@@ -358,7 +620,7 @@ local function build(zoneId: number, kind: string, options)
 	local face = frame("Face", {
 		BackgroundColor3 = WHITE,
 		Size = UDim2.new(1, 0, 1, -LIP),
-		ZIndex = Z + 2,
+		ZIndex = Z + 7,
 		Parent = lip,
 		UI.Corner(CORNER),
 		UI.Gradient(colors.Top, colors.Bottom),
@@ -368,7 +630,7 @@ local function build(zoneId: number, kind: string, options)
 		BackgroundTransparency = 0.74,
 		Position = UDim2.fromOffset(NAME_X - PLAQUE_X - 8, 4),
 		Size = UDim2.new(1, -(NAME_X - PLAQUE_X) - 14, 0.34, 0),
-		ZIndex = Z + 3,
+		ZIndex = Z + 8,
 		Parent = face,
 		UI.Round(),
 	})
@@ -376,7 +638,7 @@ local function build(zoneId: number, kind: string, options)
 	local sweep = frame("Sweep", {
 		BackgroundColor3 = WHITE,
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = Z + 4,
+		ZIndex = Z + 9,
 		Parent = face,
 		UI.Corner(CORNER),
 	})
@@ -395,9 +657,9 @@ local function build(zoneId: number, kind: string, options)
 	-- The rolled right end: a little cylinder in the zone's colours
 	local roll = frame("Roll", {
 		BackgroundColor3 = WHITE,
-		Position = UDim2.fromOffset(PLAQUE_X + plaqueWidth + ROLL_OUT - ROLL_W, plaqueY - 7),
-		Size = UDim2.fromOffset(ROLL_W, PLAQUE_H + 12),
-		ZIndex = Z + 6,
+		Position = UDim2.fromOffset(PLAQUE_X + plaqueW + ROLL_OUT - ROLL_W, plaqueY - 6),
+		Size = UDim2.fromOffset(ROLL_W, PLAQUE_H + 10),
+		ZIndex = Z + 10,
 		Parent = banner,
 		UI.Round(),
 		UI.Stroke(3, INK),
@@ -415,13 +677,13 @@ local function build(zoneId: number, kind: string, options)
 		BackgroundTransparency = 0.55,
 		Position = UDim2.new(0.28, 0, 0, 8),
 		Size = UDim2.new(0.2, 0, 1, -16),
-		ZIndex = Z + 7,
+		ZIndex = Z + 11,
 		Parent = roll,
 		UI.Round(),
 	})
 
-	-- The name: a darker drop under a white-to-tint fill, both outlined in Ink
-	local nameBox = UDim2.fromOffset(nameWidth + 8, PLAQUE_H - LIP)
+	-- The name, centred in its area: a darker drop under a white-to-tint fill, both outlined in Ink
+	local nameBox = UDim2.fromOffset(areaW + 8, PLAQUE_H - LIP)
 	UI.Text({
 		Name = "NameDrop",
 		Text = name,
@@ -432,7 +694,7 @@ local function build(zoneId: number, kind: string, options)
 		StrokeThickness = 3,
 		Size = nameBox,
 		Position = UDim2.fromOffset(NAME_X - 4, plaqueY + 3),
-		ZIndex = Z + 8,
+		ZIndex = Z + 12,
 		Parent = banner,
 	})
 	local nameLabel = UI.Text({
@@ -445,121 +707,87 @@ local function build(zoneId: number, kind: string, options)
 		StrokeThickness = 3,
 		Size = nameBox,
 		Position = UDim2.fromOffset(NAME_X - 4, plaqueY),
-		ZIndex = Z + 9,
+		ZIndex = Z + 13,
 		Parent = banner,
 	})
 	local fill = UI.Gradient(WHITE, colors.Tint)
 	fill.Name = "Fill"
 	fill.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, WHITE),
-		ColorSequenceKeypoint.new(0.5, WHITE),
+		ColorSequenceKeypoint.new(0.45, WHITE),
 		ColorSequenceKeypoint.new(1, colors.Tint),
 	})
 	fill.Parent = nameLabel
 
-	-- The emblem over the plaque's left end (the zone's emoji until its picture is uploaded)
+	-- The emblem over the plaque's left end (the zone's emoji on a badge until its picture is uploaded)
 	local emblem = Icons.New("Zone_" .. zone.Key, {
 		Name = "Emblem",
 		Size = UDim2.fromOffset(EMBLEM, EMBLEM),
 		Position = UDim2.fromOffset(EMBLEM_X, emblemY),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Rotation = -6,
-		ZIndex = Z + 10,
+		ZIndex = Z + 15,
 		Parent = banner,
 	})
 	local emblemScale = Instance.new("UIScale")
 	emblemScale.Parent = emblem
 	if not Icons.Image("Zone_" .. zone.Key) then
-		-- No picture yet: put the emoji on a round badge so it still reads as an emblem
-		local badge = frame("Badge", {
+		frame("Badge", {
 			BackgroundColor3 = WHITE,
 			Size = UDim2.fromScale(0.86, 0.86),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			ZIndex = Z + 9,
+			ZIndex = Z + 14,
 			Parent = emblem,
 			UI.Round(),
-			UI.Stroke(3, INK),
+			UI.Stroke(4, Theme.Sets.Bolt.Bottom),
 			UI.Gradient(colors.Top, colors.Bottom),
 		})
-		badge.ZIndex = Z + 9
 		local glyph = emblem:FindFirstChild("Emoji")
 		if glyph then
-			glyph.Size = UDim2.fromScale(0.56, 0.56)
-			glyph.ZIndex = Z + 11
+			glyph.Size = UDim2.fromScale(0.54, 0.54)
+			glyph.ZIndex = Z + 16
 		end
 	end
-	if kind == "Locked" then
+	if locked then
 		local image = emblem:FindFirstChild("Image")
 		if image then
-			image.ImageColor3 = Color3.fromRGB(150, 156, 186)
+			image.ImageColor3 = Color3.fromRGB(165, 172, 200)
 		end
+		-- on the emblem's lower left, clear of the caption card
 		Icons.New("Lock", {
 			Name = "Lock",
-			Size = UDim2.fromOffset(44, 44),
-			Position = UDim2.fromScale(0.8, 0.78),
-			ZIndex = Z + 12,
+			Size = UDim2.fromOffset(48, 48),
+			Position = UDim2.fromScale(0.2, 0.8),
+			Rotation = -8,
+			ZIndex = Z + 17,
 			Parent = emblem,
 		})
 	end
 
-	-- Kicker over the plaque's top edge
-	local kickerChip = nil
-	if kicker then
-		local set = if kind == "Unlocked" then Theme.Sets.Bolt else Theme.Sets.Coral
-		local text = if kind == "Unlocked" then "ZONE UNLOCKED!" else "LOCKED"
-		kickerChip = candyChip(banner, text, set.Top, set.Bottom, 17, Z + 12)
-		kickerChip.Name = "Kicker"
-		kickerChip.AnchorPoint = Vector2.new(0.5, 0)
-		local centre = NAME_X + nameWidth / 2
-		local half = kickerChip.Size.X.Offset / 2
-		centre = math.clamp(centre, PLAQUE_X + half + 10, PLAQUE_X + plaqueWidth - half - 10)
-		kickerChip.Position = UDim2.fromOffset(centre, plaqueY - KICKER_H / 2 - 4)
-		if kind == "Unlocked" then
-			for side = -1, 1, 2 do
-				Icons.New("Star", {
-					Name = if side < 0 then "StarLeft" else "StarRight",
-					Size = UDim2.fromOffset(26, 26),
-					Position = UDim2.new(0.5, side * (half + 14), 0.5, 0),
-					Rotation = side * 14,
-					ZIndex = Z + 15,
-					Parent = kickerChip,
-				})
-			end
+	-- Kicker over the plaque's top edge, centred on the name
+	local kickerChip = chip(banner, kicker.Text, (kicker.Set or Theme.Sets.Sky).Top, (kicker.Set or Theme.Sets.Sky).Bottom, kickerSize, Z + 18, kicker.Cloud, colors.Dark)
+	kickerChip.Name = "Kicker"
+	kickerChip.AnchorPoint = Vector2.new(0.5, 0)
+	local half = kickerChip.Size.X.Offset / 2
+	local centre = math.clamp(NAME_X + areaW / 2, PLAQUE_X + half + 24, PLAQUE_X + plaqueW - half - 10)
+	kickerChip.Position = UDim2.fromOffset(centre, plaqueY - kickerH + 10)
+	if kind == "Unlocked" then
+		for side = -1, 1, 2 do
+			Icons.New("Star", {
+				Name = if side < 0 then "StarLeft" else "StarRight",
+				Size = UDim2.fromOffset(28, 28),
+				Position = UDim2.new(0.5, side * (half + 14), 0.5, -1),
+				Rotation = side * 14,
+				ZIndex = Z + 24,
+				Parent = kickerChip,
+			})
 		end
 	end
 
-	-- Pills: centred under the plaque, never wider than the screen
-	local pills = {}
-	local pillTop = plaqueY + PLAQUE_H + 8
-	local plaqueCentre = PLAQUE_X + plaqueWidth / 2
-	local caption, captionWidth = infoPill(banner, "Caption", zoneLabel(zoneId), colors.Top, colors.Bottom, captionText, pillSize, maxWidth, Z + 1)
-	table.insert(pills, { caption, captionWidth })
-	if hazard then
-		local pill, width = infoPill(banner, "Hazard", hazard.Chip, hazard.Top, hazard.Bottom, hazard.Text, pillSize - 1, maxWidth, Z + 1)
-		table.insert(pills, { pill, width })
-	end
-	local left, right = 0, bannerWidth
-	for index, entry in pills do
-		local pill, width = entry[1], entry[2]
-		local x = plaqueCentre - width / 2
-		pill.Position = UDim2.fromOffset(x, pillTop + (index - 1) * (PILL_H + PILL_GAP))
-		left = math.min(left, x)
-		right = math.max(right, x + width)
-	end
-	local height = pillTop + #pills * (PILL_H + PILL_GAP) - PILL_GAP + 6
-
-	-- Shift everything right if a pill sticks out on the left, and size the card to fit
-	if left < 0 then
-		for _, child in banner:GetChildren() do
-			if child:IsA("GuiObject") then
-				child.Position += UDim2.fromOffset(-left, 0)
-			end
-		end
-	end
-	card.Size = UDim2.fromOffset(right - left, height)
-	-- Very narrow screens: shrink the whole card to fit
-	local fit = math.min(1, (units - 16) / (right - left))
+	card.Size = UDim2.fromOffset(bannerWidth, height)
+	-- Narrow screens: shrink the whole card to fit
+	local fit = math.min(1, (units - 16) / bannerWidth)
 	cardScale.Scale = fit
 
 	return {
@@ -570,7 +798,8 @@ local function build(zoneId: number, kind: string, options)
 		Emblem = emblem,
 		EmblemScale = emblemScale,
 		Kicker = kickerChip,
-		Pills = pills,
+		Caption = captionHolder,
+		CaptionY = captionY,
 		Sweep = sweepGradient,
 	}
 end
@@ -578,7 +807,7 @@ end
 ---------------------------------------------------------------------------
 -- Showing one card
 ---------------------------------------------------------------------------
--- Keeps the card on the spacer's spot (in Overlay units), every frame while it's shown
+-- Keeps the card on the spacer's spot (in Overlay units) while it's shown
 local function follow(card: Frame, spacer: Frame?)
 	local interface = Registry.InterfaceController
 	local root = interface.OverlayRoot
@@ -588,7 +817,7 @@ local function follow(card: Frame, spacer: Frame?)
 		end
 		local scale = math.max(interface.OverlayScale or 1, 0.01)
 		local y
-		if spacer and spacer.Parent and spacer.AbsoluteSize.X >= 0 and spacer.AbsolutePosition.Y > 0 then
+		if spacer and spacer.Parent and spacer.AbsolutePosition.Y > 0 then
 			y = (spacer.AbsolutePosition.Y - root.AbsolutePosition.Y) / scale
 		else
 			y = (interface.SafeTop or 0) + 70 -- no HUD (yet): under where the capsules would be
@@ -631,7 +860,8 @@ local function play(entry)
 	card.Parent = interface.OverlayRoot
 	local unfollow = follow(card, spacer)
 
-	-- In: drop down + scale up with a little overshoot, the emblem spins in, then the shine sweeps
+	-- In: drop down + scale up with a little overshoot, the emblem spins in, the caption card slides
+	-- out from under the plaque, then the shine sweeps
 	local banner = parts.Banner
 	banner.Position = UDim2.fromOffset(0, -22)
 	parts.BannerScale.Scale = 0.72
@@ -644,19 +874,24 @@ local function play(entry)
 		UI.Tween(parts.EmblemScale, 0.55, { Scale = 1 }, Enum.EasingStyle.Back)
 		UI.Tween(parts.Emblem, 0.55, { Rotation = -6 }, Enum.EasingStyle.Back)
 	end)
-	if parts.Kicker then
-		task.delay(0.22, function()
-			UI.Pop(parts.Kicker, 1.35)
+	if parts.Caption then
+		local x = parts.Caption.Position.X.Offset
+		parts.Caption.Position = UDim2.fromOffset(x, parts.CaptionY - 26)
+		task.delay(0.16, function()
+			UI.Tween(parts.Caption, 0.4, { Position = UDim2.fromOffset(x, parts.CaptionY) }, Enum.EasingStyle.Back)
 		end)
 	end
+	task.delay(0.22, function()
+		UI.Pop(parts.Kicker, 1.3)
+	end)
 	task.delay(IN_TIME * 0.8, function()
 		parts.Sweep.Offset = Vector2.new(-1, 0)
 		UI.Tween(parts.Sweep, 0.7, { Offset = Vector2.new(1, 0) }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 	end)
 
 	-- Hold (cut short when a newer title is waiting)
-	local hold = (entry.Options and entry.Options.Duration)
-		or (if entry.Kind == "Enter" and entry.Options and entry.Options.Repeat then HOLD.Repeat else HOLD[entry.Kind] or HOLD.Enter)
+	local options = entry.Options or {}
+	local hold = options.Duration or (if entry.Kind == "Enter" and options.Repeat then HOLD.Repeat else HOLD[entry.Kind] or HOLD.Enter)
 	local shown = 0
 	while shown < IN_TIME + hold do
 		shown += task.wait(0.05)
@@ -710,15 +945,24 @@ function ZoneTitle.Show(zoneId: number, kind: string?, options)
 	if which ~= "Unlocked" and which ~= "Locked" then
 		which = "Enter"
 	end
-	-- Already on screen (or just announced as unlocked: walking in needs no second card)
-	if current and current.ZoneId == zoneId and (current.Kind == which or (which == "Enter" and current.Kind == "Unlocked")) then
+	-- Already on screen or waiting (an "Unlocked" card names the zone too: walking in needs no second one)
+	local function covers(entry): boolean
+		return entry.ZoneId == zoneId and (entry.Kind == which or (which == "Enter" and entry.Kind == "Unlocked"))
+	end
+	if current and covers(current) then
 		return
 	end
-	-- A newer "Enter" replaces one still waiting; repeats of the same card are dropped
-	for index = #queue, 1, -1 do
-		local waiting = queue[index]
-		if (waiting.Kind == "Enter" and which == "Enter") or (waiting.ZoneId == zoneId and waiting.Kind == which) then
-			table.remove(queue, index)
+	for _, waiting in queue do
+		if covers(waiting) then
+			return
+		end
+	end
+	-- A newer "Enter" replaces one still waiting (only the zone you're in now matters)
+	if which == "Enter" then
+		for index = #queue, 1, -1 do
+			if queue[index].Kind == "Enter" then
+				table.remove(queue, index)
+			end
 		end
 	end
 	table.insert(queue, { ZoneId = zoneId, Kind = which, Options = options })

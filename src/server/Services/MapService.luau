@@ -34,6 +34,8 @@ local Pets = require(Shared.Config.Pets)
 local Format = require(Shared.Util.Format)
 local Hazards = require(Shared.Hazards)
 local EggModels = require(Shared.Models.EggModels)
+local PetModels = require(Shared.Models.PetModels) -- the lobby shop pet on its stand
+local Monetization = require(Shared.Config.Monetization) -- the lobby shop pet's product (price on its sign)
 local WorldProps = require(script.Parent.WorldProps)
 
 local MapService = {}
@@ -2360,6 +2362,107 @@ local function kiosk(parent: Instance, position: Vector3, facingDir: Vector3, ti
 	return booth, base
 end
 
+-- Lobby shop pet stand (Monetization.Products.AuroraGryphon): between the Upgrade Workshop and the Storm
+-- Shop, facing the arena like them. A tiered pedestal in the gryphon's colours with a pulsing glow, the pet
+-- (PetModels: the mesh pack when it is there) spinning and bobbing above it (tag "Spin"), an Aurora Arch
+-- behind it carrying the name and price signs, star lamps either side, and a "Buy" prompt (attribute
+-- ProductKey) that WorldController turns into MonetizationController.PromptProduct.
+local SHOP_PET = { Product = "AuroraGryphon", Position = Vector3.new(-132, 0, -80) }
+local stopShopPetRebuild: (() -> ())? = nil -- stops the last build's PetMeshes listener
+
+local function shopPetStand(parent: Instance)
+	local product = Monetization.Products[SHOP_PET.Product]
+	local def = product and Pets.Pets[product.PetId]
+	if not def then
+		return
+	end
+	local mint, violet, blue = hex("60F6C8"), hex("B27CFF"), hex("4A62D6")
+	local x, z = SHOP_PET.Position.X, SHOP_PET.Position.Z
+	local stand = model("AuroraGryphonStand", parent)
+	local function at(height: number, dz: number?): Vector3
+		return Vector3.new(x, GROUND_Y + height, z + (dz or 0))
+	end
+
+	-- Pedestal: white base with a violet neon trim, a gryphon-blue drum with gold studs, a white cap with
+	-- a mint neon rim, and a soft glow on the ground and on the cap (tag "Pulse")
+	local glow = cylinder({ Name = "Glow", Position = at(0.08), Height = 0.3, Diameter = 19.5, Color = mint, Material = M.Neon, Transparency = 0.55, CanCollide = false, CastShadow = false, Parent = stand, Tags = { "Pulse" } })
+	glow.CanQuery = false
+	cylinder({ Name = "Base", Position = at(0.6), Height = 1.2, Diameter = 15, Color = BODY, Parent = stand })
+	cylinder({ Name = "BaseTrim", Position = at(1.25), Height = 0.3, Diameter = 14.2, Color = violet, Material = M.Neon, CanCollide = false, CastShadow = false, Parent = stand })
+	cylinder({ Name = "Drum", Position = at(2.35), Height = 2.2, Diameter = 11, Color = blue, Parent = stand })
+	for index = 0, 7 do
+		local angle = index * math.pi / 4 + math.pi / 8
+		deco({ Name = "Stud", Shape = Enum.PartType.Ball, Size = Vector3.one * 0.9, CFrame = CFrame.new(at(2.35) + Vector3.new(math.cos(angle), 0, math.sin(angle)) * 5.45), Color = BOLT, Material = M.Neon, Parent = stand })
+	end
+	cylinder({ Name = "Cap", Position = at(3.85), Height = 0.8, Diameter = 12.4, Color = BODY, Parent = stand })
+	cylinder({ Name = "CapRim", Position = at(3.85), Height = 0.5, Diameter = 13, Color = mint, Material = M.Neon, CanCollide = false, CastShadow = false, Parent = stand })
+	local halo = cylinder({ Name = "Halo", Position = at(4.3), Height = 0.12, Diameter = 9, Color = mint, Material = M.Neon, Transparency = 0.35, CanCollide = false, CastShadow = false, Parent = stand, Tags = { "Pulse" } })
+	halo.CanQuery = false
+
+	-- The pet floats above the cap; its light and sparkles hang on a still part so they don't spin
+	local petCenter = at(9)
+	local core = deco({ Name = "Core", Size = Vector3.one, CFrame = CFrame.new(petCenter), Transparency = 1, Parent = stand })
+	pointLight(core, mint, 2, 20)
+	emitter(core, {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(mint, violet),
+		Size = NumberSequence.new(0.9, 0),
+		Lifetime = NumberRange.new(1, 1.8),
+		Rate = 10,
+		Speed = NumberRange.new(1.5, 3),
+		SpreadAngle = Vector2.new(180, 180),
+		LightEmission = 1,
+	})
+	local function showPet()
+		local old = stand:FindFirstChild("DisplayPet")
+		if old then
+			old:Destroy()
+		end
+		local pet = PetModels.Build(def.Id, "Normal", { Scale = 2.3 })
+		pet.Name = "DisplayPet"
+		for _, item in pet:GetDescendants() do
+			if item:IsA("BasePart") then
+				item.Anchored = true
+				item.CanCollide = false
+				item.CanQuery = false
+				item.CanTouch = false
+			end
+		end
+		pet:PivotTo(CFrame.new(petCenter) * facing(0, 1))
+		CollectionService:AddTag(pet, "Spin")
+		pet:SetAttribute("SpinSpeed", 0.6)
+		pet:SetAttribute("BobHeight", 0.7)
+		pet.Parent = stand
+	end
+	showPet()
+	-- PetMeshService inserts the uploaded mesh pack after the map is built: swap in the mesh pet then
+	if stopShopPetRebuild then
+		stopShopPetRebuild()
+	end
+	stopShopPetRebuild = PetModels.OnPackChanged(function()
+		if stand.Parent then
+			showPet()
+		end
+	end)
+
+	-- Aurora Arch behind (its mint and violet glass match the gryphon) with the signs on top, star lamps
+	place("AuroraArch", stand, CFrame.new(at(0, -6.5)) * facing(0, 1), { Scale = 0.85, Collide = false })
+	local front = CFrame.new(at(0, -5.6)) * facing(0, 1)
+	signBoard(stand, "NameSign", front * CFrame.new(0, 18.6, 0), 16, 3.4, "🐾 " .. string.upper(def.Name), STORM_DEEP, { Enum.NormalId.Front }, 30)
+	signBoard(stand, "PriceSign", front * CFrame.new(0, 15.9, 0.1), 7.4, 2.4, "R$" .. Format.Commas(product.Price), BOLT_DEEP, { Enum.NormalId.Front }, 30)
+	for _, side in { -1, 1 } do
+		place("StarLamp", stand, CFrame.new(at(0, 1.5) + Vector3.new(side * 11, 0, 0)) * facing(0, 1), { Paints = { Primary = violet }, Collide = false })
+	end
+
+	-- a short paver path from the arena square to the stand
+	pavers(stand, BIOMES[0], -60, -70.5, x, 10, true)
+
+	local host = promptHost(stand, at(3.5, 6))
+	local instance = prompt(host, "Buy", def.Name, 0, 14)
+	instance:SetAttribute("ProductKey", SHOP_PET.Product)
+	return stand
+end
+
 local function buildHub(parent: Instance)
 	local hub = folder("StormStation", parent)
 	local biome = BIOMES[0]
@@ -2415,6 +2518,7 @@ local function buildHub(parent: Instance)
 
 	kiosk(hub, stations.Upgrades, Vector3.zAxis, "Upgrade Workshop", "⬆️", SKY, "Upgrades")
 	kiosk(hub, stations.Shop, Vector3.zAxis, "Storm Shop", "🛒", SUNSET, "Shop")
+	shopPetStand(hub)
 	kiosk(hub, stations.Rewards, -Vector3.zAxis, "Daily Rewards", "🎁", CORAL, "Rewards")
 	weatherLab(hub, stations.WeatherLab, 1, nil)
 	sellPad(hub, MapLayout.HubSellPad, BOLT)

@@ -1186,9 +1186,9 @@ DESIGN = {
     "Sunbeam": {"mouth": "open"},
     # Lobby shop premium pet: tufted ears, golden eagle beak and talons, a snowy chest ruff, mint wings with
     # glowing aurora-violet flight feathers, an aurora plume tail and starlight freckles
-    "AuroraGryphon": {"mouth": None, "ears": "tuft", "beak": "eagle", "wings": "aurora", "wing_size": 1.08,
-                      "wing_glow": (178, 124, 255), "tail": "plume", "feet": "talon", "ruff": True,
-                      "star_freckles": "Shine"},
+    "AuroraGryphon": {"mouth": None, "ears": "tuft", "ear_inner": "Color_F8FAFF", "beak": "eagle", "wings": "aurora",
+                      "wing_size": 1.08, "wing_glow": (178, 124, 255), "tail": "lion", "feet": "talon", "ruff": True,
+                      "brow_star": True},
 }
 
 
@@ -1689,7 +1689,7 @@ def feat_ears(ctx):
         y_dir = vnorm((side * math.sin(tilt), math.cos(tilt), math.sin(lean)))
         xf = xf_chain([xf_rot_y(side * rad(st["turn"])), xf_frame(vmad(p, n, -0.06), y_dir, (0.0, 0.0, 1.0))])
         add(ctx, "Body", transform_mesh(outer, xf))
-        add(ctx, "Accent", transform_mesh(inner, xf))
+        add(ctx, ctx["design"].get("ear_inner", "Accent"), transform_mesh(inner, xf))
     ctx["head_top"] = max(ctx.get("head_top", 0.0), body_top(ctx) + 0.45 * scale)
 
 
@@ -1917,21 +1917,53 @@ def feather_wing(ctx, size):
     return merge_meshes(parts)
 
 
+def finger_wing_outline(ctx, feathers, notch, bottom, top):
+    # 2D wing outline (x out, y up, hinge at the origin) going CCW: from the hinge bottom along a row of
+    # round-tipped feathers [(angle_deg, length, half_width)] (bottom -> top) with notches between them,
+    # then a smooth convex leading edge from the top feather back to the hinge top
+    out = [bottom]
+    arc = lod(ctx, 7, 4)
+    for i in range(len(feathers)):
+        a, R, w = feathers[i]
+        ar = rad(a)
+        u = (math.cos(ar), math.sin(ar))
+        pv = (-math.sin(ar), math.cos(ar))
+        c = (u[0] * (R - w), u[1] * (R - w))
+        for j in range(arc + 1):
+            th = -PI / 2.0 + PI * j / float(arc)
+            out.append((c[0] + w * (math.cos(th) * u[0] + math.sin(th) * pv[0]),
+                        c[1] + w * (math.cos(th) * u[1] + math.sin(th) * pv[1])))
+        if i < len(feathers) - 1:
+            a2, R2, w2 = feathers[i + 1]
+            am = rad((a + a2) * 0.5)
+            rn = min(R, R2) * notch
+            out.append((rn * math.cos(am), rn * math.sin(am)))
+    a, R, w = feathers[-1]
+    ar = rad(a)
+    u = (math.cos(ar), math.sin(ar))
+    pv = (-math.sin(ar), math.cos(ar))
+    s0 = out[-1]
+    c1 = (s0[0] - u[0] * 0.32 + pv[0] * 0.12, s0[1] - u[1] * 0.32 + pv[1] * 0.12)
+    c2 = (top[0] + 0.06, top[1] + 0.26)
+    lead = lod(ctx, 9, 5)
+    for j in range(1, lead + 1):
+        q = bezier((s0[0], s0[1], 0.0), (c1[0], c1[1], 0.0), (c2[0], c2[1], 0.0), (top[0], top[1], 0.0), j / float(lead))
+        out.append((q[0], q[1]))
+    return out
+
+
 def aurora_wing(ctx, size):
-    # right wing (+X): a fan of tintable feathers in front, longer glowing flight feathers peeking out
-    # behind them (the aurora edge) and two soft coverts over the hinge; returns (front, glow)
-    front = []
-    glow = []
-    fan = [(66.0, 1.0), (44.0, 1.08), (22.0, 1.02), (0.0, 0.88), (-21.0, 0.7)]
-    for i, (ang, L) in enumerate(fan):
-        f = leaf(L * 0.78 * size, 0.25 * size, 0.07 * size, lod(ctx, 6, 5), lod(ctx, 6, 4), 0.6, 0.55, 0.2)
-        front.append(xform(f, [xf_rot_z(rad(ang)), xf_translate(0.0, 0.0, 0.018 * i * size)]))
-        g = leaf(L * 1.1 * size, 0.19 * size, 0.05 * size, lod(ctx, 5, 4), lod(ctx, 6, 4), 0.5, 0.6, 0.24)
-        glow.append(xform(g, [xf_rot_z(rad(ang - 4.0)), xf_translate(0.0, 0.0, (0.018 * i + 0.055) * size)]))
-    for (ang, L, W, z) in ((34.0, 0.5, 0.3, -0.05), (6.0, 0.4, 0.26, -0.07)):
-        c = leaf(L * size, W * size, 0.09 * size, lod(ctx, 6, 5), lod(ctx, 5, 4), 0.55, 0.5, 0.1)
-        front.append(xform(c, [xf_rot_z(rad(ang)), xf_translate(0.0, 0.02 * size, z * size)]))
-    return (merge_meshes(front), merge_meshes(glow))
+    # right wing (+X): a smooth tintable wing of five round-tipped feathers fanning out from the hinge, and a
+    # slightly larger glowing "aurora" wing behind it, turned a little so its violet feather tips peek out
+    # between and beyond the front ones; returns (front, glow)
+    feathers = [(-20.0, 0.62, 0.1), (-1.0, 0.78, 0.11), (18.0, 0.9, 0.12), (37.0, 0.97, 0.125), (56.0, 0.95, 0.13)]
+    front = finger_wing_outline(ctx, feathers, 0.78, (0.03, -0.12), (0.0, 0.18))
+    front = extrude([(x * size, y * size) for (x, y) in front], 0.08 * size, 0.03 * size, 1)
+    feathers = [(-20.0, 0.7, 0.095), (-1.0, 0.88, 0.1), (18.0, 1.0, 0.11), (37.0, 1.07, 0.115), (56.0, 1.04, 0.12)]
+    glow = finger_wing_outline(ctx, feathers, 0.8, (0.03, -0.14), (0.0, 0.2))
+    glow = extrude([(x * size, y * size) for (x, y) in glow], 0.05 * size, 0.0, 1)
+    glow = xform(glow, [xf_rot_z(rad(-9.0)), xf_translate(0.0, 0.0, 0.05 * size)])
+    return (front, glow)
 
 
 def bat_wing(ctx, size):
@@ -2063,14 +2095,20 @@ def feat_tail(ctx):
         tdir = vnorm(vsub(end, prev))
         accent_parts.append(transform_mesh(xform(spade, [xf_rot_z(PI), xf_translate(0.0, 0.16, 0.0)]),
                                            xf_frame(end, tdir, (1.0, 0.0, 0.0))))
-    elif style == "plume":
-        # aurora plume: long feathers sweeping back and curling up, a short tuft at the root
-        for (ang, L, W, lift) in ((-30.0, 0.72, 0.16, -30.0), (-11.0, 0.92, 0.18, -40.0), (11.0, 0.92, 0.18, -40.0),
-                                  (30.0, 0.72, 0.16, -30.0), (0.0, 1.08, 0.2, -52.0)):
-            f = leaf(L, W, 0.055, lod(ctx, 6, 4), lod(ctx, 7, 5), 0.6, 0.5, 0.42)
-            f = xform(f, [xf_rot_y(-PI / 2.0), xf_rot_x(rad(lift)), xf_rot_y(rad(ang))])
-            accent_parts.append(f)
-        accent_parts.append(ellipsoid(0.17, 0.15, 0.2, lod(ctx, 4, 3)))
+    elif style == "lion":
+        # gryphon lion tail: a slim S-curve sweeping back and up, ending in a tuft of rounded feathers
+        pts = [(0.0, 0.0, 0.0), (0.0, -0.1, 0.36), (0.0, 0.0, 0.68), (0.0, 0.3, 0.84), (0.0, 0.56, 0.74)]
+
+        def rf(t):
+            return 0.085 * (1.0 - 0.35 * t)
+        body_parts.append(sweep(pts, lod(ctx, 12, 7), rf, lod(ctx, 8, 6), (1.0, 0.0, 0.0), "round", "round", 0.0))
+        tip = pts[-1]
+        tdir = vnorm(vsub(tip, pts[-2]))
+        # soft teardrop tuft (frame +Y = along the tail): a round base, two side puffs and a curled tip
+        puffs = [((0.0, 0.0, 0.0), 0.14), ((0.07, 0.11, 0.02), 0.1), ((-0.07, 0.11, -0.02), 0.1), ((0.0, 0.2, 0.0), 0.085),
+                 ((0.0, 0.29, -0.03), 0.05)]
+        tuft = radial_mesh(cloud_surface(puffs, 26.0), lod(ctx, 6, 4))
+        accent_parts.append(transform_mesh(tuft, xf_frame(vmad(tip, tdir, 0.02), tdir, (0.0, 0.0, -1.0))))
     elif style == "bird":
         for (ang, L) in ((-24.0, 0.75), (0.0, 0.88), (24.0, 0.75)):
             f = leaf(L, 0.17, 0.05, lod(ctx, 6, 4), lod(ctx, 7, 5), 0.6, 0.5, 0.25)
@@ -2383,6 +2421,11 @@ def emblem(ctx, poly, depth, pitch, role, scale=1.0, rot=0.0):
     add(ctx, role, transform_mesh(xform(m, [xf_rot_z(rot)]), xf))
 
 
+def detail_brow_star(ctx):
+    # small golden four-point star on the forehead (premium touch for the lobby shop pet)
+    emblem(ctx, star_poly(4, 0.13, 0.045), 0.05, 37.0, fixed_role(GOLD), 1.0, 0.0)
+
+
 def detail_star_mark(ctx):
     emblem(ctx, star_poly(5, 0.15, 0.065), 0.06, 36.0, "Accent", 1.0, rad(-8.0))
 
@@ -2533,7 +2576,7 @@ DETAILS = [
     ("star_mark", detail_star_mark), ("moon_mark", detail_moon_mark), ("freckles", detail_freckles),
     ("star_freckles", detail_star_freckles), ("belly_accent", detail_belly_accent), ("back_stripe", detail_back_stripe),
     ("arms", detail_arms), ("shards", detail_shards), ("bolt_cheeks", detail_bolt_cheeks), ("ripples", detail_ripples),
-    ("ruff", detail_ruff),
+    ("ruff", detail_ruff), ("brow_star", detail_brow_star),
 ]
 
 

@@ -571,10 +571,10 @@ function handlers.Upgrade(upgradeId: string, level: number)
 end
 
 function handlers.ZoneUnlocked(zoneId: number)
-	local zone = Zones[zoneId]
 	Registry.SoundController.Play("Success", 0.9)
 	EffectsController.Confetti(90)
-	Registry.InterfaceController.BigText("ZONE UNLOCKED!", zone.Color, zone.Icon .. " " .. zone.Name, 2.8)
+	-- The zone's title card: "ZONE n UNLOCKED!" over its emblem and name (UI/Overlays/ZoneTitle)
+	require(script.Parent.Parent.UI.Overlays.ZoneTitle).Show(zoneId, "Unlocked")
 end
 
 -- Climate Shift. `look` is the gear look this shift unlocked (GameConfig.Rebirth.Cosmetics entry)

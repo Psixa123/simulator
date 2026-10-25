@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(Shared.Config.GameConfig)
 local Monetization = require(Shared.Config.Monetization)
+local Pets = require(Shared.Config.Pets)
 local Formulas = require(Shared.Formulas)
 local Format = require(Shared.Util.Format)
 local Remotes = require(Shared.Remotes)
@@ -47,6 +48,31 @@ local function grantPass(player: Player, passKey: string, announce: boolean)
 	end
 end
 
+-- A bought pet goes through the same PetService path as hatches and rewards (saved with the data, added to
+-- the Index, auto-equipped into a free slot, replicated). It is forced past MaxStorage: a paid pet is never
+-- lost; a full storage only blocks hatching until the player deletes some pets.
+local function grantPet(player: Player, data, product)
+	local pet = Pets.Pets[product.PetId]
+	if not pet then
+		error("Unknown pet " .. tostring(product.PetId))
+	end
+	local overflow = #data.Pets >= GameConfig.Pets.MaxStorage
+	local entry = Registry.PetService.GivePet(player, product.PetId, false, true)
+	if not entry then
+		error("Could not give " .. product.PetId)
+	end
+	Net.Effect(player, "PetReveal", product.PetId, false)
+	Net.Notify(player, string.format("🐾 The %s is yours! Thanks for your support!", pet.Name), "Success")
+	if overflow then
+		Net.Notify(
+			player,
+			"🎒 Your pet storage is over the limit, but your new pet is safe! Delete some pets to keep hatching.",
+			"Warning"
+		)
+	end
+	Net.NotifyAll(string.format("✨ %s got the %s from the lobby shop!", player.DisplayName, pet.Name), "Reward")
+end
+
 local function grantProduct(player: Player, productKey: string)
 	local data = Registry.DataService.Get(player)
 	local product = Monetization.Products[productKey]
@@ -62,6 +88,8 @@ local function grantProduct(player: Player, productKey: string)
 		Registry.BoostService.Add(player, product.Boost, product.Duration)
 	elseif product.Kind == "MegaStorm" then
 		Registry.MegaStormService.Summon(player)
+	elseif product.Kind == "Pet" then
+		grantPet(player, data, product)
 	end
 	Net.Effect(player, "Purchase", product.Name)
 end

@@ -248,8 +248,11 @@ function WorldController.Start()
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
 		local eggId = prompt:GetAttribute("EggId")
 		local panel = prompt:GetAttribute("Panel")
+		local productKey = prompt:GetAttribute("ProductKey") -- lobby shop stands (e.g. the Aurora Gryphon)
 		if eggId then
 			Registry.InterfaceController.OpenPanel("Egg", eggId)
+		elseif productKey then
+			Registry.MonetizationController.PromptProduct(productKey)
 		elseif panel then
 			Registry.InterfaceController.OpenPanel(panel)
 		end

@@ -189,6 +189,21 @@ Monetization.Products = {
 		Kind = "MegaStorm",
 		Description = "Summon a Mega Storm for the whole server! It arrives in 20 seconds, or right after any storm that is already on its way.",
 	},
+	-- Lobby shop pet (the display stand in the hub and the Shop's featured card). Every purchase gives one
+	-- Aurora Gryphon (Pets.Pets.AuroraGryphon, +600%); it is granted even when pet storage is full.
+	-- Id = 0 until the developer product is created: Creator Dashboard -> Monetization -> Developer Products
+	-- -> "Aurora Gryphon", R$2,000 -> paste its id here. Studio simulates the purchase while it is 0.
+	AuroraGryphon = {
+		Id = 0,
+		Order = 0,
+		Category = "Featured",
+		Name = "Aurora Gryphon",
+		Icon = "Pets", -- Icons.luau key (3D paw); Icons.Emoji("Pets") = "🐾"
+		Price = 2000,
+		Kind = "Pet",
+		PetId = "AuroraGryphon",
+		Description = "An exclusive pet with glowing aurora wings: +600% energy. Every purchase adds one more to your team.",
+	},
 }
 
 -- Fill in keys

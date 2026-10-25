@@ -121,3 +121,50 @@ python3 tools/world/build_world_pack.py --check  # the world prop pack is unaffe
 before the images are uploaded. Upload `assets/ui/icons3d/<Key>.png` to Roblox as images (Creator Hub or
 Open Cloud) and put each asset id in its key's `Id`. `tools/preview_ui.py` then draws the matching repo
 picture for that id.
+
+## Zone emblems
+
+One chunky medallion per region of `src/shared/Config/Zones.luau` (the hub and the six zones), keyed
+`Zone_<Zone Key>`: a thick gold coin rim around an enamel face in the biome palette, with a bold raised
+symbol of the biome on it. They are made with the same kit, look and pipeline as the icons above and are
+shown on the zone title card (`src/client/UI/Overlays/ZoneTitle.luau`).
+
+![zone emblems](../../assets/ui/icons3d/_zones.png)
+
+| Key | Region | Symbol |
+| --- | --- | --- |
+| Zone_Hub | Storm Station | domed lab with a porthole, on a cloud |
+| Zone_Meadows | Sunny Plains | sun over green hills and a clover |
+| Zone_Thunder | Thunder Valley | thundercloud with a bolt and raindrops |
+| Zone_Dunes | Dune Sea | dune bands, sun and a cactus |
+| Zone_Frost | Frostpeak | snowy peak with a snowflake |
+| Zone_Volcano | Ashfall Volcano | volcano with lava and an ash cloud |
+| Zone_Sky | Upper Atmosphere | ringed planet with stars |
+
+| Path | What |
+| --- | --- |
+| `tools/icons/sketchup_zone_emblems.py` | the SketchUp models: 4 `# ===== chunk` blocks (chunk 1 = the emblem helpers in `session_state["ZE"]`), one group `Prop_Zone_<Key>` per emblem; built on the icon helpers (chunks 1–2 of `sketchup_icons.py`) |
+| `assets/source/world/zone_emblems.json` | the extracted SketchUp polygons (`storm-icons-source/1`) |
+| `assets/source/world/StormZoneEmblems.skp` | the SketchUp model |
+| `assets/ui/icons3d/Zone_<Key>.png` | the finished 512 px emblems; `_zones.png` is their contact sheet |
+
+Every command above takes `--set zones` to work on the emblems instead of the icons:
+
+```sh
+python3 tools/icons/import_icons.py --set zones offline         # dry run -> build/icons/zones/offline/icons.json
+python3 tools/icons/render_icons.py --set zones --source build/icons/zones/offline/icons.json
+python3 tools/icons/render_icons.py --set zones                 # the committed source -> Zone_<Key>.png + _zones.png
+```
+
+SketchUp build order (`build_model`): `tools/world/sketchup/lib.py` (4 chunks, the first with `clean: true`),
+chunks 1–2 of `tools/icons/sketchup_icons.py`, the 4 chunks of `sketchup_zone_emblems.py`, then
+`tools/world/sketchup/extract.py` in three batches (`ONLY = ["Zone_Hub", "Zone_Meadows"]`,
+`["Zone_Thunder", "Zone_Dunes", "Zone_Frost"]`, `["Zone_Volcano", "Zone_Sky"]`), each saved to a file and
+imported with `python3 tools/icons/import_icons.py --set zones import <file>` (`--replace` on the first);
+then `save_model` as `StormZoneEmblems.skp`. In the last build the extraction was identical to the offline
+dry run.
+
+In the game: `Icons.luau` has a `Zone_<Key>` line per emblem (uploaded with
+`python3 tools/roblox/upload_icons.py --only Zone_Hub,Zone_Meadows,Zone_Thunder,Zone_Dunes,Zone_Frost,Zone_Volcano,Zone_Sky`),
+and a new zone needs a `Zone_<Key>` model, an entry in `ZONE_ICONS` in `render_icons.py` and a line in
+`Icons.luau` (until then the title card shows the zone's emoji on a round badge).
