@@ -55,10 +55,7 @@ function ZoneService.TryUnlock(player: Player, zoneId: number)
 	data.Volts -= zone.Cost
 	data.Zone = zoneId
 	Registry.DataService.Replicate(player, "Volts", "Zone")
-	Net.Effect(player, "ZoneUnlocked", zoneId)
-	if zoneId >= 3 then
-		Net.NotifyAll(string.format("🎉 %s unlocked %s %s!", player.DisplayName, zone.Icon, zone.Name), "Success")
-	end
+	Net.Effect(player, "ZoneUnlocked", zoneId) -- only the player who unlocked it sees the celebration
 	return { Ok = true }
 end
 
