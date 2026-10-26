@@ -166,8 +166,9 @@ function PetService.Hatch(player: Player, eggId: string, count: number?, free: b
 		local entry, isNew = PetService.AddPet(player, petId, false)
 		table.insert(results, { Id = petId, Uid = entry and entry.Uid, New = isNew })
 
+		-- Only Legendary and Exclusive hatches are announced to the whole server
 		local rarity = Pets.RarityOf(petId)
-		if rarity.Order >= 5 then
+		if rarity.Name == "Legendary" or rarity.Name == "Exclusive" then
 			Net.NotifyAll(
 				string.format("🌟 %s hatched a %s %s!", player.DisplayName, rarity.Name, Pets.Pets[petId].Name),
 				"Reward"

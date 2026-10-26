@@ -61,13 +61,11 @@ function RebirthService.Rebirth(player: Player)
 			end
 		end
 	end)
+	-- Only the player hears about it (no server-wide announcement)
 	if unlocked then
-		Net.NotifyAll(
-			string.format("🌀 %s reached Climate Shift %d and unlocked the %s %s look!", player.DisplayName, data.Rebirths, unlocked.Icon, unlocked.Name),
-			"Success"
-		)
+		Net.Notify(player, string.format("🌀 Climate Shift %d! You unlocked the %s %s look!", data.Rebirths, unlocked.Icon, unlocked.Name), "Success")
 	else
-		Net.NotifyAll(string.format("🌀 %s just reached Climate Shift %d!", player.DisplayName, data.Rebirths), "Success")
+		Net.Notify(player, string.format("🌀 You reached Climate Shift %d!", data.Rebirths), "Success")
 	end
 	return { Ok = true, Rebirths = data.Rebirths }
 end
