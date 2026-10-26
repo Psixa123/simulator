@@ -1,0 +1,374 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  Roblox Ads Manager image creatives (16:9, 1920 x 1080), one per hook for A/B testing:
+  ads.html?id=catch | hatch | mega | islands | tiers | legendary | scene | title
+  tools/render_art.py renders them all with `python3 tools/render_art.py ads` into assets/ads/ad_0N_<id>.png.
+
+  They are seen small in the Home feed (about 300 - 400 px wide), so each has one focal subject, at most about
+  four big words and its content inside 6 % margins (115 px left/right, 65 px top/bottom). Everything shown is
+  real game content rendered by tools/branding/capture.py (assets/source/branding): the map, weather cells, eggs,
+  pets, and a blocky player with the Storm Vacuum and Storm Tank built by the game's CharacterGear.
+-->
+<link rel="stylesheet" href="branding/brand.css">
+<style>
+  #stage { width: 1920px; height: 1080px; }
+  .fill {
+    position: absolute;
+    inset: 0;
+  }
+  /* a soft round light (set left / top / width / height and --color) */
+  .halo {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--color, rgba(255, 255, 255, 0.9)) 0%, transparent 68%);
+    transform: translate(-50%, -50%);
+  }
+</style>
+<script src="branding/brand.js"></script>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+const stage = document.getElementById("stage");
+const ART = "branding/";
+const INK = Brand.INK;
+const BOLT_GLOW = "rgba(255, 236, 120, 0.95)";
+
+// ------------------------------------------------------------------------------------------- helpers
+
+// A full-size layer: a map render (with a CSS filter), a gradient, or the light rays
+function backdrop(src, filter = "") {
+  const image = document.createElement("img");
+  image.className = "backdrop";
+  image.decoding = "sync";
+  image.src = ART + src;
+  if (filter) image.style.filter = filter;
+  stage.appendChild(image);
+  return image;
+}
+
+function layer(css) {
+  const div = document.createElement("div");
+  div.className = "fill";
+  div.style.cssText += css;
+  stage.appendChild(div);
+  return div;
+}
+
+function rays(x, y, strength = 0.18, reach = "70%") {
+  const div = document.createElement("div");
+  div.className = "sunburst";
+  div.style.cssText = `--x: ${x}; --y: ${y}; --ray: ${strength}; --reach: ${reach}`;
+  stage.appendChild(div);
+}
+
+function halo(x, y, size, color) {
+  const div = document.createElement("div");
+  div.className = "halo";
+  div.style.cssText = `left: ${x}px; top: ${y}px; width: ${size}px; height: ${size * 0.8}px; --color: ${color}`;
+  stage.appendChild(div);
+}
+
+function pet(name, fit, at, opts = {}) {
+  return Brand.place(stage, Brand.sprite(ART + `pets/${name}.png`, { fit }), at, opts);
+}
+
+function studio(name, width, at, opts = {}) {
+  return Brand.place(stage, Brand.sprite(ART + `studio/${name}.png`, { width }), at, opts);
+}
+
+function sparkles(list) {
+  for (const [x, y, size] of list) {
+    Brand.place(stage, Brand.sparkle(size), [x, y]);
+  }
+}
+
+// The vacuum's suction (EffectsController's VacuumBeam): from the nozzle (narrow) to the weather cell (wide),
+// light blue fading into the cell's accent colour, with swirling streaks and sparkles drawn into the nozzle
+function suction(from, to, startWidth, endWidth, accent) {
+  const [x1, y1] = from;
+  const [x2, y2] = to;
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+  const half = (t) => (startWidth + (endWidth - startWidth) * t) / 2;
+  let streaks = "";
+  for (let i = 0; i < 3; i++) {
+    let d = "";
+    for (let t = 0; t <= 1.0001; t += 0.02) {
+      const y = Math.sin(t * Math.PI * 2.6 + i * 2.1) * half(t) * 0.75;
+      d += `${t === 0 ? "M" : "L"} ${(t * length).toFixed(1)} ${y.toFixed(1)} `;
+    }
+    streaks += `<path d="${d}" fill="none" stroke="#ffffff" stroke-width="${9 - i * 2}" stroke-linecap="round" opacity="${0.8 - i * 0.15}"/>`;
+  }
+  let specks = "";
+  for (let i = 0; i < 14; i++) {
+    const t = (i * 0.37) % 1;
+    const y = Math.sin(i * 2.7) * half(t) * 0.8;
+    const r = 5 + 9 * t;
+    specks += `<circle cx="${t * length}" cy="${y}" r="${r}" fill="#ffffff" opacity="0.9"/>`;
+  }
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+    <defs>
+      <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#eafcff" stop-opacity="0.95"/>
+        <stop offset="0.5" stop-color="#aaebff" stop-opacity="0.75"/>
+        <stop offset="1" stop-color="${accent}" stop-opacity="0.35"/>
+      </linearGradient>
+      <filter id="soft" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="16"/></filter>
+    </defs>
+    <g transform="translate(${x1} ${y1}) rotate(${angle})">
+      <path d="M 0 ${-startWidth / 2} L ${length} ${-endWidth / 2} L ${length} ${endWidth / 2} L 0 ${startWidth / 2} Z"
+        fill="#7fe6ff" opacity="0.7" filter="url(#soft)"/>
+      <path d="M 0 ${-startWidth / 2} L ${length} ${-endWidth / 2} L ${length} ${endWidth / 2} L 0 ${startWidth / 2} Z" fill="url(#beam)"/>
+      ${streaks}${specks}
+    </g>
+  </svg>`;
+  const svg = wrapper.firstChild;
+  svg.classList.add("layer");
+  svg.style.left = "0px";
+  svg.style.top = "0px";
+  stage.appendChild(svg);
+  return svg;
+}
+
+// One half of an egg render broken along the hatch animation's crack belt (Hatch.luau CRACKS, stage 3: egg
+// units, x = half widths, y = half heights, down is +), with an Ink edge along the break. Returns a <canvas>.
+const BELT = [[-1.2, 0.02], [-0.86, 0.02], [-0.66, -0.09], [-0.46, 0.04], [-0.28, -0.08], [-0.1, 0.04], [0.06, -0.09],
+  [0.24, 0.03], [0.44, -0.09], [0.64, 0.03], [0.86, -0.05], [1.2, -0.05]];
+
+async function eggHalf(src, part, width) {
+  const image = new Image();
+  image.src = src;
+  await image.decode();
+  const w = image.naturalWidth;
+  const h = image.naturalHeight;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${width * h / w}px`;
+  canvas.className = "sprite";
+  const context = canvas.getContext("2d");
+  // the sticker render: the egg fills it apart from a ~4 % border (outline + margin)
+  const point = ([x, y]) => [w / 2 + x * w * 0.46, h / 2 + y * h * 0.46];
+  context.beginPath();
+  BELT.forEach((p, index) => (index ? context.lineTo(...point(p)) : context.moveTo(...point(p))));
+  const edgeY = part === "top" ? 0 : h;
+  context.lineTo(w, edgeY);
+  context.lineTo(0, edgeY);
+  context.closePath();
+  context.save();
+  context.clip();
+  context.drawImage(image, 0, 0);
+  context.restore();
+  // the Ink edge of the break, only where there is shell
+  context.globalCompositeOperation = "source-atop";
+  context.beginPath();
+  BELT.forEach((p, index) => (index ? context.lineTo(...point(p)) : context.moveTo(...point(p))));
+  context.strokeStyle = INK;
+  context.lineWidth = w * 0.035;
+  context.lineJoin = "round";
+  context.stroke();
+  return canvas;
+}
+
+// Arrow for the crafting steps, with a "5x" badge
+function craftArrow(label) {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="190" height="200" viewBox="0 0 190 200" overflow="visible">
+    <path d="M 20 70 L 105 70 L 105 30 L 175 100 L 105 170 L 105 130 L 20 130 Z" fill="#ffffff" stroke="${INK}"
+      stroke-width="12" stroke-linejoin="round"/>
+    <text x="80" y="118" text-anchor="middle" font-family="Luckiest Guy" font-size="46" fill="${INK}">${label}</text>
+  </svg>`;
+  return wrapper.firstChild;
+}
+
+// The Mega Storm banner's health bar (HudController), drawn big: the storm's name over a glass track
+function healthBar(name, fraction, width) {
+  const height = 70;
+  const outline = 8;
+  const fill = (width - 18) * fraction;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${width + outline * 2}" height="${height + 100}" overflow="visible">
+    <defs>
+      <linearGradient id="hp" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffb3f0"/><stop offset="0.5" stop-color="#ff5ad2"/><stop offset="1" stop-color="#c23ad8"/>
+      </linearGradient>
+    </defs>
+    <text x="${width / 2 + outline}" y="62" text-anchor="middle" font-family="Luckiest Guy" font-size="58" letter-spacing="2"
+      fill="#ffffff" stroke="${INK}" stroke-width="13" stroke-linejoin="round" paint-order="stroke">${name}</text>
+    <g transform="translate(${outline} 90)">
+      <rect width="${width}" height="${height}" rx="${height / 2}" fill="#d5e5fb" stroke="${INK}" stroke-width="${outline}"/>
+      <rect x="9" y="9" width="${fill}" height="${height - 18}" rx="${(height - 18) / 2}" fill="url(#hp)"/>
+      <rect x="24" y="15" width="${fill - 30}" height="13" rx="6.5" fill="#ffffff" opacity="0.55"/>
+    </g>
+  </svg>`;
+  return wrapper.firstChild;
+}
+
+// The vacuum scene of ads 1 and 7: the player (from behind) aims the Storm Vacuum at a weather cell. `nozzle`
+// is where the vacuum's mouth lands for a player sprite of `width` at `at` (anchor: bottom-left).
+function vacuumScene({ player, cloud, cloudWidth, cloudAt, accent, beamWidths }) {
+  const sprite = Brand.sprite(ART + "studio/Gear_Player.png", { width: player.width });
+  Brand.place(stage, sprite, player.at, { anchor: [0, 1], z: 3 });
+  const scale = player.width / 648; // Gear_Player.png is 648 x 770; the nozzle mouth is at about (600, 64)
+  const nozzle = [player.at[0] + 600 * scale, player.at[1] - (770 - 64) * scale];
+  halo(cloudAt[0], cloudAt[1], cloudWidth * 1.4, "rgba(170, 235, 255, 0.55)");
+  const cell = studio(cloud, cloudWidth, cloudAt, { z: 2 });
+  const beam = suction(nozzle, [cloudAt[0] - cloudWidth * 0.08, cloudAt[1] + cloudWidth * 0.08], beamWidths[0], beamWidths[1], accent);
+  beam.style.zIndex = 4;
+  return { nozzle, cell };
+}
+
+// ------------------------------------------------------------------------------------------- the ads
+
+const ADS = {
+  // 1. The core action: a player vacuuming a storm cloud out of Thunder Valley's sky
+  async catch() {
+    backdrop("map/thunder_field.jpg", "blur(3px) saturate(1.3) brightness(1.05)");
+    layer("background: linear-gradient(180deg, rgba(40, 24, 120, 0.55) 0%, rgba(40, 24, 120, 0) 45%)");
+    rays("66%", "42%", 0.14, "65%");
+    layer("background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(24, 20, 80, 0.55) 100%)");
+    Brand.place(stage, Brand.bolt(230, { glow: BOLT_GLOW }), [1770, 250], { rotate: 16 });
+    Brand.place(stage, Brand.bolt(170, { glow: BOLT_GLOW }), [1080, 210], { rotate: -14 });
+    vacuumScene({
+      player: { width: 600, at: [150, 1135] },
+      cloud: "Weather_StormCloud", cloudWidth: 700, cloudAt: [1390, 430],
+      accent: "#ffe650", beamWidths: [70, 330],
+    });
+    pet("ThunderPup", 300, [1310, 925], { rotate: 4, z: 5 });
+    pet("Zappy", 230, [1640, 905], { rotate: 6, z: 5 });
+    sparkles([[1000, 520, 52], [1760, 640, 44], [1180, 760, 40]]);
+    Brand.place(stage, Brand.title("CATCH THE", { size: 170, fill: "cloud" }), [130, 70], { anchor: [0, 0], z: 6 });
+    Brand.place(stage, Brand.title("STORM!", { size: 230, fill: "bolt" }), [130, 255], { anchor: [0, 0], z: 6 });
+  },
+
+  // 2. An egg breaking open like the hatch animation, a pet popping out (the Plains Cloud Egg and its pets)
+  async hatch() {
+    layer("background: radial-gradient(circle at 50% 62%, #fffbe8 0%, #ffe9a0 14%, #8fe0ff 40%, #3a9df5 75%, #2a6fdc 100%)");
+    rays("50%", "62%", 0.3, "80%");
+    halo(960, 680, 1100, "rgba(255, 255, 230, 0.95)");
+    const egg = ART + "studio/Egg_MeadowEgg.png";
+    const bottom = await eggHalf(egg, "bottom", 470);
+    Brand.place(stage, bottom, [960, 1110], { anchor: [0.5, 1], z: 2 });
+    const top = await eggHalf(egg, "top", 470);
+    Brand.place(stage, top, [1450, 610], { rotate: 32, z: 2 });
+    // the shell's top flew off to the right; the pets burst out of the bottom half
+    pet("Puffling", 260, [560, 640], { rotate: -14, z: 3 });
+    pet("Sunny", 220, [1420, 920], { rotate: 10, z: 3 });
+    pet("Prism", 480, [960, 700], { z: 4 });
+    sparkles([[700, 420, 60], [1240, 400, 50], [420, 860, 46], [1560, 760, 40], [960, 340, 44]]);
+    Brand.place(stage, Brand.title("HATCH CUTE PETS!", { size: 200, maxWidth: 1640, fill: "bolt" }), [960, 175], { z: 6 });
+  },
+
+  // 3. The Mega Storm boss (Cosmic Maelstrom) in the arena, its health bar and the pet it drops
+  async mega() {
+    const map = backdrop("map/arena.jpg", "saturate(1.6) contrast(1.2) brightness(0.95)");
+    map.style.transform = "scale(1.25)";
+    map.style.transformOrigin = "50% 62%";
+    layer("background: linear-gradient(180deg, rgba(38, 18, 104, 0.92) 0%, rgba(84, 40, 170, 0.6) 30%, rgba(120, 70, 220, 0) 60%)");
+    layer("background: radial-gradient(ellipse 620px 560px at 50% 66%, transparent 45%, rgba(30, 14, 80, 0.55) 100%)");
+    layer("background: radial-gradient(ellipse 520px 480px at 50% 64%, rgba(255, 80, 230, 0.75), rgba(160, 60, 255, 0.35) 50%, transparent 72%); mix-blend-mode: overlay");
+    Brand.place(stage, Brand.bolt(280, { glow: BOLT_GLOW }), [470, 560], { rotate: 18 });
+    Brand.place(stage, Brand.bolt(300, { glow: BOLT_GLOW }), [1450, 560], { rotate: -16 });
+    pet("MaelstromSpirit_three4", 360, [1560, 880], { rotate: 6, z: 3 });
+    pet("VoltWyrm_three4", 330, [360, 880], { rotate: -6, z: 3 });
+    Brand.place(stage, healthBar("COSMIC MAELSTROM", 0.55, 640), [960, 440], { z: 4 });
+    Brand.place(stage, Brand.ribbon("BEAT THE", { size: 80, colors: "storm", padX: 60 }), [960, 100], { rotate: -2, z: 6 });
+    Brand.place(stage, Brand.title("MEGA STORM!", { size: 210, maxWidth: 1600, fill: "bolt" }), [960, 265], { z: 6 });
+  },
+
+  // 4. The six zone islands in a row over the cloud sea, each with its zone emblem
+  async islands() {
+    backdrop("map/chain.jpg", "saturate(1.6) contrast(1.15) brightness(1.02)");
+    layer("background: linear-gradient(180deg, rgba(47, 134, 242, 0.85) 0%, rgba(92, 200, 255, 0.3) 32%, rgba(92, 200, 255, 0) 48%)");
+    layer("background: radial-gradient(ellipse at 50% 55%, transparent 60%, rgba(24, 40, 110, 0.45) 100%)");
+    // emblems in the shot's order, left to right: Upper Atmosphere ... Sunny Plains
+    const emblems = ["Sky", "Volcano", "Frost", "Dunes", "Thunder", "Meadows"];
+    emblems.forEach((key, index) => {
+      const x = 250 + index * 284;
+      const y = 520 + (index % 2) * 40 - Math.sin(index / 5 * Math.PI) * 30;
+      const image = Brand.sprite(`../ui/icons3d/Zone_${key}.png`, { width: 240 });
+      Brand.place(stage, image, [x, y], { rotate: (index - 2.5) * 3, z: 3 });
+    });
+    Brand.place(stage, Brand.title("EXPLORE 6", { size: 170, fill: "cloud" }), [960, 125], { z: 6 });
+    Brand.place(stage, Brand.title("SKY ISLANDS!", { size: 200, maxWidth: 1600, fill: "bolt" }), [960, 300], { z: 6 });
+  },
+
+  // 5. Crafting tiers: 5 Thunder Pups make a Golden one, 5 Golden make a Rainbow one
+  async tiers() {
+    layer("background: radial-gradient(circle at 50% 64%, #ffffff 0%, #d9ccff 18%, #a98bff 42%, #6b4be6 72%, #3a2aa8 100%)");
+    rays("50%", "64%", 0.2, "80%");
+    halo(330, 760, 520, "rgba(170, 220, 255, 0.8)");
+    halo(960, 730, 640, "rgba(255, 220, 90, 0.9)");
+    halo(1590, 700, 760, "rgba(255, 200, 255, 0.9)");
+    pet("ThunderPup", 300, [330, 760], { rotate: -4, z: 3 });
+    pet("ThunderPup_Golden", 380, [960, 735], { z: 3 });
+    const rainbow = await Brand.rainbowSprite(ART + "pets/ThunderPup_Rainbow.png", { fit: 450 });
+    Brand.place(stage, rainbow, [1590, 705], { rotate: 4, z: 3 });
+    Brand.place(stage, craftArrow("5x"), [640, 760], { z: 4 });
+    Brand.place(stage, craftArrow("5x"), [1265, 740], { z: 4 });
+    sparkles([[1780, 470, 56], [1400, 470, 44], [1120, 560, 46], [790, 560, 40], [1750, 930, 40]]);
+    Brand.place(stage, Brand.title("GOLDEN &", { size: 170, fill: "bolt" }), [960, 130], { z: 6 });
+    Brand.place(stage, Brand.title("RAINBOW PETS!", { size: 180, maxWidth: 1600, fill: "rainbow", horizontal: true }), [960, 305], { z: 6 });
+  },
+
+  // 6. The Legendary pets of the eggs (Pets.luau rarity Legendary, gold)
+  async legendary() {
+    layer("background: radial-gradient(circle at 50% 66%, #fff6c8 0%, #ffd25a 20%, #f29a2a 42%, #8a3fb8 72%, #3a1f78 100%)");
+    rays("50%", "66%", 0.26, "85%");
+    halo(960, 720, 900, "rgba(255, 245, 190, 0.95)");
+    pet("StormLord", 270, [590, 650], { rotate: -8, z: 2 });
+    pet("GalaxyGuardian", 270, [1330, 640], { rotate: 8, z: 2 });
+    pet("YetiKing", 330, [330, 850], { rotate: -6, z: 3 });
+    pet("InfernoDrake", 330, [1590, 850], { rotate: 6, z: 3 });
+    pet("BreezeKing", 500, [960, 800], { z: 4 });
+    sparkles([[700, 420, 60], [1230, 420, 56], [180, 600, 46], [1740, 600, 46], [960, 520, 44], [1180, 980, 40], [740, 980, 40]]);
+    Brand.place(stage, Brand.title("LEGENDARY", { size: 210, maxWidth: 1600, fill: "bolt" }), [960, 135], { z: 6 });
+    Brand.place(stage, Brand.title("PETS!", { size: 170, fill: "cloud" }), [960, 315], { z: 6 });
+  },
+
+  // 7. No text: the vacuum scene big, a purple Thunderhead, pets watching
+  async scene() {
+    backdrop("map/thunder_field.jpg", "blur(4px) saturate(1.35) brightness(1.08)");
+    layer("background: linear-gradient(180deg, rgba(60, 30, 150, 0.45) 0%, rgba(60, 30, 150, 0) 50%)");
+    rays("68%", "34%", 0.16, "70%");
+    layer("background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(24, 20, 80, 0.5) 100%)");
+    Brand.place(stage, Brand.bolt(250, { glow: BOLT_GLOW }), [1760, 200], { rotate: 18 });
+    Brand.place(stage, Brand.bolt(190, { glow: BOLT_GLOW }), [880, 170], { rotate: -16 });
+    vacuumScene({
+      player: { width: 720, at: [180, 1160] },
+      cloud: "Weather_Thunderhead", cloudWidth: 820, cloudAt: [1330, 380],
+      accent: "#b982ff", beamWidths: [80, 380],
+    });
+    pet("AuroraGryphon", 430, [1360, 900], { z: 5 });
+    pet("ThunderPup", 260, [1720, 930], { rotate: 6, z: 5 });
+    sparkles([[960, 520, 56], [1700, 640, 46], [1060, 820, 40], [640, 170, 40]]);
+  },
+
+  // 8. Bold and minimal: the name and the Aurora Gryphon on a clean bright sky
+  async title() {
+    layer("background: radial-gradient(circle at 50% 72%, #ffffff 0%, #c8f4ff 16%, #6fd2ff 40%, #2f8ff2 72%, #2361d0 100%)");
+    rays("50%", "72%", 0.24, "85%");
+    halo(960, 790, 900, "rgba(255, 255, 255, 0.95)");
+    pet("AuroraGryphon_front", 760, [960, 790], { z: 3 });
+    Brand.place(stage, Brand.title("STORM CATCHER", { size: 220, maxWidth: 1620, fill: "bolt" }), [960, 170], { z: 6 });
+    Brand.place(stage, Brand.ribbon("SIMULATOR", { size: 76, colors: "sky", padX: 70 }), [960, 345], { rotate: -2, z: 6 });
+  },
+};
+
+async function build() {
+  await Brand.ready();
+  const id = new URLSearchParams(location.search).get("id") || "catch";
+  await ADS[id]();
+  await Brand.imagesLoaded();
+}
+
+build();
+</script>
+</body>
+</html>
