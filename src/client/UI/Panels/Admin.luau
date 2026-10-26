@@ -520,7 +520,7 @@ function Admin.Build()
 	end })
 
 	local shiftsRow = row(me, nextOrder(), { Name = "Shifts", Icon = "ClimateShift", Color = SETS.Storm.Top, Title = "Climate Shifts" })
-	local shiftsBox = field({ Name = "Count", Placeholder = "0 - 1000", Size = UDim2.fromOffset(150, BUTTON_HEIGHT - 2), LayoutOrder = 1, Parent = shiftsRow.Controls })
+	local shiftsBox = field({ Name = "Count", Placeholder = "0 or more", Size = UDim2.fromOffset(150, BUTTON_HEIGHT - 2), LayoutOrder = 1, Parent = shiftsRow.Controls })
 	button({ Text = "Set", Color = "Storm", LayoutOrder = 2, Parent = shiftsRow.Controls, OnClick = function()
 		local count = readNumber(shiftsBox, "a number of Climate Shifts")
 		if count then

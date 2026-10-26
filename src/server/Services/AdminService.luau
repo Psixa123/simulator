@@ -52,7 +52,7 @@ local AdminService = {}
 
 local MAX_VOLTS = 1e30
 local MAX_ENERGY = 1e30
-local MAX_SHIFTS = 1000
+local MAX_SHIFTS = 1e9 -- Climate Shifts have no real limit; this only keeps the number sane
 local MAX_BOOST_MINUTES = 7 * 24 * 60
 local MAX_PETS_PER_COMMAND = 50
 local PET_LIMIT = GameConfig.Pets.MaxStorage + 90 -- admins can go over storage (to test it), up to here
