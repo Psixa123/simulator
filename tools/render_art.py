@@ -3,6 +3,7 @@
 Usage:  python tools/render_art.py                  (render everything)
         python tools/render_art.py icon             (only names containing "icon")
         python tools/render_art.py icon thumbnail   (the game icon and the three thumbnails)
+        python tools/render_art.py ads              (the Ads Manager image creatives, assets/ads)
 Sources live in assets/source (plain HTML + SVG), output goes to assets/. The game icon and thumbnails
 (icon.html, thumbnail1..3.html) lay out 3D renders of the real game content from assets/source/branding,
 which tools/branding/capture.py makes.
@@ -41,6 +42,9 @@ PRODUCTS = ["VoltsSmall", "VoltsMedium", "VoltsLarge", "VoltsHuge", "EnergyBoost
 # Transparent pieces the in-game Shop draws its cards with (badge.html RAW; uploaded by upload_store_icons.py)
 SHOP_ART = [("ShopRays", 1024), ("Robux", 128)]
 
+# Roblox Ads Manager image creatives (16:9), one per hook: ads.html?id=<key> -> assets/ads/ad_0N_<key>.png
+ADS = ["catch", "hatch", "mega", "islands", "tiers", "legendary", "scene", "title"]
+
 UI_ICONS = ["Pets", "Eggs", "Shop", "Upgrades", "Rewards", "Teleport", "ClimateShift", "Settings", "Index", "Volts", "Energy",
             "Power", "Range", "Speed", "Tank", "Luck", "Gift", "Daily", "Codes", "MegaStorm", "Radar", "Sell", "Close", "Lock",
             "Check", "Star", "Rainbow"]
@@ -57,6 +61,7 @@ JOBS += [(f"gamepasses/{name}.png", "store3d.html", f"?id={name}", 512, 512) for
 JOBS += [(f"products/{name}.png", "store3d.html", f"?id={name}", 512, 512) for name in PRODUCTS]
 JOBS += [(f"ui/{name}.png", "ui_icons.html", f"?id={name}", 256, 256) for name in UI_ICONS]
 JOBS += [(f"ui/shop/{name}.png", "badge.html", f"?id={name}&size={size}", size, size) for name, size in SHOP_ART]
+JOBS += [(f"ads/ad_{index:02d}_{key}.png", "ads.html", f"?id={key}", 1920, 1080) for index, key in enumerate(ADS, 1)]
 
 
 def find_browser():

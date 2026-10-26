@@ -114,9 +114,9 @@ function suction(from, to, startWidth, endWidth, accent) {
   wrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
     <defs>
       <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#eafcff" stop-opacity="0.95"/>
-        <stop offset="0.5" stop-color="#aaebff" stop-opacity="0.75"/>
-        <stop offset="1" stop-color="${accent}" stop-opacity="0.35"/>
+        <stop offset="0" stop-color="#f2fdff" stop-opacity="0.95"/>
+        <stop offset="0.6" stop-color="#aaebff" stop-opacity="0.8"/>
+        <stop offset="1" stop-color="${accent}" stop-opacity="0.6"/>
       </linearGradient>
       <filter id="soft" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="16"/></filter>
     </defs>
@@ -212,15 +212,18 @@ function healthBar(name, fraction, width) {
 
 // The vacuum scene of ads 1 and 7: the player (from behind) aims the Storm Vacuum at a weather cell. `nozzle`
 // is where the vacuum's mouth lands for a player sprite of `width` at `at` (anchor: bottom-left).
-function vacuumScene({ player, cloud, cloudWidth, cloudAt, accent, beamWidths }) {
+// The beam runs behind the cell into its body (the upper part of the sprite: the cells' bolts hang below).
+function vacuumScene({ player, cloud, cloudWidth, cloudAt, accent, beamWidths, brighten = 1 }) {
   const sprite = Brand.sprite(ART + "studio/Gear_Player.png", { width: player.width });
   Brand.place(stage, sprite, player.at, { anchor: [0, 1], z: 3 });
   const scale = player.width / 648; // Gear_Player.png is 648 x 770; the nozzle mouth is at about (600, 64)
   const nozzle = [player.at[0] + 600 * scale, player.at[1] - (770 - 64) * scale];
-  halo(cloudAt[0], cloudAt[1], cloudWidth * 1.4, "rgba(170, 235, 255, 0.55)");
+  halo(cloudAt[0], cloudAt[1] - cloudWidth * 0.1, cloudWidth * 1.5, "rgba(190, 240, 255, 0.6)");
   const cell = studio(cloud, cloudWidth, cloudAt, { z: 2 });
-  const beam = suction(nozzle, [cloudAt[0] - cloudWidth * 0.08, cloudAt[1] + cloudWidth * 0.08], beamWidths[0], beamWidths[1], accent);
-  beam.style.zIndex = 4;
+  if (brighten !== 1) cell.style.filter = `brightness(${brighten}) ${getComputedStyle(cell).filter}`;
+  const body = [cloudAt[0] - cloudWidth * 0.05, cloudAt[1] - cloudWidth * 0.17];
+  const beam = suction(nozzle, body, beamWidths[0], beamWidths[1], accent);
+  beam.style.zIndex = 1;
   return { nozzle, cell };
 }
 
@@ -237,8 +240,8 @@ const ADS = {
     Brand.place(stage, Brand.bolt(170, { glow: BOLT_GLOW }), [1080, 210], { rotate: -14 });
     vacuumScene({
       player: { width: 600, at: [150, 1135] },
-      cloud: "Weather_StormCloud", cloudWidth: 700, cloudAt: [1390, 430],
-      accent: "#ffe650", beamWidths: [70, 330],
+      cloud: "Weather_StormCloud", cloudWidth: 700, cloudAt: [1390, 450],
+      accent: "#ffe650", beamWidths: [70, 330], brighten: 1.15,
     });
     pet("ThunderPup", 300, [1310, 925], { rotate: 4, z: 5 });
     pet("Zappy", 230, [1640, 905], { rotate: 6, z: 5 });
@@ -253,22 +256,22 @@ const ADS = {
     rays("50%", "62%", 0.3, "80%");
     halo(960, 680, 1100, "rgba(255, 255, 230, 0.95)");
     const egg = ART + "studio/Egg_MeadowEgg.png";
-    const bottom = await eggHalf(egg, "bottom", 470);
-    Brand.place(stage, bottom, [960, 1110], { anchor: [0.5, 1], z: 2 });
-    const top = await eggHalf(egg, "top", 470);
-    Brand.place(stage, top, [1450, 610], { rotate: 32, z: 2 });
-    // the shell's top flew off to the right; the pets burst out of the bottom half
-    pet("Puffling", 260, [560, 640], { rotate: -14, z: 3 });
-    pet("Sunny", 220, [1420, 920], { rotate: 10, z: 3 });
-    pet("Prism", 480, [960, 700], { z: 4 });
-    sparkles([[700, 420, 60], [1240, 400, 50], [420, 860, 46], [1560, 760, 40], [960, 340, 44]]);
+    const bottom = await eggHalf(egg, "bottom", 500);
+    Brand.place(stage, bottom, [960, 1110], { anchor: [0.5, 1], z: 4 });
+    const top = await eggHalf(egg, "top", 500);
+    Brand.place(stage, top, [1470, 560], { rotate: 32, z: 2 });
+    // the shell's top flew off to the right; the pets burst out of the bottom half (Prism still half inside)
+    pet("Puffling", 320, [500, 620], { rotate: -14, z: 3 });
+    pet("Sunny", 270, [1440, 880], { rotate: 10, z: 3 });
+    pet("Prism", 520, [960, 690], { z: 3 });
+    sparkles([[700, 420, 60], [1240, 400, 50], [380, 880, 46], [1650, 740, 40], [960, 360, 44]]);
     Brand.place(stage, Brand.title("HATCH CUTE PETS!", { size: 200, maxWidth: 1640, fill: "bolt" }), [960, 175], { z: 6 });
   },
 
   // 3. The Mega Storm boss (Cosmic Maelstrom) in the arena, its health bar and the pet it drops
   async mega() {
     const map = backdrop("map/arena.jpg", "saturate(1.6) contrast(1.2) brightness(0.95)");
-    map.style.transform = "scale(1.25)";
+    map.style.transform = "translateY(90px) scale(1.25)";
     map.style.transformOrigin = "50% 62%";
     layer("background: linear-gradient(180deg, rgba(38, 18, 104, 0.92) 0%, rgba(84, 40, 170, 0.6) 30%, rgba(120, 70, 220, 0) 60%)");
     layer("background: radial-gradient(ellipse 620px 560px at 50% 66%, transparent 45%, rgba(30, 14, 80, 0.55) 100%)");
@@ -287,31 +290,31 @@ const ADS = {
     backdrop("map/chain.jpg", "saturate(1.6) contrast(1.15) brightness(1.02)");
     layer("background: linear-gradient(180deg, rgba(47, 134, 242, 0.85) 0%, rgba(92, 200, 255, 0.3) 32%, rgba(92, 200, 255, 0) 48%)");
     layer("background: radial-gradient(ellipse at 50% 55%, transparent 60%, rgba(24, 40, 110, 0.45) 100%)");
-    // emblems in the shot's order, left to right: Upper Atmosphere ... Sunny Plains
-    const emblems = ["Sky", "Volcano", "Frost", "Dunes", "Thunder", "Meadows"];
-    emblems.forEach((key, index) => {
-      const x = 250 + index * 284;
-      const y = 520 + (index % 2) * 40 - Math.sin(index / 5 * Math.PI) * 30;
-      const image = Brand.sprite(`../ui/icons3d/Zone_${key}.png`, { width: 240 });
-      Brand.place(stage, image, [x, y], { rotate: (index - 2.5) * 3, z: 3 });
-    });
-    Brand.place(stage, Brand.title("EXPLORE 6", { size: 170, fill: "cloud" }), [960, 125], { z: 6 });
-    Brand.place(stage, Brand.title("SKY ISLANDS!", { size: 200, maxWidth: 1600, fill: "bolt" }), [960, 300], { z: 6 });
+    // each zone's emblem over its island (the shot runs from Upper Atmosphere on the left to Sunny Plains)
+    const emblems = [["Sky", 310, 450], ["Volcano", 565, 485], ["Frost", 820, 560], ["Dunes", 1110, 630], ["Thunder", 1440, 710],
+      ["Meadows", 1740, 790]];
+    for (const [key, x, y] of emblems) {
+      const image = Brand.sprite(`../ui/icons3d/Zone_${key}.png`, { width: 200 });
+      Brand.place(stage, image, [x, y], { rotate: (x - 960) / 120, z: 3 });
+    }
+    Brand.place(stage, Brand.title("EXPLORE 6", { size: 150, fill: "cloud" }), [960, 115], { z: 6 });
+    Brand.place(stage, Brand.title("SKY ISLANDS!", { size: 180, maxWidth: 1500, fill: "bolt" }), [960, 270], { z: 6 });
   },
 
   // 5. Crafting tiers: 5 Thunder Pups make a Golden one, 5 Golden make a Rainbow one
   async tiers() {
     layer("background: radial-gradient(circle at 50% 64%, #ffffff 0%, #d9ccff 18%, #a98bff 42%, #6b4be6 72%, #3a2aa8 100%)");
     rays("50%", "64%", 0.2, "80%");
-    halo(330, 760, 520, "rgba(170, 220, 255, 0.8)");
-    halo(960, 730, 640, "rgba(255, 220, 90, 0.9)");
-    halo(1590, 700, 760, "rgba(255, 200, 255, 0.9)");
-    pet("ThunderPup", 300, [330, 760], { rotate: -4, z: 3 });
-    pet("ThunderPup_Golden", 380, [960, 735], { z: 3 });
-    const rainbow = await Brand.rainbowSprite(ART + "pets/ThunderPup_Rainbow.png", { fit: 450 });
-    Brand.place(stage, rainbow, [1590, 705], { rotate: 4, z: 3 });
-    Brand.place(stage, craftArrow("5x"), [640, 760], { z: 4 });
-    Brand.place(stage, craftArrow("5x"), [1265, 740], { z: 4 });
+    halo(300, 770, 560, "rgba(170, 220, 255, 0.7)");
+    halo(930, 740, 700, "rgba(255, 220, 90, 0.85)");
+    halo(1580, 710, 820, "rgba(255, 200, 255, 0.85)");
+    pet("ThunderPup", 330, [300, 770], { rotate: -4, z: 3 });
+    const golden = pet("ThunderPup_Golden", 420, [930, 745], { z: 3 });
+    golden.style.filter = `brightness(1.12) saturate(1.15) ${getComputedStyle(golden).filter}`;
+    const rainbow = await Brand.rainbowSprite(ART + "pets/ThunderPup_Rainbow.png", { fit: 470 });
+    Brand.place(stage, rainbow, [1580, 715], { rotate: 4, z: 3 });
+    Brand.place(stage, craftArrow("5x"), [615, 770], { z: 4, scale: 0.9 });
+    Brand.place(stage, craftArrow("5x"), [1245, 750], { z: 4, scale: 0.9 });
     sparkles([[1780, 470, 56], [1400, 470, 44], [1120, 560, 46], [790, 560, 40], [1750, 930, 40]]);
     Brand.place(stage, Brand.title("GOLDEN &", { size: 170, fill: "bolt" }), [960, 130], { z: 6 });
     Brand.place(stage, Brand.title("RAINBOW PETS!", { size: 180, maxWidth: 1600, fill: "rainbow", horizontal: true }), [960, 305], { z: 6 });
@@ -322,14 +325,15 @@ const ADS = {
     layer("background: radial-gradient(circle at 50% 66%, #fff6c8 0%, #ffd25a 20%, #f29a2a 42%, #8a3fb8 72%, #3a1f78 100%)");
     rays("50%", "66%", 0.26, "85%");
     halo(960, 720, 900, "rgba(255, 245, 190, 0.95)");
-    pet("StormLord", 270, [590, 650], { rotate: -8, z: 2 });
-    pet("GalaxyGuardian", 270, [1330, 640], { rotate: 8, z: 2 });
-    pet("YetiKing", 330, [330, 850], { rotate: -6, z: 3 });
-    pet("InfernoDrake", 330, [1590, 850], { rotate: 6, z: 3 });
-    pet("BreezeKing", 500, [960, 800], { z: 4 });
-    sparkles([[700, 420, 60], [1230, 420, 56], [180, 600, 46], [1740, 600, 46], [960, 520, 44], [1180, 980, 40], [740, 980, 40]]);
-    Brand.place(stage, Brand.title("LEGENDARY", { size: 210, maxWidth: 1600, fill: "bolt" }), [960, 135], { z: 6 });
-    Brand.place(stage, Brand.title("PETS!", { size: 170, fill: "cloud" }), [960, 315], { z: 6 });
+    const gold = "rgba(255, 214, 80, 0.95)";
+    const legends = [["StormLord", 270, [600, 660], -8, 2], ["GalaxyGuardian", 270, [1320, 650], 8, 2],
+      ["YetiKing", 330, [330, 850], -6, 3], ["InfernoDrake", 330, [1590, 850], 6, 3], ["BreezeKing", 560, [960, 790], 0, 4]];
+    for (const [name, fit, at, rotate, z] of legends) {
+      Brand.glow(pet(name, fit, at, { rotate, z }), gold, 26);
+    }
+    sparkles([[720, 450, 60], [1210, 450, 56], [180, 620, 46], [1740, 620, 46], [960, 520, 44], [1200, 990, 40], [720, 990, 40]]);
+    Brand.place(stage, Brand.title("LEGENDARY", { size: 190, maxWidth: 1560, fill: "bolt" }), [960, 160], { z: 6 });
+    Brand.place(stage, Brand.title("PETS!", { size: 160, fill: "cloud" }), [960, 330], { z: 6 });
   },
 
   // 7. No text: the vacuum scene big, a purple Thunderhead, pets watching
@@ -342,8 +346,8 @@ const ADS = {
     Brand.place(stage, Brand.bolt(190, { glow: BOLT_GLOW }), [880, 170], { rotate: -16 });
     vacuumScene({
       player: { width: 720, at: [180, 1160] },
-      cloud: "Weather_Thunderhead", cloudWidth: 820, cloudAt: [1330, 380],
-      accent: "#b982ff", beamWidths: [80, 380],
+      cloud: "Weather_Thunderhead", cloudWidth: 760, cloudAt: [1340, 450],
+      accent: "#b982ff", beamWidths: [80, 380], brighten: 1.6,
     });
     pet("AuroraGryphon", 430, [1360, 900], { z: 5 });
     pet("ThunderPup", 260, [1720, 930], { rotate: 6, z: 5 });
@@ -354,10 +358,13 @@ const ADS = {
   async title() {
     layer("background: radial-gradient(circle at 50% 72%, #ffffff 0%, #c8f4ff 16%, #6fd2ff 40%, #2f8ff2 72%, #2361d0 100%)");
     rays("50%", "72%", 0.24, "85%");
-    halo(960, 790, 900, "rgba(255, 255, 255, 0.95)");
-    pet("AuroraGryphon_front", 760, [960, 790], { z: 3 });
-    Brand.place(stage, Brand.title("STORM CATCHER", { size: 220, maxWidth: 1620, fill: "bolt" }), [960, 170], { z: 6 });
-    Brand.place(stage, Brand.ribbon("SIMULATOR", { size: 76, colors: "sky", padX: 70 }), [960, 345], { rotate: -2, z: 6 });
+    halo(960, 760, 1000, "rgba(255, 255, 255, 0.95)");
+    const bank = [[60, 330, 120], [250, 300, 110], [450, 340, 105], [1470, 340, 105], [1670, 300, 115], [1870, 330, 120]];
+    Brand.place(stage, Brand.cloudBank(1920, 420, bank, { base: 360, bottom: "#b9d4ff" }), [960, 1080], { anchor: [0.5, 1], z: 2 });
+    Brand.place(stage, Brand.sprite(ART + "pets/AuroraGryphon_front.png", { width: 980 }), [960, 735], { z: 3 });
+    sparkles([[300, 560, 56], [1620, 540, 50], [470, 440, 36], [1450, 430, 40]]);
+    Brand.place(stage, Brand.title("STORM CATCHER", { size: 200, maxWidth: 1560, fill: "bolt" }), [960, 160], { z: 6 });
+    Brand.place(stage, Brand.ribbon("SIMULATOR", { size: 70, colors: "sky", padX: 64 }), [960, 318], { rotate: -2, z: 6 });
   },
 };
 

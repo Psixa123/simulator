@@ -107,7 +107,7 @@ MAP_SHOTS = {
     # ads: standing in Thunder Valley's field among the storm clouds
     "thunder_field": "pos=380,22,60 look=520,20,-10 fov=60 light=2 size=2400x1350",
     # ads: the whole chain of sky islands over the cloud sea, from the side
-    "chain": "target=850,0,0 az=160 el=36 dist=1350 fov=40 light=hub fog=2000,8000 size=2400x1350",
+    "chain": "target=960,230,0 az=160 el=36 dist=1450 fov=40 light=hub fog=2000,8000 size=2400x1350",
 }
 
 
