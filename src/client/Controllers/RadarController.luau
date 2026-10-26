@@ -1,8 +1,8 @@
 --!nonstrict
 -- Storm Radar gamepass (client): an alert card whenever rare weather spawns in any unlocked
--- zone (with a Teleport button when it's in another zone) and an always-on-top marker with
--- the live distance on every rare cell until it pops. Only radar owners ever see these;
--- the server sends "RadarSpawn" to owners only (see Server/Services/StormRadar).
+-- zone, with a Teleport button when it's in another zone; the card goes away once the weather
+-- is caught. Only radar owners ever see these; the server sends "RadarSpawn" to owners only
+-- (see Server/Services/StormRadar). There are no floating markers over the weather itself.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,8 +13,6 @@ local Zones = require(Shared.Config.Zones)
 local Weather = require(Shared.Config.Weather)
 local MapLayout = require(Shared.Config.MapLayout)
 local Monetization = require(Shared.Config.Monetization)
-local Formulas = require(Shared.Formulas)
-local Format = require(Shared.Util.Format)
 local Remotes = require(Shared.Remotes)
 
 local Registry = require(script.Parent.Parent.Registry)
@@ -26,29 +24,16 @@ local RadarController = {}
 local PASS_KEY = "StormRadar"
 local ALERT_TIME = 9 -- seconds an alert card stays on screen
 local MAX_ALERTS = 2
-local CLOSE_DISTANCE = 30 -- studs; the marker tells you to start vacuuming
 
 local RARE_COLOR = Weather.Rarities.Rare.Color
 
 local player = Players.LocalPlayer
 local pass = Monetization.Gamepasses[PASS_KEY]
 local cellFolder: Instance
-local playerGui: Instance
 local holder: Frame
 local alerts = {} -- { { Card, Model } } oldest first
 local alertOrder = 0
-local markers = {} -- [Model] = { Gui, Distance, Origin }
 local teleporting = false
-
-local function ownsRadar(): boolean
-	local data = Registry.DataController.Data
-	return data ~= nil and Formulas.HasPass(data, PASS_KEY)
-end
-
-local function isRare(typeId: any): boolean
-	local def = typeId and Weather.Types[typeId]
-	return def ~= nil and Weather.Rarities[def.Rarity].Announce == true
-end
 
 local function myPosition(): Vector3?
 	local character = player.Character
@@ -57,85 +42,6 @@ local function myPosition(): Vector3?
 		return root.Position
 	end
 	return nil
-end
-
----------------------------------------------------------------------------
--- World markers
----------------------------------------------------------------------------
-local function removeMarker(model: Instance)
-	local marker = markers[model]
-	if marker then
-		markers[model] = nil
-		marker.Gui:Destroy()
-	end
-end
-
-local function addMarker(model: Instance)
-	if markers[model] or not model.Parent then
-		return
-	end
-	local root = model:FindFirstChild("Root")
-	local typeId = model:GetAttribute("Type")
-	local def = typeId and Weather.Types[typeId]
-	if not root or not def then
-		return
-	end
-
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "RadarMarker"
-	gui.Adornee = root
-	gui.AlwaysOnTop = true
-	gui.ResetOnSpawn = false
-	gui.LightInfluence = 0
-	gui.Size = UDim2.fromOffset(200, 82)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, 16, 0)
-	local icon = UI.Icon({
-		Text = pass.Icon,
-		Color = pass.Color,
-		Size = UDim2.fromOffset(40, 40),
-		Position = UDim2.fromScale(0.5, 0),
-		AnchorPoint = Vector2.new(0.5, 0),
-		Parent = gui,
-	})
-	UI.Label({
-		Name = "Title",
-		Text = "✨ " .. def.Name,
-		TextColor3 = RARE_COLOR,
-		Size = UDim2.new(1, 0, 0, 22),
-		Position = UDim2.fromOffset(0, 42),
-		Stroke = 2.5,
-		Parent = gui,
-	})
-	local distance = UI.Label({
-		Name = "Distance",
-		Text = "",
-		Font = Theme.BodyFont,
-		Size = UDim2.new(1, 0, 0, 16),
-		Position = UDim2.fromOffset(0, 64),
-		Stroke = 2,
-		Parent = gui,
-	})
-	gui.Parent = playerGui
-	UI.Pop(icon, 1.6)
-
-	markers[model] = { Gui = gui, Distance = distance, Origin = model:GetAttribute("Origin") or root.Position }
-end
-
--- Markers for rare cells that were already there (joining, buying the radar, unlocking a zone)
-local function scan()
-	local data = Registry.DataController.Data
-	if not data or not ownsRadar() then
-		for model in markers do
-			removeMarker(model)
-		end
-		return
-	end
-	for _, model in cellFolder:GetChildren() do
-		local zoneId = model:GetAttribute("Zone")
-		if type(zoneId) == "number" and zoneId <= Formulas.BestCatchableZone(data) and isRare(model:GetAttribute("Type")) then
-			addMarker(model)
-		end
-	end
 end
 
 ---------------------------------------------------------------------------
@@ -280,22 +186,10 @@ local function onRadarSpawn(typeId: any, position: any, zoneId: any, cellId: any
 	local model = cellFolder:FindFirstChild("Cell" .. cellId) or cellFolder:WaitForChild("Cell" .. cellId, 3)
 	if model and model.Parent then
 		alert.Model = model
-		addMarker(model)
 	end
 end
 
 local function update()
-	local position = myPosition()
-	for model, marker in markers do
-		if not model.Parent then
-			removeMarker(model)
-		elseif position then
-			local studs = (marker.Origin - position).Magnitude
-			marker.Distance.Text = if studs <= CLOSE_DISTANCE then "📍 Vacuum it up!" else "📍 " .. Format.Number(math.floor(studs)) .. " studs away"
-		else
-			marker.Distance.Text = ""
-		end
-	end
 	-- Alerts about weather that's already gone aren't useful any more
 	for index = #alerts, 1, -1 do
 		local alert = alerts[index]
@@ -306,7 +200,6 @@ local function update()
 end
 
 function RadarController.Init()
-	playerGui = player:WaitForChild("PlayerGui")
 	-- Right side, just above the boost timers: the top right belongs to the Roblox player list
 	holder = UI.Create("Frame", {
 		Name = "RadarAlerts",
@@ -345,8 +238,6 @@ function RadarController.Start()
 			onRadarSpawn(...)
 		end
 	end)
-	cellFolder.ChildRemoved:Connect(removeMarker)
-	Registry.DataController.ObserveMany({ "Passes", "Zone", "Upgrades" }, scan)
 
 	while true do
 		update()

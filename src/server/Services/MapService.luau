@@ -1430,6 +1430,89 @@ local function sellStation(parent: Instance, zoneId: number, biome)
 	place("SellMachine", parent, CFrame.new(pad.X + SELL_MACHINE.X, GROUND_Y, pad.Z + SELL_MACHINE.Z) * facing(0, 1), { Scale = 1.05, Collide = true })
 end
 
+-- The egg's name and price above the incubator: a sign sized in studs on a still anchor (the egg
+-- itself spins and bobs) whose bottom edge stays above the glass dome, so the price is never behind it.
+local VOLTS_IMAGE = "rbxassetid://124885999776457" -- the Volts coin (Icons.Volts in src/client/UI/Icons.luau)
+local EGG_DOME_TOP = 17.6 -- studs above the ground: EggIncubator (12.9 tall) at Scale 1.35
+local EGG_SIGN = Vector2.new(15, 5.7) -- studs
+
+local function inkPill(parent: Instance, name: string, position: UDim2, size: UDim2, face: Color3, faceBottom: Color3, inset: Vector2)
+	local outline = Instance.new("Frame")
+	outline.Name = name
+	outline.AnchorPoint = Vector2.new(0.5, 0)
+	outline.Position = position
+	outline.Size = size
+	outline.BackgroundColor3 = INK
+	outline.BorderSizePixel = 0
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = outline
+	local inner = Instance.new("Frame")
+	inner.Name = "Face"
+	inner.AnchorPoint = Vector2.new(0.5, 0.5)
+	inner.Position = UDim2.fromScale(0.5, 0.5)
+	inner.Size = UDim2.fromScale(1 - inset.X * 2, 1 - inset.Y * 2)
+	inner.BackgroundColor3 = WHITE
+	inner.BorderSizePixel = 0
+	corner:Clone().Parent = inner
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new(face, faceBottom)
+	gradient.Rotation = 90
+	gradient.Parent = inner
+	inner.Parent = outline
+	outline.Parent = parent
+	return inner
+end
+
+local function eggSign(parent: Instance, position: Vector3, egg)
+	local anchor = deco({
+		Name = "EggSign",
+		Size = Vector3.one,
+		CFrame = CFrame.new(position.X, GROUND_Y + EGG_DOME_TOP + 0.6 + EGG_SIGN.Y / 2, position.Z),
+		Transparency = 1,
+		Parent = parent,
+	})
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "EggSign"
+	gui.Size = UDim2.fromScale(EGG_SIGN.X, EGG_SIGN.Y)
+	gui.MaxDistance = 140
+	gui.LightInfluence = 0
+	gui.Adornee = anchor
+	gui.Parent = anchor
+
+	-- Name plate: a white pill with an Ink outline (0.18 studs) and the name in Ink
+	local nameHeight = 3.1
+	local plate = inkPill(gui, "Name", UDim2.fromScale(0.5, 0), UDim2.fromScale(1, nameHeight / EGG_SIGN.Y), WHITE, BODY, Vector2.new(0.18 / EGG_SIGN.X, 0.18 / nameHeight))
+	textLabel(plate, {
+		Text = egg.Name,
+		TextColor3 = INK,
+		Size = UDim2.fromScale(0.88, 0.72),
+		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Stroke = false,
+	})
+
+	-- Price capsule under it: the Volts coin and the cost on a Bolt-yellow pill
+	local priceWidth, priceHeight = 6.8, 2.3
+	local price = inkPill(gui, "Price", UDim2.fromScale(0.5, (EGG_SIGN.Y - priceHeight) / EGG_SIGN.Y), UDim2.fromScale(priceWidth / EGG_SIGN.X, priceHeight / EGG_SIGN.Y), BOLT, BOLT_DEEP, Vector2.new(0.16 / priceWidth, 0.16 / priceHeight))
+	local coin = Instance.new("ImageLabel")
+	coin.Name = "Coin"
+	coin.BackgroundTransparency = 1
+	coin.Image = VOLTS_IMAGE
+	coin.ScaleType = Enum.ScaleType.Fit
+	coin.AnchorPoint = Vector2.new(0, 0.5)
+	coin.Position = UDim2.fromScale(0.04, 0.5)
+	coin.Size = UDim2.fromScale(0.3, 1.25)
+	coin.Parent = price
+	textLabel(price, {
+		Text = Format.Number(egg.Cost),
+		Size = UDim2.fromScale(0.6, 0.78),
+		Position = UDim2.fromScale(0.36, 0.5),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Stroke = 2,
+	})
+end
+
 local function eggStation(parent: Instance, zoneId: number)
 	local zone = Zones[zoneId]
 	local eggId = zone.Egg
@@ -1455,9 +1538,7 @@ local function eggStation(parent: Instance, zoneId: number)
 	eggModel:SetAttribute("SpinSpeed", 0.5)
 	eggModel:SetAttribute("BobHeight", 0.6)
 
-	local gui = billboard(eggModel.PrimaryPart, UDim2.fromOffset(260, 104), Vector3.new(0, 8.6, 0), 120)
-	textLabel(gui, { Text = "🥚 " .. egg.Name, Size = UDim2.fromScale(1, 0.48), Stroke = 3 })
-	textLabel(gui, { Text = "⚡ " .. Format.Number(egg.Cost), TextColor3 = BOLT, Size = UDim2.fromScale(1, 0.4), Position = UDim2.fromScale(0, 0.52), Stroke = 3 })
+	eggSign(station, position, egg)
 
 	local host = promptHost(station, position + Vector3.new(0, 4, 0))
 	local instance = prompt(host, "Open Egg", egg.Name, 0, 16)

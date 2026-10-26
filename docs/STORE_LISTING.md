@@ -30,7 +30,7 @@ The in-game Shop shows the same pictures as its card art. They are uploaded sepa
 | `TripleHatch` | Triple Hatch | 149 | Hatch 3 eggs at once. | `assets/gamepasses/TripleHatch.png` |
 | `AutoHatch` | Auto Hatch | 99 | Keep hatching eggs automatically while you stand next to them. | `assets/gamepasses/AutoHatch.png` |
 | `PetSlots` | +3 Pet Slots | 249 | Equip 3 more pets at the same time. | `assets/gamepasses/PetSlots.png` |
-| `StormRadar` | Storm Radar | 149 | Get alerted whenever rare weather spawns in any zone you've unlocked, with a marker that leads you to it. | `assets/gamepasses/StormRadar.png` |
+| `StormRadar` | Storm Radar | 149 | Get alerted whenever rare weather spawns in any zone you've unlocked, with a button that teleports you there. | `assets/gamepasses/StormRadar.png` |
 
 ## Developer products
 

@@ -97,7 +97,7 @@ out more than a normal Mega Storm. The **Forecast Board** in the hub shows what'
 ### 🛰️ Storm Radar
 
 Owners of the **Storm Radar** gamepass get an alert whenever rare weather spawns in any biome they've
-unlocked, with a marker that leads them to it.
+unlocked, with a button that teleports them there.
 
 ### 🌀 Climate Shift (rebirth)
 

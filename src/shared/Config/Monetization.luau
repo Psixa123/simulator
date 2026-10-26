@@ -121,7 +121,7 @@ Monetization.Gamepasses = {
 		Icon = "🛰️",
 		Price = 149,
 		Color = Color3.fromRGB(56, 201, 176),
-		Description = "Get alerted whenever rare weather spawns in any zone you've unlocked, with a marker that leads you to it.",
+		Description = "Get alerted whenever rare weather spawns in any zone you've unlocked, with a button that teleports you there.",
 	},
 }
 
