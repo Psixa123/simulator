@@ -148,6 +148,27 @@ STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
 )}
 STORE_SCENES = ("Store_AuroraGryphon", "Store_PetSlots")  # made by store_scenes.py, not in the SketchUp source
 
+# The badge models (tools/icons/sketchup_badge_icons.py + badge_scenes.py): the medals, shot straight on so they
+# stay round (every medal has the same outline, so the same fill puts them all at the same size: badges3d.html
+# relies on it), and the heroes made for the badges, from their own 3/4 angle. Rendered at 1024 px into
+# assets/source/badges3d and laid out by assets/source/badges3d.html (tools/render_art.py badges).
+BADGE_MEDAL = {"yaw": 0, "pitch": 0, "roll": 0, "fill": 0.84, "lift": 0.0, "metal": METALS}
+BADGE_HERO = dict(STORE_VIEW, yaw=-16, pitch=10)
+BADGE_RINGS = ("Sky", "Gold", "Indigo", "Pink", "Orange", "Berry", "Lime", "Steel", "Royal", "Emerald", "Rainbow")
+BADGE_ICONS = {f"Badge_Ring_{name}": dict(BADGE_MEDAL) for name in BADGE_RINGS}
+BADGE_ICONS.update({f"Badge_Zone_{zone}": dict(BADGE_MEDAL) for zone in ("Hub", "Thunder", "Dunes", "Frost", "Volcano", "Sky")})
+BADGE_ICONS.update({f"Badge_{key}": dict(BADGE_HERO, **view) for key, view in (
+    ("Trophy", {"yaw": -18, "pitch": 12}),
+    ("HatchScene", {"yaw": -14, "pitch": 12, "noline": "Neon_FFFFFF,Color_FDB9CC"}),
+    ("PetLegendary", {"yaw": -10, "pitch": 8, "noline": "Neon_FFFFFF,Color_FDB9CC,Color_FFD7E0"}),
+    ("PetGolden", {"yaw": -14, "pitch": 8, "metal": METALS + ",Color_FFCA3A,Color_FFA023",
+                   "noline": "Neon_FFFFFF,Color_FFAE82,Color_FFB36E,Color_FFA88E"}),
+    ("PetRainbow", {"yaw": -12, "pitch": 8, "noline": "Neon_FFFFFF,Color_FFAE82,Color_FFB59E,Color_FFB5BA"}),
+    ("RareWeather", {"yaw": -14, "pitch": 10}),
+)})
+# Models only used as parts of the scenes above (badge_scenes.py), not rendered on their own
+BADGE_PARTS = ("Badge_Frame_", "Badge_HatchEgg", "Badge_HatchCap")
+
 # Icon sets: source, hero-angle table, contact sheet (in the set's output folder, default OUT), work folder (GLB,
 # raw renders, check48); size = finished PNG size (outline, lines and shadow scale with it); extra = a function
 # that adds props to the source (the store scenes)
@@ -159,6 +180,11 @@ SETS = {
     "store": {"source": STORE_SOURCE, "table": STORE_ICONS, "sheet": "_sheet.png", "work": BUILD / "store",
               "glb": "StormStoreIcons.glb", "title": "store heroes", "out": STORE_OUT, "size": 1024,
               "scenes": STORE_SCENES, "extra": "store_scenes", "check48": False, "see_through": True},
+    "badges": {"source": ROOT / "assets" / "source" / "world" / "badge_icons.json", "table": BADGE_ICONS,
+               "sheet": "_sheet.png", "work": BUILD / "badges", "glb": "StormBadgeIcons.glb", "title": "badge models",
+               "out": ROOT / "assets" / "source" / "badges3d", "size": 1024, "extra": "badge_scenes",
+               "scenes": tuple(k for k in BADGE_ICONS if not k.startswith("Badge_Ring_") and k != "Badge_Trophy"),
+               "parts": BADGE_PARTS, "check48": False},
 }
 
 
@@ -413,7 +439,7 @@ def check48(images, target, columns=14):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--set", choices=sorted(SETS), default="icons",
-                        help="icons (default), zones (zone emblems) or store (store heroes)")
+                        help="icons (default), zones (zone emblems), store (store heroes) or badges (badge medals + heroes)")
     parser.add_argument("--source", default=None, help="icon source json (default the set's: assets/source/world/"
                                                        "icons.json, zone_emblems.json or store_icons.json)")
     parser.add_argument("--out", default=None, help="output folder (default assets/ui/icons3d, store: "
@@ -437,8 +463,9 @@ def main():
         extra = importlib.import_module(spec["extra"]).add_scenes
     built = write_glb(source, glb, extra)
     print(f"wrote {rel(glb)} ({glb.stat().st_size // 1024} KB, {len(built)} icons)")
+    parts = spec.get("parts", ())
     wanted = [k for k in args.icons.split(",") if k] or [k for k in table if k in built] + \
-        [k for k in built if k not in table]
+        [k for k in built if k not in table and not k.startswith(parts)]
     missing = [k for k in wanted if k not in built]
     if missing:
         sys.exit("not in the source: " + ", ".join(missing))
@@ -447,7 +474,7 @@ def main():
         finish(raws[key], out / f"{key}.png", size, spec.get("see_through", False))
         tris = sum(len(p["tris"]) for p in built[key]["pieces"].values())
         print(f"  {key:<13} {len(built[key]['pieces']):>2} paints {tris:>5} tris -> {rel(out / (key + '.png'))}")
-    images = {k: out / f"{k}.png" for k in list(table) + [k for k in built if k not in table]
+    images = {k: out / f"{k}.png" for k in list(table) + [k for k in built if k not in table and not k.startswith(parts)]
               if (out / f"{k}.png").exists()}
     sheet = contact_sheet(images, out / spec["sheet"], columns=min(7, max(1, len(images))), title=spec["title"])
     print(f"wrote {rel(sheet)}")

@@ -178,6 +178,9 @@ local function popCell(cell)
 		if data then
 			local bonus = Registry.EconomyService.AddEnergy(player, contributed * GameConfig.CompletionBonus, cell.Value)
 			data.Stats.CellsCaught += 1
+			if def.Rarity == "Rare" then
+				data.Stats.RareCaught = (data.Stats.RareCaught or 0) + 1
+			end
 			Net.Effect(player, "CellCaught", cell.Position, cell.Type, (contributed + bonus) * cell.Value)
 		end
 	end

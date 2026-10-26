@@ -57,6 +57,9 @@ SETS = {
     "store": {"script": HERE / "sketchup_store_icons.py", "helpers": [(SCRIPT, 2)],
               "source": ROOT / "assets" / "source" / "world" / "store_icons.json",
               "offline": ROOT / "build" / "icons" / "store" / "offline" / "icons.json"},
+    "badges": {"script": HERE / "sketchup_badge_icons.py", "helpers": [(SCRIPT, 2)],
+               "source": ROOT / "assets" / "source" / "world" / "badge_icons.json",
+               "offline": ROOT / "build" / "icons" / "badges" / "offline" / "icons.json"},
 }
 
 sys.path.insert(0, str(WORLD))

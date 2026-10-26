@@ -1,5 +1,5 @@
 """Runs the Luau mock tests for the pet mesh pack, the server's pack loaders, WorldProps, the admin commands
-(AdminService), the Infinite Tank gamepass and the map outside Roblox.
+(AdminService), the Infinite Tank gamepass, the badges (AchievementService) and the map outside Roblox.
 
 Bundles tests/mock/RobloxMock.luau, the game modules under test and the spec into one script and runs
 it with the `luau` command line (https://github.com/luau-lang/luau/releases). Set LUAU=path/to/luau if
@@ -47,10 +47,13 @@ MODULES = {
     "EconomyService": "src/server/Services/EconomyService.luau",
     "RewardService": "src/server/Services/RewardService.luau",
     "Rewards": "src/shared/Config/Rewards.luau",
+    # Badges.spec.luau: the badge rules and the real AchievementService awarding them
+    "Badges": "src/shared/Config/Badges.luau",
+    "AchievementService": "src/server/Services/AchievementService.luau",
 }
 OPTIONAL = {"WorldPropsData"}
 SPECS = ["PetMeshes.spec.luau", "PetMeshService.spec.luau", "WorldProps.spec.luau", "Admin.spec.luau", "Purchase.spec.luau",
-         "InfiniteTank.spec.luau"]
+         "InfiniteTank.spec.luau", "Badges.spec.luau"]
 MAP_SPEC = "MapContracts.luau"
 
 

@@ -62,7 +62,7 @@ local function template()
 		Daily = { Streak = 0, LastClaim = 0 },
 		Codes = {},
 		Settings = deepCopy(GameConfig.DefaultSettings),
-		Stats = { CellsCaught = 0, EggsHatched = 0, MegaStorms = 0, Sells = 0, PlayTime = 0 },
+		Stats = { CellsCaught = 0, RareCaught = 0, EggsHatched = 0, MegaStorms = 0, Sells = 0, PlayTime = 0 },
 		Receipts = {},
 	}
 end

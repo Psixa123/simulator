@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Badge Icons</title>
+<style>
+  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+  svg { display: block; }
+</style>
+<script src="art.js"></script>
+<script src="store3d.js"></script>
+</head>
+<body>
+<script>
+  // Roblox badge icons with 3D art (512 x 512, designed on a 1024 grid):
+  //   badges3d.html?id=FirstCatch   -> one badge (ids = Key of src/shared/Config/Badges.luau)
+  //   &bg=0                          -> without the background (tools/render_art.py checks the medal's reach)
+  // tools/render_art.py badges renders them to assets/badges/<Key>.png (docs/BADGES.md, tools/icons/README.md
+  // "Badge icons"). Roblox shows badge icons cropped to a circle, so the medal and everything on it stay inside the
+  // centred circle of radius 460 (230 at 512 px); only the background reaches the corners.
+  //
+  // A badge: a sunburst in the badge's colour; the 3D medal (assets/source/badges3d/Badge_Ring_<Colour>.png, or a
+  // zone medal Badge_Zone_<Zone>.png holding the zone's scene) rendered straight on, so its face is the circle of
+  // radius FACE_R round the centre; soft light rays and a glow on the face; the 3D hero; sparkles; an optional label.
+  //
+  // Each design: ring = medal render; bg = sunburst colours [centre, middle, edge]; hero = [src, x, y, size, turn?]
+  // (src relative to assets/source); face = false for the zone medals (their face is the scene); glow = tint of the
+  // light on the face; label = SVG markup on top; sparkles = [[x, y, r], ...].
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id") || "Welcome";
+  const SIZE = Number(params.get("size")) || 512;
+  const BG = params.get("bg") !== "0";
+  const FACE_R = 300;   // the enamel face of the medal renders (fill 0.84 in render_icons.BADGE_MEDAL)
+  const B3 = (key) => `badges3d/Badge_${key}.png`;
+  const STORE = (key) => `store3d/Store_${key}.png`;
+  const UI = (key) => `../ui/icons3d/${key}.png`;
+  const SPARKS = [[218, 205, 26], [818, 236, 22], [190, 700, 18], [835, 735, 24]];
+  const COUNT = (text, size = 120) => label3d(512, 872, text, size, { colors: ["#ffffff", "#fff3a6", "#ffc531"] });
+
+  const D = {
+    Welcome: { ring: B3("Zone_Hub"), face: false, bg: ["#c4fff3", "#38ccb4", "#0f6e66"] },
+    FirstCatch: { ring: B3("Ring_Sky"), bg: ["#c8ecff", "#5cbcf5", "#1d6fb8"], hero: [STORE("AutoCatch"), 522, 498, 690] },
+    RareCatch: { ring: B3("Ring_Gold"), bg: ["#fff2a8", "#ffbe2e", "#c46a00"], hero: [B3("RareWeather"), 505, 520, 680],
+                 glow: "#fff6c8" },
+    StormChaser: { ring: B3("Ring_Indigo"), bg: ["#d6d8ff", "#7478f0", "#2f2f9e"], hero: [STORE("MegaTank"), 512, 462, 610],
+                   label: COUNT("1,000", 132) },
+    Zone_Thunder: { ring: B3("Zone_Thunder"), face: false, bg: ["#e6d6ff", "#a678ff", "#4a2a9c"] },
+    Zone_Dunes: { ring: B3("Zone_Dunes"), face: false, bg: ["#fff1d0", "#f0b45a", "#9a5a14"] },
+    Zone_Frost: { ring: B3("Zone_Frost"), face: false, bg: ["#e4f6ff", "#8fd3f7", "#2f7fb3"] },
+    Zone_Volcano: { ring: B3("Zone_Volcano"), face: false, bg: ["#ffd9cc", "#f26d4f", "#8f2410"] },
+    Zone_Sky: { ring: B3("Zone_Sky"), face: false, bg: ["#d8d0ff", "#6a52e0", "#1d1260"] },
+    FirstHatch: { ring: B3("Ring_Pink"), bg: ["#ffd8ec", "#ff85bd", "#b23a78"], hero: [B3("HatchScene"), 512, 500, 690] },
+    LegendaryPet: { ring: B3("Ring_Orange"), bg: ["#ffe0bf", "#ff9a3c", "#b8520c"], hero: [B3("PetLegendary"), 512, 512, 710],
+                    glow: "#fff1c4" },
+    GoldenPet: { ring: B3("Ring_Berry"), bg: ["#ffd0df", "#e8577f", "#8a1840"], hero: [B3("PetGolden"), 512, 505, 665] },
+    RainbowPet: { ring: B3("Ring_Rainbow"), bg: ["#fff0fb", "#c79bff", "#5b33c8"], hero: [B3("PetRainbow"), 512, 512, 700] },
+    ClimateShift: { ring: B3("Ring_Lime"), bg: ["#e6ffc4", "#8fd848", "#3f7f12"], hero: [UI("ClimateShift"), 512, 505, 640] },
+    MegaStorm: { ring: B3("Ring_Steel"), bg: ["#e6ebff", "#a3b1e3", "#4a5688"], hero: [STORE("SummonMegaStorm"), 512, 492, 670],
+                 glow: "#e9dcff" },
+    StormChampion: { ring: B3("Ring_Royal"), bg: ["#cfe0ff", "#4f86ec", "#183f9a"], hero: [B3("Trophy"), 512, 500, 660],
+                     glow: "#fff4cc" },
+    Millionaire: { ring: B3("Ring_Emerald"), bg: ["#c8f5da", "#3cc27a", "#0f6a36"], hero: [STORE("DoubleVolts"), 520, 468, 610],
+                   label: COUNT("1M", 156) },
+  };
+
+  // Light on the enamel face: a few soft rays turning round the centre and a glow, clipped to the face
+  function faceLight(tint = "#ffffff") {
+    const clip = uid("face");
+    return `<defs><clipPath id="${clip}"><circle cx="512" cy="512" r="${FACE_R}"/></clipPath></defs>` +
+      `<g clip-path="url(#${clip})">${rays(512, 512, 420, 16, "#ffffff", 0.13)}${glow(512, 500, 300, tint, 0.55)}</g>`;
+  }
+
+  function image(src, cx, cy, size, rot = 0) {
+    const turn = rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : "";
+    return `<image href="${src}" x="${cx - size / 2}" y="${cy - size / 2}" width="${size}" height="${size}"${turn}/>`;
+  }
+
+  function compose() {
+    const d = D[id] || D.Welcome;
+    let c = BG ? burst(d.bg, 512, 512) + sparkles([[170, 178, 16, 0.75], [858, 170, 14, 0.7], [160, 862, 13, 0.65], [866, 850, 16, 0.75]]) : "";
+    c += image(d.ring, 512, 512, 1024);
+    if (d.face !== false) c += faceLight(d.glow);
+    if (d.hero) c += image(...d.hero);
+    c += sparkles(d.sparkles || SPARKS);
+    c += d.label || "";
+    return c;
+  }
+
+  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 1024 1024">${baseDefs()}${compose()}</svg>`;
+</script>
+</body>
+</html>

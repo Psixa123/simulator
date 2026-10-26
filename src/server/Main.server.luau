@@ -22,6 +22,7 @@ local ORDER = {
 	"HazardService",
 	"MegaStormService",
 	"LeaderboardService",
+	"AchievementService", -- Roblox badges, awarded from the player data the services above change
 	"AdminService", -- owner-only admin panel commands (uses the services above)
 }
 

@@ -250,3 +250,59 @@ A new item needs a hero (a chunk function, or a scene in `store_scenes.py`), an 
 into the item's `Image =` line in `Monetization.luau` (the Shop draws the badge once Roblox has approved it). Pass
 the badge keys with `--only`: a plain `--force` would also upload the Shop's sunburst and Robux pieces again. The
 pass and product icons on the Creator Dashboard are uploaded by hand (`docs/STORE_LISTING.md`).
+
+## Badge icons
+
+The Roblox badge icons (`assets/badges/<Key>.png`, one per badge of `src/shared/Config/Badges.luau`, listed in
+`docs/BADGES.md`) are round 3D medals: a scalloped seal, a fat glossy rim and an enamel face in the badge's colour, shot
+straight on so they stay round, with the badge's 3D hero on the face, soft light rays, sparkles and (for counts) a candy
+label. Roblox crops badge icons to a circle, so the medal and everything on it stays inside the centred circle of radius
+230 on the 512 px icon (`render_art.py badges` checks it); only the sunburst background reaches the corners.
+
+![badge models](../../assets/source/badges3d/_sheet.png)
+
+| Badge | Medal | Hero |
+| --- | --- | --- |
+| Welcome | Teal zone medal | the Storm Station scene of the `Zone_Hub` emblem |
+| FirstCatch | Sky | the Storm Vacuum sucking a cloud (`Store_AutoCatch`) |
+| RareCatch | Gold | the Rainbow icon (rainbow on clouds) with the Star icon |
+| StormChaser | Indigo | the big storm tank (`Store_MegaTank`) + "1,000" |
+| Zone_Thunder, Zone_Dunes, Zone_Frost, Zone_Volcano, Zone_Sky | Purple, Sand, Ice, Lava, Cosmic zone medals | the zone emblem's scene |
+| FirstHatch | Pink | a cracked spotted egg with a Puffling in it wearing the egg's top |
+| LegendaryPet | Orange | the Breeze King (a Legendary pet) |
+| GoldenPet | Berry | a Golden Thunder Pup (the game's golden tier colours) |
+| RainbowPet | Rainbow (six-colour rim) | a Rainbow Zappy under the Rainbow icon's arc |
+| ClimateShift | Lime | the Climate Shift swirl (UI icon) |
+| MegaStorm | Steel | the purple tornado under a thundercloud (`Store_SummonMegaStorm`) |
+| StormChampion | Royal | a gold trophy with a bolt badge on a plinth |
+| Millionaire | Emerald | coin stacks and a big Volts coin (`Store_DoubleVolts`) + "1M" |
+
+| Path | What |
+| --- | --- |
+| `tools/icons/sketchup_badge_icons.py` | the SketchUp models: 4 `# ===== chunk` blocks (1 of badge helpers in `session_state["BG"]`, the medals `Badge_Ring_<Colour>` and face-less zone frames `Badge_Frame_<Colour>`, the trophy, the egg shell `Badge_HatchEgg` / `Badge_HatchCap`); built on the icon helpers (chunks 1–2 of `sketchup_icons.py`) |
+| `tools/icons/badge_scenes.py` | models made from the game's other models: the zone medals (a frame + the zone emblem's face and scene from `zone_emblems.json`), the hatch scene (egg + Puffling + cap), the Legendary / Golden / Rainbow pets (`tools/pets`, in the tier colours of `PetModels.luau`) and the rare-weather rainbow (`icons.json`) |
+| `assets/source/world/badge_icons.json` | the extracted SketchUp polygons (`storm-icons-source/1`) |
+| `assets/source/world/StormBadgeIcons.skp` | the SketchUp model |
+| `assets/source/badges3d/Badge_<Name>.png` | the 1024 px medal and hero renders; `_sheet.png` is their contact sheet |
+| `assets/source/badges3d.html` | the badge layouts (`D`: medal, sunburst colours, hero and its placement, label); reuses `store3d.js` and `art.js`. The other heroes are the store renders (`store3d/`) and UI icons (`../ui/icons3d/`) |
+| `build/badges/contact_sheet.png` | (not committed) every badge at 150 px, circle-cropped like Roblox shows it, on light and dark |
+
+### Rebuild
+
+```sh
+python3 tools/icons/import_icons.py --set badges offline          # dry run -> build/icons/badges/offline/icons.json
+python3 tools/icons/render_icons.py --set badges --source build/icons/badges/offline/icons.json --size 512   # quick look
+python3 tools/icons/render_icons.py --set badges                  # the committed source -> assets/source/badges3d (~3 min)
+python3 tools/render_art.py badges                                # -> assets/badges/<Key>.png + build/badges checks
+```
+
+Medal framing (`BADGE_MEDAL`: straight on, `fill` 0.84, so the face is the circle of radius `FACE_R` = 300 round the
+centre of the 1024 grid in `badges3d.html`) and hero angles are in `BADGE_ICONS` in `render_icons.py`. A new badge needs
+a design in `D` in `badges3d.html` and its key in `BADGES` in `tools/render_art.py` (a new medal colour: a line in
+`RINGS` of chunk 2 and in `BADGE_RINGS`).
+
+SketchUp build order (`build_model`): `tools/world/sketchup/lib.py` (4 chunks, the first with `clean: true`), chunks 1–2
+of `tools/icons/sketchup_icons.py`, the 4 chunks of `sketchup_badge_icons.py`, then `tools/world/sketchup/extract.py`
+followed by `tools/icons/digest.py` as ONE call. Save that result to a file and run
+`python3 tools/icons/import_icons.py --set badges verify <file> --write`: when every model matches the dry run it is
+written as the source. Finish with `save_model` as `StormBadgeIcons.skp`. In the last build all 20 models matched.
