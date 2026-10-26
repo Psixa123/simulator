@@ -88,7 +88,7 @@ STUDIO_STEP = 300
 # Map shots (tools/preview_map.py --shot specs): name -> camera
 MAP_SHOTS = {
     # thumbnail 1: the seven sky islands in a row, seen from behind the Storm Station
-    "islands": "pos=-430,250,0 look=420,0,0 fov=46 light=hub fog=900,5200 size=2400x1350",
+    "islands": "pos=-430,250,0 look=420,40,0 fov=46 light=hub fog=900,5200 size=2400x1350",
     # thumbnail 2: Sunny Plains around its egg incubator
     "plains": "target=150,10,0 az=125 el=16 dist=170 fov=50 light=1 size=2400x1350",
     # thumbnail 3: the Mega Storm (Cosmic Maelstrom) in the Storm Station arena

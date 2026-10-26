@@ -74,8 +74,8 @@ DEPTH_JUMP = 0.12     # studs between neighbouring pixels that count as an occlu
 # icon spans; noline = paints without ink lines (by default the white shine streaks, Neon_FFFFFF).
 VIEW = {"yaw": -22, "pitch": 10, "roll": 0, "fill": 0.8, "noline": "Neon_FFFFFF"}
 # viewer.html query keys a table entry may set (lift = frame shift up; metal / matte = paint lists; glass = opacity
-# of glass; see viewer.html)
-VIEW_KEYS = ("yaw", "pitch", "roll", "fill", "noline", "lift", "metal", "matte", "glass")
+# of glass, clear = 1 for glass without the toon shade; see viewer.html)
+VIEW_KEYS = ("yaw", "pitch", "roll", "fill", "noline", "lift", "metal", "matte", "glass", "clear")
 ICONS = {
     "Volts": {"yaw": -26, "pitch": 6},
     "Energy": {"yaw": -18, "pitch": 6},
@@ -117,7 +117,7 @@ ZONE_ICONS = {f"Zone_{key}": dict(ZONE_VIEW) for key in
 # and the vacuum gun): the 3D art of the gamepass / product badges, rendered at 1024 px into assets/source/store3d
 # and put on the badges by assets/source/store3d.html (tools/render_art.py).
 METALS = "Color_FFB52E,Color_FFC23A,Color_FFCF3A,Color_F59A23,Color_C3CCF0,Color_8794CC"
-MATTES = "Color_C92A62,Color_D9A250,Color_F0C470,Color_D9884A,Color_A45F2E"
+MATTES = "Color_C92A62,Color_D9A250,Color_F0C470,Color_D9884A,Color_A45F2E,Color_6447C9"
 STORE_VIEW = {"yaw": -20, "pitch": 12, "fill": 0.9, "metal": METALS, "matte": MATTES, "glass": 0.2}
 STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
     ("VIP", {"yaw": -18, "pitch": 16}),
@@ -134,8 +134,8 @@ STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
     ("VoltsMedium", {"yaw": -14, "pitch": 14}),
     ("VoltsLarge", {"yaw": -22, "pitch": 22}),
     ("VoltsHuge", {"yaw": -18, "pitch": 16}),
-    ("EnergyBoost", {"yaw": -16, "pitch": 10}),
-    ("LuckBoost", {"yaw": -16, "pitch": 10}),
+    ("EnergyBoost", {"yaw": -16, "pitch": 10, "clear": 1}),
+    ("LuckBoost", {"yaw": -16, "pitch": 10, "clear": 1}),
     ("SummonMegaStorm", {"yaw": -12, "pitch": 6}),
     ("AutoCatch", {"yaw": -10, "pitch": 8}),
     # the pets (store_scenes.py): no ink line round their blush (pre-mixed solid pink, store_scenes.blush_paint)
@@ -154,7 +154,7 @@ SETS = {
               "glb": "StormZoneEmblems.glb", "title": "zone emblems"},
     "store": {"source": STORE_SOURCE, "table": STORE_ICONS, "sheet": "_sheet.png", "work": BUILD / "store",
               "glb": "StormStoreIcons.glb", "title": "store heroes", "out": STORE_OUT, "size": 1024,
-              "scenes": STORE_SCENES, "extra": "store_scenes", "check48": False},
+              "scenes": STORE_SCENES, "extra": "store_scenes", "check48": False, "see_through": True},
 }
 
 
@@ -288,8 +288,10 @@ def solid(color, alpha):
     return c[None, None, :] * alpha[..., None], alpha
 
 
-def finish(raw_path, target, size=SIZE):
-    """Shaded render + id/depth pass -> the finished icon (512 px; outline, lines and shadow scale with size)."""
+def finish(raw_path, target, size=SIZE, see_through=False):
+    """Shaded render + id/depth pass -> the finished icon (512 px; outline, lines and shadow scale with size).
+    see_through: the outline and the shadow stay outside the silhouette, so see-through glass shows what is
+    behind the icon (the badge) instead of the Ink under it."""
     raw = np.asarray(Image.open(raw_path).convert("RGBA"))
     px = raw.shape[0]
     k = size / SIZE
@@ -314,6 +316,12 @@ def finish(raw_path, target, size=SIZE):
     s = SS * k
     shadow = shift(outline, int(round(SHADOW["dx"] * s)), int(round(SHADOW["dy"] * s)))
     shadow = blur(shadow, SHADOW["blur"] * s) * SHADOW["alpha"]
+
+    if see_through:
+        inside = np.clip(alpha * 20.0, 0.0, 1.0)
+        inside = 1.0 - dilate(1.0 - inside, 2.0 * SS)  # shrunk a little: the antialiased rim keeps its Ink
+        outline = outline * (1.0 - inside)
+        shadow = shadow * (1.0 - inside)
 
     obj = (shade[..., :3] * alpha[..., None], alpha)
     img = over(solid(INK, line), obj)
@@ -424,7 +432,7 @@ def main():
         sys.exit("not in the source: " + ", ".join(missing))
     raws = render_raw(wanted, glb, work / "raw", args.workers, table, size)
     for key in wanted:
-        finish(raws[key], out / f"{key}.png", size)
+        finish(raws[key], out / f"{key}.png", size, spec.get("see_through", False))
         tris = sum(len(p["tris"]) for p in built[key]["pieces"].values())
         print(f"  {key:<13} {len(built[key]['pieces']):>2} paints {tris:>5} tris -> {rel(out / (key + '.png'))}")
     images = {k: out / f"{k}.png" for k in list(table) + [k for k in built if k not in table]

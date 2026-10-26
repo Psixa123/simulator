@@ -31,13 +31,13 @@ pets = SimpleNamespace(**build_pets.load_geometry())
 # Pets per scene: (pet id, foot position in studs, scale, turn in degrees to the left)
 PET_SCENES = {
     "Store_AuroraGryphon": [("AuroraGryphon", (0.0, 0.0, 0.0), 2.4, 0)],
-    "Store_PetSlots": [("Puffling", (-2.35, 0.9, 0.0), 1.55, 22), ("Zappy", (2.35, 0.9, 0.0), 1.55, -22),
-                       ("ThunderPup", (0.0, -0.5, 0.0), 1.9, 0)],
+    "Store_PetSlots": [("Puffling", (-2.9, 0.7, 0.0), 1.55, 26), ("Zappy", (2.9, 0.7, 0.0), 1.55, -26),
+                       ("ThunderPup", (0.0, -0.6, 0.0), 1.9, 0)],
 }
 # The vacuum gun in Store_AutoCatch: scaled, its barrel (gear.py: along -Y) turned to +X and raised, its grip
 # (the prop's origin) moved to `at` (studs). sketchup_store_icons.py (chunk 10, NOZZLE) aims the beam at the
 # nozzle mouth this puts at nozzle() - keep the two in step.
-GUN = {"scale": 2.3, "turn": 90.0, "raise": 24.0, "at": (-2.6, 0.0, 1.0)}
+GUN = {"scale": 2.3, "turn": 90.0, "raise": 32.0, "at": (-2.4, 0.0, 0.6)}
 GUN_NOZZLE = (0.0, -2.75, 0.66)  # gear.py: the nozzle mouth, on the barrel axis
 # The gun's tint paints for the store (its gear.json defaults are the plain grey of the starter look)
 GUN_PAINTS = {"Primary": "D5DCF2", "Secondary": "3A4052", "Tertiary": "46C8FF"}

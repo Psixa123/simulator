@@ -750,14 +750,14 @@ def volts_huge():
     p = ST["new_store"]("VoltsHuge", 13)
     vault(p, (0.0, 0.6, 0.0))
     # a big heap of coins in front of the vault, stacks and gold bars round it, coins on its roof
-    ST["heap"](p, (0.0, -1.35, 0.0), 2.7, 1.25, 36, seed=21, r=0.52, ry=1.5)
+    ST["heap"](p, (0.0, -1.35, 0.0), 2.7, 1.25, 24, seed=21, r=0.66, ry=1.5)
     ST["coin_stack"](p, (-2.75, -0.2, 0.0), 7, r=0.72, h=0.27, seed=31)
     ST["coin_stack"](p, (2.75, -0.1, 0.0), 5, r=0.72, h=0.27, seed=32)
     ST["heap"](p, (0.3, 0.6, 4.75), 1.3, 0.6, 10, seed=33, r=0.42, ry=0.9)
-    bar = L["lathe"]([(0.0, 0.0), (0.82, 0.0), (0.62, 0.55), (0.0, 0.55)], n=4, phase=math.pi / 4)
-    for (x, y, z), spin in (((-1.75, -2.55, 0.0), 30), ((1.85, -2.5, 0.0), -24)):
-        L["piece"](p, Q["gold"], L["move"](L["rotate"](L["scale"](bar, [1.6, 0.8, 1.0]), "z", spin), (x, y, z)),
-                   crease=30)
+    bar = L["warp"](L["rounded_box"]((0.0, 0.0, 0.32), [1.7, 0.85, 0.64], 0.12, seg=2),
+                    lambda q: [q[0] * (1.0 - 0.22 * q[2] / 0.64), q[1] * (1.0 - 0.3 * q[2] / 0.64), q[2]])
+    for (x, y, z), spin in (((-1.9, -2.5, 0.0), 28), ((2.0, -2.45, 0.0), -22)):
+        L["piece"](p, Q["gold2"], L["move"](L["rotate"](bar, "z", spin), (x, y, z)), crease=40)
     return p
 
 
@@ -802,37 +802,44 @@ def summon_mega_storm():
     bands = 9
     for i in range(bands):
         t = i / (bands - 1.0)
-        z = 0.35 + 4.0 * t
-        rr = 0.32 + 1.75 * t ** 1.25
-        sway = 0.55 * math.sin(t * 3.3 + 0.4) * (1.0 - 0.5 * t)
+        z = 0.35 + 3.9 * t
+        rr = 0.3 + 1.45 * t ** 1.2
+        sway = 0.5 * math.sin(t * 3.3 + 0.4) * (1.0 - 0.6 * t)
         paint = P["storm_l"] if i % 2 == 0 else "Color_A88BFF"
-        L["piece"](p, paint, IC["torus"]((sway, 0.0, z), rr, 0.26 + 0.12 * t, n=48, m=10, axis="z", squash=1.25),
+        L["piece"](p, paint, IC["torus"]((sway, 0.0, z), rr, 0.25 + 0.1 * t, n=48, m=10, axis="z", squash=1.25),
                    crease=60)
     L["piece"](p, P["storm_d"], L["lathe"]([(0.0, 0.0), (0.3, 0.1), (0.5, 0.5), (0.0, 0.6)], n=24,
-                                           center=(0.55 * math.sin(0.4), 0.0, 0.0)), crease=60)
-    # the thundercloud on top, lightning on both sides
-    ST["cloud"](p, (0.1, 0.25, 5.15), 1.32, "Color_7A5CE0", seed=6, flat="Color_6447C9")
-    for x, z, s, rot in ((-2.35, 3.0, 2.0, 12), (2.45, 2.55, 1.7, -14)):
-        L["piece"](p, P["bolt"], IC["slab"](IC["rot2"](IC["bolt_shape"](s), rot), 0.5, 0.12, y=-0.6, x=x, z=z,
+                                           center=(0.5 * math.sin(0.4), 0.0, 0.0)), crease=60)
+    # wind streaks wrapped round the front of the funnel
+    for z, rr, a0, a1 in ((1.3, 1.05, 205, 300), (2.5, 1.55, 235, 335), (3.5, 2.0, 200, 285)):
+        arc = [(rr * math.cos(math.radians(a)), rr * math.sin(math.radians(a)), z + 0.25 * math.sin(math.radians(a)))
+               for a in range(a0, a1 + 1, 6)]
+        L["piece"](p, P["white"], L["tube"](arc, 0.1, n=8, caps="round"), crease=60)
+    # a wide, dark thundercloud on top: a flat base under a row of puffs
+    top, under = "Color_8A72EC", "Color_6447C9"
+    L["piece"](p, under, L["rounded_box"]((0.0, 0.2, 4.9), [6.0, 2.7, 1.2], 0.58, seg=3), crease=40)
+    for (x, y, z), r in (((-2.3, 0.25, 5.35), 0.95), ((-1.2, 0.4, 5.85), 1.25), ((0.2, 0.45, 6.05), 1.4),
+                         ((1.55, 0.35, 5.75), 1.2), ((2.5, 0.2, 5.3), 0.9), ((-0.6, -0.35, 5.35), 1.0),
+                         ((0.95, -0.35, 5.3), 1.0)):
+        L["piece"](p, top, L["blob"]((x, y, z), r, squash=0.85, lump=0.04, seed=6, seg=7), crease=60)
+    for x, z, s, rot in ((-2.6, 2.85, 2.1, 12), (2.7, 2.45, 1.8, -14)):
+        L["piece"](p, P["bolt"], IC["slab"](IC["rot2"](IC["bolt_shape"](s), rot), 0.5, 0.12, y=-0.7, x=x, z=z,
                                             corner=0.2), crease=50)
-    # bits of debris whirling round the funnel
-    for (x, y, z), r in (((-1.6, -0.9, 1.4), 0.2), ((1.7, -0.8, 1.9), 0.17), ((-1.1, -1.3, 3.2), 0.15)):
-        L["piece"](p, P["leaf"], L["ball"]((x, y, z), [r * 1.4, r * 0.6, r], seg=3), crease=60)
     return p
 
 
 # AutoCatch: the vacuum gun itself is the game's own (tools/world/sketchup/gear.py, prop VacuumGun), placed by
-# tools/icons/store_scenes.py (GUN: x2.3, barrel turned to +X and raised 24 degrees, grip at (-2.6, 0, 1.0)), so
-# its nozzle mouth is at about (2.56, 0.0, 4.96). This model holds what it catches: a cloud and a glowing beam.
-NOZZLE = (2.56, 0.0, 4.96)
-AIM = L["v_norm"]([math.cos(math.radians(24)), 0.0, math.sin(math.radians(24))])
+# tools/icons/store_scenes.py (GUN: x2.3, barrel turned to +X and raised 32 degrees, grip at (-2.4, 0, 0.6)), so
+# its nozzle mouth is at about (2.16, 0.0, 5.24). This model holds what it catches: a cloud and a glowing beam.
+NOZZLE = (2.16, 0.0, 5.24)
+AIM = L["v_norm"]([math.cos(math.radians(32)), 0.0, math.sin(math.radians(32))])
 
 
 def auto_catch():
     p = ST["new_store"]("AutoCatch", 17)
-    far = L["v_add"](NOZZLE, L["v_mul"](AIM, 3.6))
-    ST["cloud"](p, (far[0] + 0.6, far[1] + 0.2, far[2] + 0.55), 0.95, P["white"], seed=3, flat=P["cloud"])
-    beam = L["lathe"]([(0.0, 0.0), (0.62, 0.0), (1.55, 3.4), (0.0, 3.4)], n=40)
+    far = L["v_add"](NOZZLE, L["v_mul"](AIM, 3.1))
+    ST["cloud"](p, (far[0] + 0.7, far[1] + 0.3, far[2] + 0.7), 1.2, P["white"], seed=3, flat=P["cloud"])
+    beam = L["lathe"]([(0.0, 0.0), (0.66, 0.0), (1.65, 3.0), (0.0, 3.0)], n=40)
     L["piece"](p, "Glass_8FF0FF", IC["align"](beam, AIM, L["v_add"](NOZZLE, L["v_mul"](AIM, 0.1))), crease=60)
     # raindrops and a little bolt being pulled into the nozzle
     for k, s in ((1.2, 0.22), (2.1, 0.28), (2.8, 0.2)):

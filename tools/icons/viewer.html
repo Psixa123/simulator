@@ -22,6 +22,7 @@
          horizon band and a stronger highlight; used by the store heroes for gold and steel)
          &matte=Color_C92A62,... (paints with only a faint highlight: velvet, cloth, straw, wood)
          &glass=0.34 (opacity of glass where it faces the camera; lower shows more of what is inside)
+         &clear=1 (glass keeps its light tint on the shadow side too, instead of the toon shade: clear bulbs)
 -->
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
@@ -53,6 +54,7 @@ const noLine = new Set((params.get('noline') || '').split(',').filter(Boolean));
 const metal = new Set((params.get('metal') || '').split(',').filter(Boolean));
 const matte = new Set((params.get('matte') || '').split(',').filter(Boolean));
 const glassAlpha = Number(params.get('glass') || 0.34);
+const clearGlass = params.get('clear') === '1';
 const DEPTH_SCALE = 4096;  // studs -> 16-bit depth steps
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -123,7 +125,7 @@ const shadeFragment = `
       col = mix(col, vec3(1.0), gloss * (0.88 * smoothstep(0.95, 0.972, sp) + 0.15 * smoothstep(0.8, 0.95, sp)));
       if (kind > 1.5 && kind < 2.5) {  // Glass: see-through in the middle, denser at the rim
         alpha = ${glassAlpha.toFixed(3)} + 0.55 * fres + 0.6 * smoothstep(0.955, 0.975, sp);
-        col = mix(col, vec3(1.0), 0.18);
+        col = mix(${clearGlass ? 'max(col, base * 0.94)' : 'col'}, vec3(1.0), 0.18);
       }
     }
     gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
