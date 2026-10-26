@@ -18,6 +18,7 @@ const Brand = (() => {
     leaf: [[0, "#b8f7a2"], [0.5, "#7be36a"], [1, "#33b24a"]],
     coral: [[0, "#ffb3ba"], [0.5, "#ff7a85"], [1, "#e43a58"]],
     sunset: [[0, "#ffd9a6"], [0.5, "#ffb15c"], [1, "#f2702a"]],
+    rainbow: [[0, "#ff6b81"], [0.2, "#ffb347"], [0.4, "#ffe95a"], [0.6, "#6ee88a"], [0.8, "#54c8ff"], [1, "#b48bff"]],
   };
 
   async function ready() {
@@ -56,7 +57,8 @@ const Brand = (() => {
 
   // A big title line: gradient fill, thick Ink outline, a solid Ink extrusion underneath, a white gloss on
   // the upper half and a soft shadow. opts: size (font px), fill (FILLS key or stops), stroke, depth,
-  // spacing (letter spacing px), font, maxWidth (shrinks the line to fit), gloss (0..1)
+  // spacing (letter spacing px), font, maxWidth (shrinks the line to fit), gloss (0..1), horizontal (the fill
+  // runs left -> right, e.g. FILLS.rainbow)
   function title(text, opts = {}) {
     const font = opts.font || "Luckiest Guy";
     let size = opts.size || 160;
@@ -72,7 +74,7 @@ const Brand = (() => {
     const width = Math.ceil(box.width + pad * 2);
     const height = Math.ceil(box.height + pad * 2 + depth);
     const baseline = pad - box.y;
-    const fill = gradient(typeof opts.fill === "string" ? FILLS[opts.fill] : (opts.fill || FILLS.bolt));
+    const fill = gradient(typeof opts.fill === "string" ? FILLS[opts.fill] : (opts.fill || FILLS.bolt), opts.horizontal);
     const gloss = gradient([[0, "#ffffff"], [0.5, "#ffffff"], [0.5001, "#ffffff", 0], [1, "#ffffff", 0]]);
     const shadowId = uid("shadow");
     const line = (attributes, dy = 0) => `<text x="${width / 2}" y="${baseline + dy}" text-anchor="middle"

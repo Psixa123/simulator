@@ -67,8 +67,10 @@ PETS = [
         "BreezeKing", "ThunderPup", "PhoenixChick", "AuroraFox",  # thumbnail 1 (and 2)
         "Droplet", "Zappy", "CactusCub", "Icicle", "LavaPup", "Nebula", "Sunny", "VoltBat", "Scarab", "Moonbeam",
         "Ember", "InfernoDrake",  # thumbnail 2
+        "Puffling", "Prism", "StormLord", "MirageDjinn", "YetiKing", "GalaxyGuardian",  # ads
     )],
     ("ThunderPup", "Golden", "hero", 640),
+    ("ThunderPup", "Rainbow", "hero", 640),
     ("AuroraFox", "Rainbow", "hero", 640),
     *[(pet, "Normal", "three4", 640) for pet in (  # thumbnail 3: the Mega Storm exclusives
         "TempestTitan", "VoltWyrm", "FrostColossus", "CycloneDrake", "MaelstromSpirit", "RainbowRoc",
@@ -80,11 +82,15 @@ STUDIO = {
     "Weather_": (1024, -20, 12),
     "Egg_": (512, -25, 10),
     "MegaStorm_": (1024, -20, 6),
+    "Gear_Vacuum": (1024, -100, 14),  # side view, nozzle to the left
+    "Gear_Player": (1024, 125, 8),  # from behind on the left: the vacuum aims up and to the right
 }
 # The studio models the pages use (--all renders every one)
 STUDIO_USED = {
-    "Weather_StormCloud", "Weather_RainbowMist", "Weather_Starstorm", "Weather_CosmicVortex",
+    "Weather_StormCloud", "Weather_RainbowMist", "Weather_Starstorm", "Weather_CosmicVortex", "Weather_Thunderhead",
+    "Weather_RainCloud", "Weather_Breeze",
     "Egg_MeadowEgg", "Egg_ThunderEgg", "Egg_DuneEgg", "Egg_FrostEgg", "Egg_MagmaEgg", "Egg_CosmicEgg",
+    "Gear_Vacuum", "Gear_Player",
 }
 # BrandingScene.luau's studio slots
 STUDIO_ORIGIN = (0, 3000, 9000)
@@ -98,6 +104,10 @@ MAP_SHOTS = {
     "plains": "target=150,10,0 az=125 el=16 dist=170 fov=50 light=1 size=2400x1350",
     # thumbnail 3: the Mega Storm (Cosmic Maelstrom) in the Storm Station arena, from low down
     "arena": "target=-112,75,0 az=235 el=-2 dist=135 fov=66 light=hub size=2400x1350",
+    # ads: standing in Thunder Valley's field among the storm clouds
+    "thunder_field": "pos=380,22,60 look=520,20,-10 fov=60 light=2 size=2400x1350",
+    # ads: the whole chain of sky islands over the cloud sea, from the side
+    "chain": "target=850,0,0 az=160 el=36 dist=1350 fov=40 light=hub fog=2000,8000 size=2400x1350",
 }
 
 
@@ -281,8 +291,10 @@ def capture_studio(raw_dir, out_dir, everything=False):
         if not rows:
             print(f"  ! studio slot {slot} ({name}) is empty")
             continue
-        (stage_dir / f"{name}.json").write_text(json.dumps(rows), encoding="utf-8")
-        size, azimuth, elevation = next(v for prefix, v in STUDIO.items() if name.startswith(prefix))
+        meshes = {row[0][5:]: scene["meshes"]["items"][row[0][5:]] for row in rows if row[0].startswith("mesh:")}
+        payload = {"rows": rows, "meshes": meshes, "bin": "/" + rel(raw_dir / "meshes.bin")}
+        (stage_dir / f"{name}.json").write_text(json.dumps(payload), encoding="utf-8")
+        size, azimuth, elevation = next(v for prefix, v in STUDIO.items() if name.startswith(prefix))  # first match
         px = size * SUPERSAMPLE
         query = f"parts=/{rel(stage_dir / (name + '.json'))}&size={px}&az={azimuth}&el={elevation}"
         jobs.append((f"tools/branding/stage.html?{query}", stage_dir / f"{name}.png", px))

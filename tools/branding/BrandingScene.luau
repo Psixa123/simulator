@@ -9,7 +9,8 @@
 -- (WeatherModels.BuildMegaStorm) in the Storm Station arena. A fixed random seed keeps the shots
 -- identical between runs.
 --
--- Far above the map it also lines up a "studio": every weather cell, every egg and every Mega Storm
+-- Far above the map it also lines up a "studio": every weather cell, every egg, every Mega Storm and
+-- the Storm Vacuum gear (alone, and on a blocky player aiming it, built by the real CharacterGear) each
 -- on its own, STUDIO_STEP studs apart from STUDIO_ORIGIN (buildStudio prints the slots), which
 -- capture.py cuts out of the scene and renders one by one on a transparent background.
 
@@ -17,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local MapService = require(script.Parent.MapService)
+local CharacterGear = require(script.Parent.CharacterGear)
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local WeatherModels = require(Shared:WaitForChild("Models"):WaitForChild("WeatherModels"))
@@ -39,6 +41,11 @@ local ARENA_STORM = 5 -- Cosmic Maelstrom
 local STUDIO_ORIGIN = Vector3.new(0, 3000, 9000)
 local STUDIO_STEP = 300
 local EGG_HEIGHT = 4 -- studs, like the egg stations' display egg
+local AIM = 118 -- degrees the player's vacuum arm is raised from hanging down (90 = level): aiming up at a cloud
+local SKIN = Color3.fromRGB(255, 205, 148)
+local HAIR = Color3.fromRGB(92, 58, 40)
+local SHIRT = Color3.fromRGB(92, 200, 255)
+local PANTS = Color3.fromRGB(58, 64, 120)
 
 local function typesByRarity(zone)
 	local result = {}
@@ -101,8 +108,73 @@ local function clearView()
 	end
 end
 
--- Every weather type (zone order), every egg and every Mega Storm, each in its own studio slot. The
--- slot list is printed as "STUDIO <slot> <name>" lines for capture.py.
+local function block(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Anchored = true
+	part.Size = size
+	part.CFrame = cframe
+	part.Color = color
+	part.Material = Enum.Material.SmoothPlastic
+	part.Parent = parent
+	return part
+end
+
+-- A blocky R15-shaped player (like tools/world/GearPreview.luau) facing -Z with the HumanoidRootPart at the
+-- origin, the right arm raised AIM degrees about the shoulder. Returns the model, its UpperTorso and RightHand.
+local function player(parent: Instance)
+	local model = Instance.new("Model")
+	model.Name = "Player"
+	model.Parent = parent
+	local function limb(name, size, offset, color)
+		return block(name, size, offset, color, model)
+	end
+	local root = limb("HumanoidRootPart", Vector3.new(2, 2, 1), CFrame.new(), SHIRT)
+	root.Transparency = 1
+	model.PrimaryPart = root
+	limb("LowerTorso", Vector3.new(2, 0.4, 1), CFrame.new(0, -0.8, 0), PANTS)
+	local upper = limb("UpperTorso", Vector3.new(2, 1.6, 1), CFrame.new(0, 0.2, 0), SHIRT)
+	local back = Instance.new("Attachment")
+	back.Name = "BodyBackAttachment"
+	back.CFrame = CFrame.new(0, 0.2, 0.5)
+	back.Parent = upper
+	limb("Head", Vector3.new(1.2, 1.2, 1.2), CFrame.new(0, 1.6, 0), SKIN)
+	limb("Hair", Vector3.new(1.3, 0.45, 1.3), CFrame.new(0, 2.1, 0.03), HAIR)
+	limb("HairBack", Vector3.new(1.3, 0.8, 0.3), CFrame.new(0, 1.75, 0.52), HAIR)
+	local shoulder = CFrame.new(1.5, 1.0, 0) * CFrame.Angles(math.rad(AIM), 0, 0) * CFrame.new(-1.5, -1.0, 0)
+	limb("RightUpperArm", Vector3.new(1, 1.2, 1), shoulder * CFrame.new(1.5, 0.4, 0), SHIRT)
+	limb("RightLowerArm", Vector3.new(1, 1.1, 1), shoulder * CFrame.new(1.5, -0.6, 0), SKIN)
+	local hand = limb("RightHand", Vector3.new(0.6, 0.6, 0.6), shoulder * CFrame.new(1.5, -1.1, 0), SKIN)
+	local grip = Instance.new("Attachment")
+	grip.Name = "RightGripAttachment"
+	grip.CFrame = CFrame.new(0, -0.15, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
+	grip.Parent = hand
+	-- the left arm swings back a little, like running
+	local left = CFrame.new(-1.5, 1.0, 0) * CFrame.Angles(math.rad(-20), 0, 0) * CFrame.new(1.5, -1.0, 0)
+	limb("LeftUpperArm", Vector3.new(1, 1.2, 1), left * CFrame.new(-1.5, 0.4, 0), SHIRT)
+	limb("LeftLowerArm", Vector3.new(1, 1.1, 1), left * CFrame.new(-1.5, -0.6, 0), SKIN)
+	limb("LeftHand", Vector3.new(0.6, 0.6, 0.6), left * CFrame.new(-1.5, -1.1, 0), SKIN)
+	for _, side in { -1, 1 } do
+		limb("Leg", Vector3.new(1, 2.4, 1), CFrame.new(side * 0.5, -2.2, 0), PANTS)
+	end
+	return model, upper, hand
+end
+
+-- Holds the tool's Handle at the hand's RightGripAttachment (what Humanoid:EquipTool does)
+local function hold(tool: Tool, hand: BasePart, model: Model)
+	local grip = hand:FindFirstChild("RightGripAttachment")
+	local target = hand.CFrame * grip.CFrame * tool.Grip:Inverse()
+	local base = tool:FindFirstChild("Handle").CFrame
+	for _, part in tool:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CFrame = target * base:ToObjectSpace(part.CFrame)
+		end
+	end
+	tool.Parent = model
+end
+
+-- Every weather type (zone order), every egg, every Mega Storm and the gear, each in its own studio slot.
+-- The slot list is printed as "STUDIO <slot> <name>" lines for capture.py.
 local function buildStudio()
 	local folder = Instance.new("Folder")
 	folder.Name = "BrandingStudio"
@@ -126,6 +198,23 @@ local function buildStudio()
 	for _, stormType in GameConfig.MegaStorm.Types do
 		place("MegaStorm_" .. stormType.Key, WeatherModels.BuildMegaStorm(stormType))
 	end
+
+	-- the Storm Vacuum on its own (a Model, so place() can pivot it)
+	local vacuum = Instance.new("Model")
+	CharacterGear.BuildVacuum().Parent = vacuum
+	place("Gear_Vacuum", vacuum)
+
+	-- a player aiming the vacuum, the Storm Tank on their back, the tank 85 % full
+	local holder = Instance.new("Model")
+	local model, upper, hand = player(holder)
+	local tool = CharacterGear.BuildVacuum()
+	hold(tool, hand, model)
+	local tank = CharacterGear.BuildTank()
+	CharacterGear.AttachTank(model, tank, upper:FindFirstChild("BodyBackAttachment"))
+	CharacterGear.SetTankFill(tank, 0.85)
+	local nozzle = tool:FindFirstChild("Handle"):FindFirstChild("NozzleAttachment")
+	print(string.format("NOZZLE %.3f %.3f %.3f", nozzle.WorldPosition.X, nozzle.WorldPosition.Y, nozzle.WorldPosition.Z))
+	place("Gear_Player", holder)
 end
 
 function Scene.Init()
