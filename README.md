@@ -284,6 +284,7 @@ on the Creator Hub (the `Price` in the file is only a fallback, so keep them the
 | `AutoCatch` | 🤖 Auto Catch | 299 | `assets/gamepasses/AutoCatch.png` |
 | `RemoteSell` | 📡 Remote Sell (sell anywhere + auto-sell when full) | 199 | `assets/gamepasses/RemoteSell.png` |
 | `MegaTank` | 🛢️ Mega Tank (2x tank capacity) | 149 | `assets/gamepasses/MegaTank.png` |
+| `InfiniteTank` | ♾️ Infinite Tank (the tank never fills up) | 499 | `assets/gamepasses/InfiniteTank.png` |
 | `LuckyHatcher` | 🍀 Lucky Hatcher | 249 | `assets/gamepasses/LuckyHatcher.png` |
 | `TripleHatch` | 🥚 Triple Hatch | 149 | `assets/gamepasses/TripleHatch.png` |
 | `AutoHatch` | 🔁 Auto Hatch | 99 | `assets/gamepasses/AutoHatch.png` |

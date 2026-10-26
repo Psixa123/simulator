@@ -37,14 +37,13 @@ function EconomyService.SpendVolts(player: Player, amount: number): boolean
 	return true
 end
 
--- Adds energy to the tank, capped by capacity. Returns how much was actually added.
+-- Adds energy to the tank, capped by capacity (no cap with Infinite Tank). Returns how much was actually added.
 function EconomyService.AddEnergy(player: Player, units: number, valuePerUnit: number): number
 	local data = Registry.DataService.Get(player)
 	if not data or units <= 0 then
 		return 0
 	end
-	local capacity = Formulas.TankCapacity(data)
-	local added = math.min(math.max(0, capacity - data.Energy), units)
+	local added = math.min(Formulas.TankSpace(data), units)
 	if added <= 0 then
 		return 0
 	end
@@ -55,7 +54,7 @@ function EconomyService.AddEnergy(player: Player, units: number, valuePerUnit: n
 end
 
 function EconomyService.IsTankFull(data): boolean
-	return data.Energy >= Formulas.TankCapacity(data) - 1e-6
+	return Formulas.IsTankFull(data)
 end
 
 -- Converts the whole tank into Volts. source: "Pad" | "Remote" | "Auto"

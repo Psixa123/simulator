@@ -22,8 +22,8 @@ function Format.Number(value: number?): string
 	if number ~= number then
 		return "0"
 	end
-	if number == math.huge then
-		return "∞"
+	if number == math.huge or number == -math.huge then
+		return if number > 0 then "∞" else "-∞" -- never "inf"
 	end
 
 	local sign = if number < 0 then "-" else ""

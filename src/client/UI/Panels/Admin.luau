@@ -1214,7 +1214,8 @@ function Admin.Build()
 		-- Me
 		if info then
 			voltsRow.Info.Text = "Now: " .. Format.Number(info.Volts or 0)
-			energyRow.Info.Text = string.format("%s / %s energy", Format.Number(math.floor(info.Energy or 0)), Format.Number(info.Capacity or 0))
+			local capacity = if Formulas.HasInfiniteTank(info) then "∞" else Format.Number(info.Capacity or 0)
+			energyRow.Info.Text = string.format("%s / %s energy", Format.Number(math.floor(info.Energy or 0)), capacity)
 			shiftsRow.Info.Text = "Now: " .. tostring(info.Rebirths or 0)
 			for upgradeId, upgradeRow in upgradeRows do
 				local level = info.Upgrades and info.Upgrades[upgradeId] or 1

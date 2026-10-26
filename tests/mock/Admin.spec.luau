@@ -173,7 +173,7 @@ Registry.EconomyService = {
 	end,
 	AddEnergy = function(player, units, valuePerUnit)
 		local data = datas[player]
-		local added = math.min(math.max(0, Formulas.TankCapacity(data) - data.Energy), units)
+		local added = math.min(Formulas.TankSpace(data), units) -- like EconomyService (no cap with Infinite Tank)
 		data.Energy += added
 		data.TankValue += added * valuePerUnit
 		Registry.DataService.Replicate(player, "Energy", "TankValue")
@@ -523,13 +523,49 @@ check("pass grant", reply.Ok and data.Passes.VIP == true)
 check("pass grant: replicated", table.find(replicated, "OwnerOfStorms:Passes") ~= nil)
 check("pass grant: info lists it", reply.Info.Passes.VIP == true)
 reply = invoke(owner, "Pass", { Pass = "All", Owned = true })
-check("pass grant all", reply.Ok and data.Passes.MegaTank and data.Passes.PetSlots and data.Passes.StormRadar)
+check("pass grant all", reply.Ok and data.Passes.MegaTank and data.Passes.PetSlots and data.Passes.StormRadar and data.Passes.InfiniteTank)
 reply = invoke(owner, "Pass", { Pass = "VIP", Owned = false })
 check("pass revoke", reply.Ok and data.Passes.VIP == nil and data.Passes.MegaTank == true)
 data.Energy = Formulas.TankCapacity(data)
 invoke(owner, "Pass", { Pass = "All", Owned = false })
 check("pass revoke all", next(data.Passes) == nil)
 check("pass revoke: Mega Tank energy capped", data.Energy == Formulas.TankCapacity(data))
+
+-- Infinite Tank: the admin panel grants it like any pass, Give / Set go past a normal tank, Fill tops up to
+-- one normal tank, a smaller Storm Tank doesn't cap it, and removing the pass caps the tank again
+reset()
+data.Energy, data.TankValue = 100, 400
+reply = invoke(owner, "Pass", { Pass = "InfiniteTank", Owned = true })
+check("infinite tank: granted", reply.Ok and data.Passes.InfiniteTank == true, reply.Error)
+check("infinite tank: grant message", reply.Ok and string.find(reply.Message, "Infinite Tank", 1, true) ~= nil, reply.Message)
+check("infinite tank: the info lists it", reply.Info and reply.Info.Passes.InfiniteTank == true)
+check("infinite tank: replicated", table.find(replicated, "OwnerOfStorms:Passes") ~= nil)
+local normal = Formulas.TankCapacity(data)
+check("infinite tank: TankCapacity stays the normal, finite tank", normal == Formulas.BaseTank(data) and normal < math.huge, normal)
+check("infinite tank: the info's Capacity is finite", reply.Info and reply.Info.Capacity == normal, reply.Info and reply.Info.Capacity)
+check("infinite tank: never full", not Formulas.IsTankFull(data) and Formulas.TankSpace(data) == math.huge)
+reply = invoke(owner, "Energy", { Mode = "Give", Amount = normal * 3 })
+check("infinite tank: energy give goes past a normal tank", reply.Ok and data.Energy == 100 + normal * 3, data.Energy)
+check("infinite tank: the answer shows ∞", reply.Ok and string.find(reply.Message, "/ ∞ energy", 1, true) ~= nil, reply.Message)
+check("infinite tank: no inf or nan in the answer", not string.find(string.lower(reply.Message), "inf", 1, true) and not string.find(string.lower(reply.Message), "nan", 1, true), reply.Message)
+check("infinite tank: still not full past a normal tank", not Formulas.IsTankFull(data))
+local over = data.Energy
+reply = invoke(owner, "Energy", { Mode = "Fill" })
+check("infinite tank: fill keeps what is above a normal tank", reply.Ok and data.Energy == over, data.Energy)
+invoke(owner, "Energy", { Mode = "Set", Amount = 10 })
+reply = invoke(owner, "Energy", { Mode = "Fill" })
+check("infinite tank: fill tops up to one normal tank", reply.Ok and data.Energy == normal, data.Energy .. " / " .. normal)
+reply = invoke(owner, "Energy", { Mode = "Set", Amount = normal * 5 })
+check("infinite tank: energy set past a normal tank", reply.Ok and data.Energy == normal * 5, data.Energy)
+invoke(owner, "Upgrade", { Upgrade = "Tank", Level = 1 })
+check("infinite tank: a smaller Storm Tank doesn't cap it", data.Energy == normal * 5, data.Energy)
+local worth = data.TankValue
+invoke(owner, "Pass", { Pass = "InfiniteTank", Owned = false })
+local capped = Formulas.TankCapacity(data)
+check("infinite tank: removed", data.Passes.InfiniteTank == nil)
+check("infinite tank: removing it caps the tank", data.Energy == capped, data.Energy .. " / " .. capped)
+check("infinite tank: removing it keeps the worth in proportion", math.abs(data.TankValue - worth * capped / (normal * 5)) < 1e-6, data.TankValue)
+invoke(owner, "Upgrade", { Upgrade = "Tank", Level = 8 })
 
 reset()
 reply = invoke(owner, "Teleport", { To = 5 })

@@ -85,7 +85,7 @@ local function compute(data)
 	local catchZone = math.clamp(if zoneHere > 0 and zoneHere <= bestZone then zoneHere else bestZone, 1, #Zones)
 	local remoteSell = Formulas.HasPass(data, "RemoteSell")
 
-	if data.Energy >= Formulas.TankCapacity(data) - 1e-6 and not remoteSell then
+	if Formulas.IsTankFull(data) and not remoteSell then -- never with Infinite Tank
 		-- The Mega Storm pays Volts, so a full tank doesn't stop you from fighting it
 		if Registry.VacuumController.InMegaRange() then
 			return "🌪️ Tank full, but you can still vacuum the Mega Storm!", nil, nil

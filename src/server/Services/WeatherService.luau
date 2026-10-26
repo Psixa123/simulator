@@ -201,10 +201,10 @@ end
 
 -- Drains up to `power` from a cell into the player's tank (shared by the vacuum and pets).
 -- Returns false when the tank is full and can't be auto-sold, so the caller should stop.
+-- An Infinite Tank is never full: only the cell's health and the power limit what it drains.
 local function drainCell(player: Player, data, cell, power: number, now: number): boolean
 	local remoteSell = Formulas.HasPass(data, "RemoteSell")
-	local capacity = Formulas.TankCapacity(data)
-	if data.Energy >= capacity - 1e-6 then
+	if Formulas.IsTankFull(data) then
 		if remoteSell then
 			Registry.EconomyService.Sell(player, "Auto")
 		else
@@ -213,8 +213,7 @@ local function drainCell(player: Player, data, cell, power: number, now: number)
 	end
 
 	local multiplier = Formulas.EnergyMultiplier(data, now)
-	local space = capacity - data.Energy
-	local drained = math.min(cell.Health, power, space / multiplier)
+	local drained = math.min(cell.Health, power, Formulas.TankSpace(data) / multiplier)
 	if drained > 0 then
 		cell.Health -= drained
 		local added = Registry.EconomyService.AddEnergy(player, drained * multiplier, cell.Value)
@@ -227,7 +226,7 @@ local function drainCell(player: Player, data, cell, power: number, now: number)
 		end
 	end
 
-	if remoteSell and data.Energy >= capacity - 1e-6 then
+	if remoteSell and Formulas.IsTankFull(data) then
 		Registry.EconomyService.Sell(player, "Auto")
 	end
 	return true
@@ -439,7 +438,7 @@ local function onCatch(player: Player, action, targetId)
 	if (root.Position - cell.Position).Magnitude > Formulas.Range(data) + GameConfig.CatchRangeLeeway then
 		return
 	end
-	if data.Energy >= Formulas.TankCapacity(data) - 1e-6 and not Formulas.HasPass(data, "RemoteSell") then
+	if Formulas.IsTankFull(data) and not Formulas.HasPass(data, "RemoteSell") then
 		tankFullMessage(player)
 		return
 	end

@@ -59,12 +59,44 @@ function Formulas.BoostActive(data, boostName: string, now: number): boolean
 	return endTime ~= nil and endTime > now
 end
 
+-- The normal size of a full tank (Storm Tank level, Mega Tank). Always finite, also with Infinite Tank:
+-- it is what "a full tank" means for the HUD, the admin Fill and anything that pays per tank.
 function Formulas.TankCapacity(data): number
 	local capacity = Formulas.BaseTank(data)
 	if Formulas.HasPass(data, "MegaTank") then
 		capacity *= GameConfig.PassEffects.MegaTank
 	end
 	return capacity
+end
+
+-- Infinite Tank pass: the tank has no limit, so it never fills up
+function Formulas.HasInfiniteTank(data): boolean
+	return Formulas.HasPass(data, "InfiniteTank")
+end
+
+-- True when the tank can't take more energy (never with Infinite Tank). Server and client both use this.
+function Formulas.IsTankFull(data): boolean
+	return not Formulas.HasInfiniteTank(data) and (data.Energy or 0) >= Formulas.TankCapacity(data) - 1e-6
+end
+
+-- Energy the tank can still take: math.huge with Infinite Tank, so only use it to limit catching
+-- (math.min), never as an amount to pay out or show
+function Formulas.TankSpace(data): number
+	if Formulas.HasInfiniteTank(data) then
+		return math.huge
+	end
+	return math.max(0, Formulas.TankCapacity(data) - (data.Energy or 0))
+end
+
+-- How full the tank looks, 0..1 (HUD storm jar, backpack fill). An Infinite Tank never reaches the
+-- top: one normal tank of energy shows half full, two show two thirds and so on, up to 95%.
+function Formulas.TankFillFraction(data): number
+	local energy = math.max(0, data.Energy or 0)
+	local capacity = Formulas.TankCapacity(data)
+	if Formulas.HasInfiniteTank(data) then
+		return math.min(0.95, energy / (energy + capacity))
+	end
+	return math.clamp(energy / capacity, 0, 1)
 end
 
 ---------------------------------------------------------------------------

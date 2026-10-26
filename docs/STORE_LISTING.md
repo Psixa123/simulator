@@ -26,6 +26,7 @@ The in-game Shop shows the same pictures as its card art. They are uploaded sepa
 | `AutoCatch` | Auto Catch | 299 | Your vacuum automatically catches the nearest weather. No clicking needed! | `assets/gamepasses/AutoCatch.png` |
 | `RemoteSell` | Remote Sell | 199 | Sell from anywhere and automatically sell whenever your tank is full. | `assets/gamepasses/RemoteSell.png` |
 | `MegaTank` | Mega Tank | 149 | Double your Storm Tank capacity forever. | `assets/gamepasses/MegaTank.png` |
+| `InfiniteTank` | Infinite Tank | 499 | Your Storm Tank never fills up: catch weather nonstop and sell whenever you like. | `assets/gamepasses/InfiniteTank.png` |
 | `LuckyHatcher` | Lucky Hatcher | 249 | +50% luck for Rare, Epic and Legendary pets from every egg. | `assets/gamepasses/LuckyHatcher.png` |
 | `TripleHatch` | Triple Hatch | 149 | Hatch 3 eggs at once. | `assets/gamepasses/TripleHatch.png` |
 | `AutoHatch` | Auto Hatch | 99 | Keep hatching eggs automatically while you stand next to them. | `assets/gamepasses/AutoHatch.png` |

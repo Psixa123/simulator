@@ -155,9 +155,10 @@ local function update(force: boolean?)
 		return
 	end
 
-	-- A full tank only blocks regular weather: the Mega Storm pays out Volts, not energy
+	-- A full tank only blocks regular weather: the Mega Storm pays out Volts, not energy.
+	-- Same rule as the server (WeatherService): an Infinite Tank is never full.
 	local remoteSell = Formulas.HasPass(data, "RemoteSell")
-	local tankFull = data.Energy >= Formulas.TankCapacity(data) - 1e-6 and not remoteSell
+	local tankFull = Formulas.IsTankFull(data) and not remoteSell
 	if tankFull and not inMegaRange(root) then
 		stop()
 		if holding then

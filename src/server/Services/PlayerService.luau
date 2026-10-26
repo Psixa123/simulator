@@ -48,7 +48,7 @@ function PlayerService.UpdateTank(player: Player)
 	if not data then
 		return
 	end
-	local fraction = math.clamp(data.Energy / Formulas.TankCapacity(data), 0, 1)
+	local fraction = Formulas.TankFillFraction(data) -- an Infinite Tank never shows full
 	local stepped = if fraction >= 0.999 then 1 else math.floor(fraction * 20 + 0.5) / 20
 	if stepped ~= entry.Fraction then
 		entry.Fraction = stepped

@@ -57,6 +57,7 @@ local ITEM_ICONS = {
 	AutoCatch = "Power",
 	RemoteSell = "Radar",
 	MegaTank = "Tank",
+	InfiniteTank = "Tank",
 	LuckyHatcher = "Luck",
 	TripleHatch = "Eggs",
 	AutoHatch = "Eggs",

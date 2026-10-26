@@ -233,7 +233,7 @@ local function energyValue(data): number
 	return Zones[Formulas.BestCatchableZone(data)].Value
 end
 
--- Keeps the tank within its capacity (after an upgrade or pass change), keeping its worth in proportion
+-- Lowers the tank to `wanted` energy (never raises it), keeping its worth in proportion
 local function capEnergy(player: Player, data, wanted: number)
 	wanted = math.max(0, wanted)
 	if wanted >= data.Energy then
@@ -242,6 +242,18 @@ local function capEnergy(player: Player, data, wanted: number)
 	data.TankValue = if wanted > 0 and data.Energy > 0 then data.TankValue * wanted / data.Energy else 0
 	data.Energy = wanted
 	Registry.DataService.Replicate(player, "Energy", "TankValue")
+end
+
+-- Keeps the tank within its capacity after an upgrade or pass change (an Infinite Tank has no limit)
+local function fitTank(player: Player, data)
+	if not Formulas.HasInfiniteTank(data) then
+		capEnergy(player, data, Formulas.TankCapacity(data))
+	end
+end
+
+-- "1.2K" for a normal tank, "∞" for an Infinite Tank
+local function capacityText(data): string
+	return if Formulas.HasInfiniteTank(data) then "∞" else Format.Number(Formulas.TankCapacity(data))
 end
 
 -- Finds a player in this server by Name, then DisplayName, then the start of a Name (any case)
@@ -406,7 +418,7 @@ COMMANDS.Energy = {
 	Target = true,
 	Run = function(ctx)
 		local player, data, args = ctx.Target, ctx.Data, ctx.Args
-		local capacity = Formulas.TankCapacity(data)
+		local capacity = Formulas.TankCapacity(data) -- a normal full tank, also with Infinite Tank
 		local wanted
 		if args.Mode == "Give" or args.Mode == "Set" then
 			if args.Amount == nil then
@@ -414,17 +426,19 @@ COMMANDS.Energy = {
 			end
 			wanted = if args.Mode == "Give" then data.Energy + args.Amount else args.Amount
 		elseif args.Mode == "Fill" then
-			wanted = capacity
+			-- An Infinite Tank is topped up to one normal tank; what is already above that stays
+			wanted = if Formulas.HasInfiniteTank(data) then math.max(data.Energy, capacity) else capacity
 		else
 			wanted = 0
 		end
-		wanted = math.clamp(wanted, 0, capacity)
+		-- No top with Infinite Tank (Give / Set may go past a normal tank)
+		wanted = if Formulas.HasInfiniteTank(data) then math.max(0, wanted) else math.clamp(wanted, 0, capacity)
 		if wanted > data.Energy then
 			Registry.EconomyService.AddEnergy(player, wanted - data.Energy, energyValue(data))
 		else
 			capEnergy(player, data, wanted)
 		end
-		return ok(string.format("%s tank: %s / %s energy.", whose(ctx), Format.Number(math.floor(data.Energy)), Format.Number(capacity)))
+		return ok(string.format("%s tank: %s / %s energy.", whose(ctx), Format.Number(math.floor(data.Energy)), capacityText(data)))
 	end,
 }
 
@@ -442,7 +456,7 @@ COMMANDS.Upgrade = {
 			table.insert(parts, string.format("%s %s Lv %d", def.Icon, def.Name, level))
 		end
 		Registry.DataService.Replicate(ctx.Target, "Upgrades")
-		capEnergy(ctx.Target, data, Formulas.TankCapacity(data))
+		fitTank(ctx.Target, data)
 		return ok(string.format("%s upgrades: %s.", whose(ctx), table.concat(parts, ", ")))
 	end,
 }
@@ -487,7 +501,7 @@ COMMANDS.Pass = {
 		-- Passes is a session key: Roblox's own ownership check decides again when they rejoin
 		Registry.DataService.Replicate(ctx.Target, "Passes")
 		Registry.PetService.Refresh(ctx.Target, data) -- +3 Pet Slots changes who is equipped
-		capEnergy(ctx.Target, data, Formulas.TankCapacity(data)) -- Mega Tank
+		fitTank(ctx.Target, data) -- Mega Tank, Infinite Tank
 		local pass = Monetization.Gamepasses[args.Pass]
 		local label = if pass then pass.Icon .. " " .. pass.Name else "every gamepass"
 		local whom = if ctx.Target == ctx.Admin then "" elseif args.Owned then " to " .. name(ctx.Target) else " from " .. name(ctx.Target)

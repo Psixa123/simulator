@@ -619,6 +619,74 @@ local function runScenario()
 	UserInputService.KeyboardEnabled = true
 	note(string.format("energy %.0f / %d, cells caught %d", data.Energy, Formulas.TankCapacity(data), data.Stats.CellsCaught))
 
+	------------------------------------------------------------------ Infinite Tank: a full tank keeps catching
+	-- WeatherService enforces the tank's limit on the server and VacuumController predicts the same on the
+	-- client: with the pass a full normal tank keeps filling, with no "tank is full" toast or hint
+	local function tankFullToasts(): number
+		local found = 0
+		for _, event in MockTest.ClientEvents do
+			if event.Remote == "Notify" and event.Player == player and string.find(tostring(event.Args[1]), "tank is full", 1, true) then
+				found += 1
+			end
+		end
+		return found
+	end
+	emptyTank()
+	local normalTank = Formulas.TankCapacity(data)
+	Registry.EconomyService.AddEnergy(player, normalTank, 1)
+	check("infinite tank: a normal tank fills up first", Registry.EconomyService.IsTankFull(data), data.Energy)
+	cell = pickCell(perSecond * 3) or cell
+	cellId = cell:GetAttribute("CellId")
+	goTo(cell, "infinite tank")
+	local toasts = tankFullToasts()
+	Remotes.Catch:FireServer("Start", cellId)
+	task.wait(0.5)
+	check("infinite tank: without the pass the server won't catch into a full tank", catchTarget(character) == 0, catchTarget(character))
+	check("infinite tank: without the pass the player is told the tank is full", tankFullToasts() > toasts, tankFullToasts())
+
+	data.Passes.InfiniteTank = true
+	Registry.DataService.Replicate(player, "Passes")
+	check("infinite tank: the client gets the pass", waitUntil(function()
+		local clientData = registry.DataController.Data
+		return clientData and clientData.Passes and clientData.Passes.InfiniteTank
+	end, 5))
+	check("infinite tank: the same tank is no longer full", not Registry.EconomyService.IsTankFull(data))
+	check("infinite tank: TankCapacity stays the normal tank", Formulas.TankCapacity(data) == normalTank, Formulas.TankCapacity(data))
+	toasts = tankFullToasts()
+	Remotes.Catch:FireServer("Start", cellId)
+	drained("infinite tank, server path", cellId, 1)
+	check("infinite tank: energy goes past a normal tank", data.Energy > normalTank, string.format("%.1f / %d", data.Energy, normalTank))
+	Remotes.Catch:FireServer("Stop")
+	task.wait(0.4)
+
+	cell = pickCell(perSecond * 2.5) or cell
+	cellId = cell:GetAttribute("CellId")
+	goTo(cell, "infinite tank, desktop")
+	client.CameraFixed = true
+	Workspace.CurrentCamera.CFrame = CFrame.lookAt(root.Position + Vector3.new(-10, 5, 0), cell:GetPivot().Position)
+	MockTest.SetMouse(nil)
+	table.clear(client.Hints)
+	local beforeClick = data.Energy
+	tool:Activate()
+	check("infinite tank, desktop: VacuumController is holding", registry.VacuumController.IsHolding())
+	drained("infinite tank, desktop click", cellId, 1.5)
+	tool:Deactivate()
+	task.wait(0.5)
+	client.CameraFixed = false
+	check("infinite tank, desktop: the client kept catching past a normal tank", data.Energy > beforeClick and beforeClick > normalTank, string.format("%.1f -> %.1f", beforeClick, data.Energy))
+	check("infinite tank: no hint on the client", #client.Hints == 0, table.concat(client.Hints, " | "))
+	check("infinite tank: no 'tank is full' toast from the server", tankFullToasts() == toasts, tankFullToasts() - toasts)
+	local backpack = character:FindFirstChild("StormTank")
+	local fill = backpack and backpack:FindFirstChild("Fill")
+	local shown = fill and fill:GetAttribute("Fraction")
+	if shown then
+		check("infinite tank: the backpack shows some energy but never full", shown > 0 and shown < 0.999, shown)
+	end
+	note(string.format("infinite tank: energy %.0f with a normal tank of %d", data.Energy, normalTank))
+	data.Passes.InfiniteTank = nil
+	Registry.DataService.Replicate(player, "Passes")
+	emptyTank()
+
 	------------------------------------------------------------------ dying and respawning
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	humanoid.Health = 0

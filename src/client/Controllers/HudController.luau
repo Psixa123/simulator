@@ -860,6 +860,9 @@ local function showOffer(data)
 	if offerShown or offerCard or stormBanner.Frame.Visible then
 		return
 	end
+	if data.Energy > Formulas.TankCapacity(data) + 1 then
+		return -- more than a normal tank: an Infinite Tank whose pass is still being checked after joining
+	end
 	local passes = {}
 	for _, key in OFFER_PASSES do
 		local pass = Monetization.Gamepasses[key]
@@ -936,10 +939,12 @@ local function refreshTank()
 	if not data then
 		return
 	end
-	local capacity = Formulas.TankCapacity(data)
-	local fraction = data.Energy / capacity
-	local full = fraction >= 0.999
-	tankBar.Set(fraction, Format.Number(data.Energy) .. " / " .. Format.Number(capacity))
+	-- Infinite Tank: "8.48K / ∞", a jar that never quite fills and never shows FULL
+	local infinite = Formulas.HasInfiniteTank(data)
+	local fraction = Formulas.TankFillFraction(data)
+	local full = not infinite and fraction >= 0.999
+	local capacityText = if infinite then "∞" else Format.Number(Formulas.TankCapacity(data))
+	tankBar.Set(fraction, Format.Number(data.Energy) .. " / " .. capacityText)
 	tankBar.SetFull(full)
 	local worth = data.TankValue * Formulas.VoltsMultiplier(data)
 	worthChip.Visible = worth > 0
