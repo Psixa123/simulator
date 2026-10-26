@@ -117,7 +117,7 @@ ZONE_ICONS = {f"Zone_{key}": dict(ZONE_VIEW) for key in
 # and the vacuum gun): the 3D art of the gamepass / product badges, rendered at 1024 px into assets/source/store3d
 # and put on the badges by assets/source/store3d.html (tools/render_art.py).
 METALS = "Color_FFB52E,Color_FFC23A,Color_FFCF3A,Color_F59A23,Color_C3CCF0,Color_8794CC"
-MATTES = "Color_C92A62,Color_D9A250,Color_F0C470"
+MATTES = "Color_C92A62,Color_D9A250,Color_F0C470,Color_D9884A,Color_A45F2E"
 STORE_VIEW = {"yaw": -20, "pitch": 12, "fill": 0.9, "metal": METALS, "matte": MATTES, "glass": 0.2}
 STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
     ("VIP", {"yaw": -18, "pitch": 16}),
@@ -132,6 +132,8 @@ STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
     ("AutoHatch", {"yaw": -12, "pitch": 8}),
     ("VoltsSmall", {"yaw": -14, "pitch": 14}),
     ("VoltsMedium", {"yaw": -14, "pitch": 14}),
+    ("VoltsLarge", {"yaw": -22, "pitch": 22}),
+    ("VoltsHuge", {"yaw": -18, "pitch": 16}),
 )}
 STORE_SCENES = ()
 

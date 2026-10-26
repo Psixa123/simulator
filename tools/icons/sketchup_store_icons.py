@@ -637,13 +637,27 @@ def volts_small():
     return p
 
 
+def open_sack(s=1.0):
+    """A fat cloth sack with its neck tied and its top folded open into a wavy mouth (about 3.9 * s tall);
+    the mouth's floor is at 3.35 * s, for a heap of coins."""
+    prof = IC["smooth_profile"]([(0.0, 0.0), (1.0, 0.04), (1.65, 0.38), (1.95, 1.0), (1.92, 1.7), (1.6, 2.35),
+                                 (1.12, 2.82), (0.92, 3.05), (1.02, 3.3), (1.38, 3.62), (1.56, 3.84), (1.5, 3.94),
+                                 (1.3, 3.8), (1.0, 3.5), (0.0, 3.35)], steps=3)
+
+    def fold(q):
+        w = math.cos(6 * math.atan2(q[1], q[0]) + 0.6)
+        lip = L["smoothstep"](3.25, 3.85, q[2])
+        return [q[0] * (1.0 + 0.1 * w * lip) * s, q[1] * (1.0 + 0.1 * w * lip) * s, (q[2] + 0.18 * w * lip) * s]
+
+    return L["warp"](L["lathe"](prof, n=60), fold)
+
+
 def volts_medium():
     p = ST["new_store"]("VoltsMedium", 11)
-    # a big open money sack bulging with coins, a few more spilled around it
-    L["piece"](p, P["leaf"], L["warp"](sack(P["leaf"], 1.18, ruffle=0.2), lambda q: [q[0], q[1] + 0.3, q[2]]),
-               crease=60)
-    L["piece"](p, Q["rim"], IC["torus"]((0, 0.3, 3.88), 0.82, 0.22, n=36, m=10, axis="z"), crease=60)
-    heap(p, (0.0, 0.3, 4.55), 1.25, 0.75, 12, seed=4, r=0.42)
+    # a big money sack folded open, a heap of coins in its mouth, a few more spilled around it
+    L["piece"](p, P["leaf"], L["move"](open_sack(1.15), (0.0, 0.3, 0.0)), crease=60)
+    L["piece"](p, Q["rim"], IC["torus"]((0, 0.3, 3.45), 1.1, 0.2, n=40, m=10, axis="z"), crease=60)
+    heap(p, (0.0, 0.3, 3.75), 1.45, 0.85, 14, seed=4, r=0.44)
     L["piece"](p, Q["rim"], IC["slab"](IC["bolt_shape"](2.3), 0.9, 0.15, y=-1.95, z=1.75, x=-0.15, corner=0.25),
                crease=50)
     ST["coin_stack"](p, (-2.05, -0.6, 0.0), 4, r=0.75, h=0.28, seed=5)
@@ -653,3 +667,97 @@ def volts_medium():
 
 
 result = {"built": [L["report"](f()) for f in (volts_small, volts_medium)]}
+
+# ===== chunk 8/12: VoltsLarge (crate of volts), VoltsHuge (vault of volts) =====
+L = session_state["L"]
+IC = session_state["IC"]
+ST = session_state["ST"]
+P, Q = IC["P"], ST["Q"]
+
+
+def crate(p, c, w=4.2, d=3.1, h=2.7):
+    """A wooden crate (planks between darker corner posts, gold corner caps), open on top."""
+    x0, y0, z0 = c
+    for k in range(3):
+        z = z0 + 0.25 + (h - 0.3) * (k + 0.5) / 3
+        ph = (h - 0.3) / 3 - 0.08
+        for sy in (-1, 1):
+            L["piece"](p, Q["wood"], L["rounded_box"]((x0, y0 + sy * (d / 2 - 0.12), z), [w - 0.5, 0.26, ph], 0.08,
+                                                      seg=2), crease=40)
+        for sx in (-1, 1):
+            L["piece"](p, Q["wood"], L["rounded_box"]((x0 + sx * (w / 2 - 0.12), y0, z), [0.26, d - 0.5, ph], 0.08,
+                                                      seg=2), crease=40)
+    L["piece"](p, Q["wood_d"], L["rounded_box"]((x0, y0, z0 + 0.15), [w - 0.2, d - 0.2, 0.3], 0.1, seg=2), crease=40)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            q = (x0 + sx * (w / 2 - 0.22), y0 + sy * (d / 2 - 0.22))
+            L["piece"](p, Q["wood_d"], L["rounded_box"]((q[0], q[1], z0 + h / 2), [0.5, 0.5, h], 0.14, seg=2),
+                       crease=40)
+            for z in (z0 + 0.3, z0 + h - 0.3):
+                L["piece"](p, Q["gold"], L["rounded_box"]((q[0], q[1], z), [0.62, 0.62, 0.5], 0.14, seg=2),
+                           crease=40)
+    # a diagonal brace across the front
+    L["piece"](p, Q["wood_d"], L["tube"]([(x0 - w / 2 + 0.55, y0 - d / 2 - 0.05, z0 + 0.55),
+                                          (x0 + w / 2 - 0.55, y0 - d / 2 - 0.05, z0 + h - 0.55)], 0.15, n=10,
+                                         caps="round"), crease=60)
+
+
+def volts_large():
+    p = ST["new_store"]("VoltsLarge", 12)
+    crate(p, (0.0, 0.2, 0.0))
+    heap(p, (0.0, 0.2, 2.35), 2.0, 1.35, 30, seed=8, r=0.5, ry=1.45)
+    # coins spilling over the front edge and stacks beside the crate
+    ST["coin"](p, (-1.0, -1.45, 2.55), L["v_norm"]([-0.2, -0.85, 0.5]), r=0.6, thick=0.22, spin=-10, n=32)
+    ST["coin"](p, (0.9, -1.5, 2.45), L["v_norm"]([0.25, -0.8, 0.5]), r=0.55, thick=0.22, spin=15, n=32)
+    ST["coin_stack"](p, (-2.65, -1.0, 0.0), 5, r=0.7, h=0.27, seed=12)
+    ST["coin_stack"](p, (2.6, -1.2, 0.0), 3, r=0.7, h=0.27, seed=13)
+    ST["coin"](p, (0.2, -2.25, 0.12), [0, 0, 1], r=0.62, thick=0.24, spin=-18)
+    return p
+
+
+def vault(p, c, w=4.2, d=2.8, h=4.1):
+    """A steel safe: rounded body with feet, a round door with a gold spoke wheel, a dial and hinges."""
+    x0, y0, z0 = c
+    L["piece"](p, Q["steel"], L["rounded_box"]((x0, y0, z0 + 0.25 + h / 2), [w, d, h], 0.45, seg=3), crease=40)
+    for sx in (-1, 1):
+        L["piece"](p, Q["steel_d"], L["rounded_box"]((x0 + sx * (w / 2 - 0.5), y0, z0 + 0.15), [0.7, d - 0.4, 0.4],
+                                                     0.14, seg=2), crease=40)
+    door = (x0 + 0.1, y0 - d / 2, z0 + 0.25 + h / 2)
+    L["piece"](p, Q["steel_d"], IC["disc"]((door[0], door[1] - 0.05, door[2]), 1.68, 0.36, 0.14, n=56), crease=50)
+    L["piece"](p, Q["steel"], IC["disc"]((door[0], door[1] - 0.22, door[2]), 1.42, 0.3, 0.12, n=56), crease=50)
+    for k in range(12):
+        a = 2 * math.pi * k / 12
+        L["piece"](p, Q["rim"], L["ball"]((door[0] + 1.55 * math.cos(a), door[1] - 0.26, door[2] + 1.55 * math.sin(a)),
+                                          0.08, seg=3), crease=60)
+    hub = (door[0], door[1] - 0.6, door[2])
+    L["piece"](p, Q["gold"], IC["torus"](hub, 0.85, 0.12, n=40, m=8), crease=60)
+    for k in range(4):
+        a = math.pi / 4 + math.pi / 2 * k
+        tip = (hub[0] + 1.1 * math.cos(a), hub[1], hub[2] + 1.1 * math.sin(a))
+        L["piece"](p, Q["gold"], L["tube"]([(hub[0], door[1] - 0.4, hub[2]), tip], 0.09, n=8, caps="flat"), crease=60)
+        L["piece"](p, Q["rim"], L["ball"](tip, 0.18, seg=4), crease=60)
+    L["piece"](p, Q["rim"], IC["disc"](hub, 0.36, 0.3, 0.1, n=32), crease=50)
+    L["piece"](p, P["ink"], IC["disc"]((x0 + w / 2 - 0.55, y0 - d / 2 - 0.05, z0 + h - 0.35), 0.28, 0.2, 0.06, n=24),
+               crease=50)
+    for z in (door[2] - 1.0, door[2] + 1.0):
+        L["piece"](p, Q["steel_d"], L["tube"]([(door[0] - 1.72, door[1] - 0.12, z - 0.32),
+                                               (door[0] - 1.72, door[1] - 0.12, z + 0.32)], 0.16, n=12, caps="round"),
+                   crease=60)
+
+
+def volts_huge():
+    p = ST["new_store"]("VoltsHuge", 13)
+    vault(p, (0.0, 0.6, 0.0))
+    # a big heap of coins in front of the vault, stacks and gold bars round it, coins on its roof
+    heap(p, (0.0, -1.35, 0.0), 2.7, 1.25, 36, seed=21, r=0.52, ry=1.5)
+    ST["coin_stack"](p, (-2.75, -0.2, 0.0), 7, r=0.72, h=0.27, seed=31)
+    ST["coin_stack"](p, (2.75, -0.1, 0.0), 5, r=0.72, h=0.27, seed=32)
+    heap(p, (0.3, 0.6, 4.75), 1.3, 0.6, 10, seed=33, r=0.42, ry=0.9)
+    bar = L["lathe"]([(0.0, 0.0), (0.82, 0.0), (0.62, 0.55), (0.0, 0.55)], n=4, phase=math.pi / 4)
+    for (x, y, z), spin in (((-1.75, -2.55, 0.0), 30), ((1.85, -2.5, 0.0), -24)):
+        L["piece"](p, Q["gold"], L["move"](L["rotate"](L["scale"](bar, [1.6, 0.8, 1.0]), "z", spin), (x, y, z)),
+                   crease=30)
+    return p
+
+
+result = {"built": [L["report"](f()) for f in (volts_large, volts_huge)]}
