@@ -134,8 +134,15 @@ STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
     ("VoltsMedium", {"yaw": -14, "pitch": 14}),
     ("VoltsLarge", {"yaw": -22, "pitch": 22}),
     ("VoltsHuge", {"yaw": -18, "pitch": 16}),
+    ("EnergyBoost", {"yaw": -16, "pitch": 10}),
+    ("LuckBoost", {"yaw": -16, "pitch": 10}),
+    ("SummonMegaStorm", {"yaw": -12, "pitch": 6}),
+    ("AutoCatch", {"yaw": -10, "pitch": 8}),
+    # the pets (store_scenes.py): no ink line round their blush (pre-mixed solid pink, store_scenes.blush_paint)
+    ("AuroraGryphon", {"yaw": -16, "pitch": 8, "noline": "Neon_FFFFFF,Color_B77BBC"}),
+    ("PetSlots", {"yaw": -8, "pitch": 8, "noline": "Neon_FFFFFF,Color_FDB9CC,Color_FFAE82,Color_BA85B8"}),
 )}
-STORE_SCENES = ()
+STORE_SCENES = ("Store_AuroraGryphon", "Store_PetSlots")  # made by store_scenes.py, not in the SketchUp source
 
 # Icon sets: source, hero-angle table, contact sheet (in the set's output folder, default OUT), work folder (GLB,
 # raw renders, check48); size = finished PNG size (outline, lines and shadow scale with it); extra = a function

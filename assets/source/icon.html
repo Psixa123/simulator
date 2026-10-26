@@ -2,50 +2,72 @@
 <html>
 <head>
 <meta charset="utf-8">
+<!--
+  Game icon (Roblox shows it small, often ~150 px): designed on a 1024 x 1024 grid, rendered at ?size=512 and
+  ?size=1024 by tools/render_art.py. Real game art only: the Aurora Gryphon Stormling under a Storm Cloud
+  weather cell (WeatherModels), both rendered by tools/branding/capture.py into assets/source/branding.
+  ?v=word adds a "STORM CATCHER" wordmark.
+-->
+<link rel="stylesheet" href="branding/brand.css">
 <style>
-  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
-  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
-  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
-  svg { display: block; }
+  #stage { width: 1024px; height: 1024px; }
+  .sky {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 58%, #ffffff 0%, #c8f4ff 18%, #6fd2ff 40%, #2f8ff2 72%, #2361d0 100%);
+  }
 </style>
-<script src="art.js"></script>
+<script src="branding/brand.js"></script>
 </head>
 <body>
+<div id="stage">
+  <div class="sky"></div>
+  <div class="sunburst" style="--x: 50%; --y: 58%; --ray: 0.22; --reach: 80%"></div>
+</div>
 <script>
-  // Game icon (designed on a 1024 grid, rendered at ?size=512 by default)
-  const size = Number(new URLSearchParams(location.search).get("size") || 512);
-  let c = "";
-  c += sky(1024, 1024, ["#9a7bff", "#4330c0", "#150e55"], 0.56, 0.5);
-  c += rays(590, 520, 1100, 16, "#ffffff", 0.07);
+const params = new URLSearchParams(location.search);
+const size = Number(params.get("size") || 512);
+const variant = params.get("v") || "pet";
+const stage = document.getElementById("stage");
+stage.style.transform = `scale(${size / 1024})`;
+document.body.style.width = `${size}px`;
+document.body.style.height = `${size}px`;
 
-  // storm ceiling
-  c += `<g opacity="0.55">`;
-  c += cloud(150, 300, 1.5, "#6a5bd6", "#5548be", null);
-  c += cloud(905, 280, 1.7, "#6a5bd6", "#5548be", null);
-  c += cloud(540, 250, 2.1, "#7868e2", "#6152cc", null);
-  c += `</g>`;
+const ART = "branding/";
+const BACKGROUNDS = {
+  sky: "radial-gradient(circle at 50% 58%, #ffffff 0%, #c8f4ff 18%, #6fd2ff 40%, #2f8ff2 72%, #2361d0 100%)",
+  sunset: "radial-gradient(circle at 50% 60%, #fffbe0 0%, #ffe07a 16%, #ffab5c 32%, #ff7a8a 50%, #a45be6 72%, #4b32b8 100%)",
+  storm: "radial-gradient(circle at 50% 60%, #ffffff 0%, #d9ccff 16%, #a98bff 36%, #6b4be6 62%, #2f2390 100%)",
+};
+document.querySelector(".sky").style.background = BACKGROUNDS[params.get("bg") || "sunset"];
+const INK = Brand.INK;
 
-  c += bolt(190, 360, 1.25, 12);
-  c += bolt(900, 420, 1.0, -14);
+async function build() {
+  await Brand.ready();
 
-  c += tornado(600, 330, 1.2, { bands: 9, step: 44, phase: 2.4 });
-
-  // ground
-  c += hills(1024, 930, 26, "#3f9d3b", 0.6, 1.5);
-  c += hills(1024, 955, 18, "#6fd04f", 2.2, 2);
-
-  c += beam(430, 722, 640, 610, 30, 120);
-  c += vacuum(200, 852, 1.75, -30);
-  c += pet(815, 842, 1.5, { body: "cloud", color: "#ffffff", accent: "#bfe6ff" });
-
-  for (const [x, y, r] of [[330, 560, 26], [860, 640, 22], [470, 470, 16], [760, 420, 18], [120, 640, 18], [960, 760, 14], [300, 760, 14]]) {
-    c += sparkle(x, y, r, "#ffffff", 0.95);
+  const backBank = [[40, 190, 110], [190, 150, 100], [830, 140, 105], [990, 180, 115]];
+  const frontBank = [[20, 300, 110], [170, 270, 100], [330, 300, 95], [690, 300, 95], [850, 265, 105], [1010, 290, 110]];
+  // bolts either side of the storm cloud, which floats over the Aurora Gryphon
+  Brand.place(stage, Brand.bolt(290, { glow: "rgba(255, 236, 120, 0.9)" }), [140, 360], { rotate: -16 });
+  Brand.place(stage, Brand.bolt(250, { glow: "rgba(255, 236, 120, 0.9)" }), [890, 330], { rotate: 18 });
+  const cloud = Brand.place(stage, Brand.sprite(ART + "studio/Weather_StormCloud.png", { width: 560 }), [512, 318]);
+  cloud.style.filter += " brightness(1.35) saturate(1.2)";
+  Brand.place(stage, Brand.cloudBank(1024, 420, backBank, { top: "#f4eeff", bottom: "#c9b8ff", shade: "#8a6fe0" }),
+    [512, 1024], { anchor: [0.5, 1] });
+  Brand.place(stage, Brand.cloudBank(1024, 420, frontBank, { base: 330 }), [512, 1024], { anchor: [0.5, 1] });
+  const gryphon = Brand.place(stage, Brand.sprite(ART + "pets/AuroraGryphon_front.png", { width: 900 }),
+    [512, variant === "word" ? 640 : 680], { rotate: -4 });
+  gryphon.style.filter = "drop-shadow(0 0 24px rgba(255, 250, 220, 0.9)) " + getComputedStyle(gryphon).filter;
+  for (const [x, y, s] of [[110, 640, 64], [915, 620, 56], [290, 110, 40], [770, 100, 44]]) {
+    Brand.place(stage, Brand.sparkle(s), [x, y]);
   }
+  if (variant === "word") {
+    Brand.place(stage, Brand.title("STORM CATCHER", { size: 150, maxWidth: 940, fill: "bolt" }), [512, 905]);
+  }
+  await Brand.imagesLoaded();
+}
 
-  c += title(512, 150, "STORM CATCHER", 122, { stroke: 26 });
-  c += ribbon(512, 224, 400, 70, "SIMULATOR", { rot: -2, size: 50, spacing: 5 });
-
-  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 1024 1024">${baseDefs()}${c}</svg>`;
+build();
 </script>
 </body>
 </html>

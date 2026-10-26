@@ -77,7 +77,7 @@ PETS = [
 
 # Studio models (BrandingScene.luau buildStudio): name prefix -> (size in px, camera azimuth, elevation)
 STUDIO = {
-    "Weather_": (640, -20, 12),
+    "Weather_": (1024, -20, 12),
     "Egg_": (512, -25, 10),
     "MegaStorm_": (1024, -20, 6),
 }

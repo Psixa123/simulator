@@ -181,6 +181,32 @@ const Brand = (() => {
     return svg;
   }
 
+  // A bank of cartoon clouds: puffs [[x, y, r], ...] (y measured from the top of a width x height box) on a
+  // solid base that runs from the puffs' feet to the bottom. Ink outline, vertical gradient, soft shading
+  // in the lower part of every puff. opts: top / bottom colours, shade colour, outline width, base (y where
+  // the solid base starts)
+  function cloudBank(width, height, puffs, opts = {}) {
+    const outline = opts.outline ?? 9;
+    const base = opts.base ?? Math.max(...puffs.map(([, y]) => y));
+    const face = gradient([[0, opts.top || "#ffffff"], [1, opts.bottom || "#cfe2ff"]]);
+    const clip = uid("clip");
+    const shape = (grow) => puffs.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r + grow}"/>`).join("") +
+      `<rect x="${-outline}" y="${base}" width="${width + outline * 2}" height="${height - base + outline}"/>`;
+    const shades = puffs.map(([x, y, r]) => `<circle cx="${x + r * 0.25}" cy="${y + r * 0.75}" r="${r * 0.75}"/>`).join("");
+    const shines = puffs.map(([x, y, r]) =>
+      `<ellipse cx="${x - r * 0.3}" cy="${y - r * 0.45}" rx="${r * 0.32}" ry="${r * 0.16}" transform="rotate(-25 ${x - r * 0.3} ${y - r * 0.45})"/>`).join("");
+    const inner = `
+      <defs>
+        ${face.def.replace("<linearGradient ", `<linearGradient gradientUnits="userSpaceOnUse" `).replace('x1="0" y1="0" x2="0" y2="1"', `x1="0" y1="${Math.min(...puffs.map(([, y, r]) => y - r))}" x2="0" y2="${height}"`)}
+        <clipPath id="${clip}">${shape(0)}</clipPath>
+      </defs>
+      <g fill="${INK}">${shape(outline)}</g>
+      <g fill="url(#${face.id})">${shape(0)}</g>
+      <g clip-path="url(#${clip})" fill="${opts.shade || "#9fc0f5"}" opacity="0.22">${shades}</g>
+      <g fill="#ffffff" opacity="0.85">${shines}</g>`;
+    return svgElement(width, height, inner);
+  }
+
   // Puts an element on the stage. at: [x, y]; anchor: [ax, ay] as fractions of the element's own size
   // (default centred); rotate (deg), scale, z, opacity
   function place(stage, element, at, opts = {}) {
@@ -218,5 +244,5 @@ const Brand = (() => {
     })));
   }
 
-  return { INK, FILLS, ready, title, ribbon, bolt, sparkle, place, sprite, imagesLoaded };
+  return { INK, FILLS, ready, title, ribbon, bolt, sparkle, cloudBank, place, sprite, imagesLoaded };
 })();
