@@ -65,8 +65,9 @@ GLASS_ALPHA = 0.45
 # Props whose origin is not the centre of their base (tools/world/PROPS.md): the base check is skipped
 # and the previews frame the whole prop without a ground (viewer.html pivot=1)
 # WindmillBlades: origin at the hub centre (MapService spins the blades about it); CliffSegment: origin on its
-# flat top, the rock hangs below it
-PIVOT_PROPS = {"WindmillBlades", "CliffSegment"}
+# flat top, the rock hangs below it; VacuumGun / VacuumPack (character gear): origin where they are held - the
+# grip centre (the Tool's Handle) and the harness plate centre (the tank's Plate)
+PIVOT_PROPS = {"WindmillBlades", "CliffSegment", "VacuumGun", "VacuumPack"}
 # Props with a walk-through opening between same-paint parts (ZoneGate: a pillar each side of the path). Their
 # pieces of one paint are kept as up to three meshes - "<PropId>.<Paint>" across the middle (|x| <= the band, in
 # studs), "<PropId>.<Paint>_2" on the -X side and "<PropId>.<Paint>_3" on the +X side - so no merged mesh (nor its

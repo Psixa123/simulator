@@ -21,6 +21,11 @@ icon helpers in chunks 1-2 of sketchup_icons.py, kept in assets/source/world/zon
     python3 tools/icons/import_icons.py --set zones offline   -> build/icons/zones/offline/icons.json
     python3 tools/icons/import_icons.py --set zones import zones.txt --replace
 
+--set store works on the store heroes (the gamepass/product icon models, tools/icons/sketchup_store_icons.py,
+also built on the icon helpers, kept in assets/source/world/store_icons.json):
+
+    python3 tools/icons/import_icons.py --set store offline   -> build/icons/store/offline/icons.json
+
 icons.json and zone_emblems.json use the world source layout (tools/world/import_sketchup.py) with their
 own format tag "storm-icons-source/1", so the world prop pack (tools/world/build_world_pack.py) skips them.
 """
@@ -45,6 +50,9 @@ SETS = {
     "zones": {"script": HERE / "sketchup_zone_emblems.py", "helpers": [(SCRIPT, 2)],
               "source": ROOT / "assets" / "source" / "world" / "zone_emblems.json",
               "offline": ROOT / "build" / "icons" / "zones" / "offline" / "icons.json"},
+    "store": {"script": HERE / "sketchup_store_icons.py", "helpers": [(SCRIPT, 2)],
+              "source": ROOT / "assets" / "source" / "world" / "store_icons.json",
+              "offline": ROOT / "build" / "icons" / "store" / "offline" / "icons.json"},
 }
 
 sys.path.insert(0, str(WORLD))
@@ -236,7 +244,9 @@ def cmd_check(args):
     names = [args.set] if args.set_given else list(SETS)
     failures = 0
     for name in names:
-        failures += check_set(name, render_icons.SETS[name]["table"], render_icons.OUT)
+        spec = render_icons.SETS[name]
+        table = [k for k in spec["table"] if k not in spec.get("scenes", ())]  # scenes are not SketchUp models
+        failures += check_set(name, table, spec.get("out", render_icons.OUT))
     print("check passed" if not failures else f"check FAILED ({failures} problem(s))")
     sys.exit(1 if failures else 0)
 
@@ -244,15 +254,17 @@ def cmd_check(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--set", choices=sorted(SETS), default=None,
-                        help="icon set: icons (default) or zones (the zone emblems); check runs every set unless given")
+                        help="icon set: icons (default), zones (the zone emblems) or store (the store heroes); check "
+                             "runs every set unless given")
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("offline", help="dry run of the SketchUp script -> a preview source")
-    p.add_argument("--out", default=None, help="default build/icons/offline/icons.json (zones: build/icons/zones/offline)")
+    p.add_argument("--out", default=None, help="default build/icons/offline/icons.json (zones/store: build/icons/<set>/offline)")
     p.set_defaults(fn=cmd_offline)
     p = sub.add_parser("import", help="merge a SketchUp extraction into the set's source (assets/source/world)")
     p.add_argument("result")
     p.add_argument("--replace", action="store_true")
-    p.add_argument("--out", default=None, help="default assets/source/world/icons.json (zones: zone_emblems.json)")
+    p.add_argument("--out", default=None, help="default assets/source/world/icons.json (zones: zone_emblems.json, "
+                                               "store: store_icons.json)")
     p.set_defaults(fn=cmd_import)
     p = sub.add_parser("check", help="sandbox safety, dry run, source + renders complete")
     p.set_defaults(fn=cmd_check)

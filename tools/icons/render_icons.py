@@ -31,6 +31,7 @@ three.js (`npm install` in tools/world).
 """
 
 import argparse
+import importlib
 import json
 import math
 import subprocess
@@ -49,7 +50,9 @@ HERE = ROOT / "tools" / "icons"
 WORLD = ROOT / "tools" / "world"
 SOURCE = ROOT / "assets" / "source" / "world" / "icons.json"
 ZONE_SOURCE = ROOT / "assets" / "source" / "world" / "zone_emblems.json"
+STORE_SOURCE = ROOT / "assets" / "source" / "world" / "store_icons.json"
 OUT = ROOT / "assets" / "ui" / "icons3d"
+STORE_OUT = ROOT / "assets" / "source" / "store3d"
 BUILD = ROOT / "build" / "icons"
 FONT = ROOT / "assets" / "source" / "fonts" / "FredokaOne-Regular.ttf"
 
@@ -70,6 +73,9 @@ DEPTH_JUMP = 0.12     # studs between neighbouring pixels that count as an occlu
 # icon's right (degrees), pitch = raised above it, roll = tilt of the frame; fill = share of the frame the
 # icon spans; noline = paints without ink lines (by default the white shine streaks, Neon_FFFFFF).
 VIEW = {"yaw": -22, "pitch": 10, "roll": 0, "fill": 0.8, "noline": "Neon_FFFFFF"}
+# viewer.html query keys a table entry may set (lift = frame shift up; metal / matte = paint lists; glass = opacity
+# of glass; see viewer.html)
+VIEW_KEYS = ("yaw", "pitch", "roll", "fill", "noline", "lift", "metal", "matte", "glass")
 ICONS = {
     "Volts": {"yaw": -26, "pitch": 6},
     "Energy": {"yaw": -18, "pitch": 6},
@@ -107,12 +113,39 @@ ZONE_VIEW = {"yaw": -16, "pitch": 7, "fill": 0.86}
 ZONE_ICONS = {f"Zone_{key}": dict(ZONE_VIEW) for key in
               ("Hub", "Meadows", "Thunder", "Dunes", "Frost", "Volcano", "Sky")}
 
-# Icon sets: source, hero-angle table, contact sheet (in OUT), work folder (GLB, raw renders, check48)
+# The store heroes (tools/icons/sketchup_store_icons.py, plus the scenes of tools/icons/store_scenes.py: real pets
+# and the vacuum gun): the 3D art of the gamepass / product badges, rendered at 1024 px into assets/source/store3d
+# and put on the badges by assets/source/store3d.html (tools/render_art.py).
+METALS = "Color_FFB52E,Color_FFC23A,Color_FFCF3A,Color_F59A23,Color_C3CCF0,Color_8794CC"
+MATTES = "Color_C92A62,Color_D9A250,Color_F0C470"
+STORE_VIEW = {"yaw": -20, "pitch": 12, "fill": 0.9, "metal": METALS, "matte": MATTES, "glass": 0.2}
+STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
+    ("VIP", {"yaw": -18, "pitch": 16}),
+    ("DoubleVolts", {"yaw": -16, "pitch": 24}),
+    ("DoubleEnergy", {"yaw": -16, "pitch": 8}),
+    ("MegaTank", {"yaw": -20, "pitch": 14}),
+    ("InfiniteTank", {"yaw": -18, "pitch": 14}),
+    ("RemoteSell", {"yaw": -14, "pitch": 10}),
+    ("StormRadar", {"yaw": -16, "pitch": 10}),
+    ("LuckyHatcher", {"yaw": -14, "pitch": 10}),
+    ("TripleHatch", {"yaw": -10, "pitch": 18}),
+    ("AutoHatch", {"yaw": -12, "pitch": 8}),
+    ("VoltsSmall", {"yaw": -14, "pitch": 14}),
+    ("VoltsMedium", {"yaw": -14, "pitch": 14}),
+)}
+STORE_SCENES = ()
+
+# Icon sets: source, hero-angle table, contact sheet (in the set's output folder, default OUT), work folder (GLB,
+# raw renders, check48); size = finished PNG size (outline, lines and shadow scale with it); extra = a function
+# that adds props to the source (the store scenes)
 SETS = {
     "icons": {"source": SOURCE, "table": ICONS, "sheet": "_sheet.png", "work": BUILD, "glb": "StormIcons.glb",
               "title": "3D UI icons"},
     "zones": {"source": ZONE_SOURCE, "table": ZONE_ICONS, "sheet": "_zones.png", "work": BUILD / "zones",
               "glb": "StormZoneEmblems.glb", "title": "zone emblems"},
+    "store": {"source": STORE_SOURCE, "table": STORE_ICONS, "sheet": "_sheet.png", "work": BUILD / "store",
+              "glb": "StormStoreIcons.glb", "title": "store heroes", "out": STORE_OUT, "size": 1024,
+              "scenes": STORE_SCENES, "extra": "store_scenes", "check48": False},
 }
 
 
@@ -162,8 +195,10 @@ def build_icon(prop):
     return {"pieces": pieces, "slot": np.zeros(3), "category": "icons", "solid": False}
 
 
-def write_glb(source, target):
+def write_glb(source, target, extra=None):
     props = json.loads(Path(source).read_text(encoding="utf-8"))["props"]
+    if extra:  # e.g. store_scenes.add_scenes: props built outside SketchUp (pets, the world's vacuum gun)
+        props = extra(props)
     built = {key: build_icon(props[key]) for key in sorted(props)}
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(wp.glb_bytes(built))
@@ -172,8 +207,8 @@ def write_glb(source, target):
 
 # ------------------------------------------------------------------------------ rendering
 
-def render_raw(keys, glb_path, raw_dir, workers=4, table=None):
-    """viewer.html screenshots: [shaded | ids+depth], SIZE*SS px each -> raw_dir/<Key>.png"""
+def render_raw(keys, glb_path, raw_dir, workers=4, table=None, size=SIZE):
+    """viewer.html screenshots: [shaded | ids+depth], size*SS px each -> raw_dir/<Key>.png"""
     browser = wp.find_browser()
     if not browser:
         sys.exit("no Chrome/Chromium found (set CHROME_PATH)")
@@ -183,12 +218,12 @@ def render_raw(keys, glb_path, raw_dir, workers=4, table=None):
     server = ThreadingHTTPServer(("127.0.0.1", 0), partial(handler, directory=str(ROOT)))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     port = server.server_address[1]
-    px = SIZE * SS
+    px = size * SS
     raw_dir.mkdir(parents=True, exist_ok=True)
 
     def one(key):
         view = dict(VIEW, **(ICONS if table is None else table).get(key, {}))
-        query = "&".join(f"{k}={view[k]}" for k in ("yaw", "pitch", "roll", "fill", "noline"))
+        query = "&".join(f"{k}={view[k]}" for k in VIEW_KEYS if k in view)
         url = f"http://127.0.0.1:{port}/tools/icons/viewer.html?icon={key}&size={px}&glb=/pack.glb&{query}"
         target = raw_dir / f"{key}.png"
         command = [browser, "--headless=new", "--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
@@ -244,10 +279,11 @@ def solid(color, alpha):
     return c[None, None, :] * alpha[..., None], alpha
 
 
-def finish(raw_path, target):
-    """Shaded render + id/depth pass -> the finished 512 px icon."""
+def finish(raw_path, target, size=SIZE):
+    """Shaded render + id/depth pass -> the finished icon (512 px; outline, lines and shadow scale with size)."""
     raw = np.asarray(Image.open(raw_path).convert("RGBA"))
     px = raw.shape[0]
+    k = size / SIZE
     shade = raw[:, :px].astype(np.float32) / 255.0
     data = raw[:, px:2 * px].astype(np.int32)
     ids = data[..., 0]
@@ -260,13 +296,13 @@ def finish(raw_path, target):
         nid, nd = shift(ids, dx, dy), shift(depth, dx, dy)
         e = (ids != nid) | ((ids > 0) & (nid > 0) & (np.abs(depth - nd) > DEPTH_JUMP))
         edge |= e | shift(e, -dx, -dy)
-    line = dilate(edge.astype(np.float32), max(0.0, LINE_PX * SS / 2.0 - 1.0))
+    line = dilate(edge.astype(np.float32), max(0.0, LINE_PX * k * SS / 2.0 - 1.0))
     line = blur(line, 0.6) * np.clip(alpha * 4.0, 0, 1)
 
     # silhouette outline (glass counts as solid) and drop shadow
     body = np.clip(alpha * 2.5, 0.0, 1.0)
-    outline = dilate(body, OUTLINE_PX * SS)
-    s = SS
+    outline = dilate(body, OUTLINE_PX * k * SS)
+    s = SS * k
     shadow = shift(outline, int(round(SHADOW["dx"] * s)), int(round(SHADOW["dy"] * s)))
     shadow = blur(shadow, SHADOW["blur"] * s) * SHADOW["alpha"]
 
@@ -277,7 +313,7 @@ def finish(raw_path, target):
     rgb, a = img
     out = np.concatenate([rgb, a[..., None]], axis=2)
     out = Image.fromarray(np.clip(out * 255.0 + 0.5, 0, 255).astype(np.uint8), "RGBa")
-    out = out.resize((SIZE, SIZE), Image.LANCZOS).convert("RGBA")
+    out = out.resize((size, size), Image.LANCZOS).convert("RGBA")
     target.parent.mkdir(parents=True, exist_ok=True)
     out.save(target, optimize=True)
     return target
@@ -347,39 +383,47 @@ def check48(images, target, columns=14):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--set", choices=sorted(SETS), default="icons", help="icons (default) or zones (zone emblems)")
+    parser.add_argument("--set", choices=sorted(SETS), default="icons",
+                        help="icons (default), zones (zone emblems) or store (store heroes)")
     parser.add_argument("--source", default=None, help="icon source json (default the set's: assets/source/world/"
-                                                       "icons.json or zone_emblems.json)")
-    parser.add_argument("--out", default=None, help="output folder (default assets/ui/icons3d; for --source previews "
-                                                    "the source's folder)")
+                                                       "icons.json, zone_emblems.json or store_icons.json)")
+    parser.add_argument("--out", default=None, help="output folder (default assets/ui/icons3d, store: "
+                                                    "assets/source/store3d; for --source previews the source's folder)")
     parser.add_argument("--icons", default="", help="comma-separated icon keys (default all)")
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--size", type=int, default=0, help="finished PNG size (default the set's: 512, store 1024)")
     args = parser.parse_args()
 
     spec = SETS[args.set]
     table = spec["table"]
+    size = args.size or spec.get("size", SIZE)
     source = Path(args.source or spec["source"]).resolve()
     preview = source != Path(spec["source"]).resolve()
-    out = Path(args.out).resolve() if args.out else (source.parent if preview else OUT)
+    out = Path(args.out).resolve() if args.out else (source.parent if preview else spec.get("out", OUT))
     work = (source.parent if preview else spec["work"])
     glb = work / spec["glb"]
-    built = write_glb(source, glb)
+    extra = None
+    if spec.get("extra"):
+        sys.path.insert(0, str(HERE))
+        extra = importlib.import_module(spec["extra"]).add_scenes
+    built = write_glb(source, glb, extra)
     print(f"wrote {rel(glb)} ({glb.stat().st_size // 1024} KB, {len(built)} icons)")
     wanted = [k for k in args.icons.split(",") if k] or [k for k in table if k in built] + \
         [k for k in built if k not in table]
     missing = [k for k in wanted if k not in built]
     if missing:
         sys.exit("not in the source: " + ", ".join(missing))
-    raws = render_raw(wanted, glb, work / "raw", args.workers, table)
+    raws = render_raw(wanted, glb, work / "raw", args.workers, table, size)
     for key in wanted:
-        finish(raws[key], out / f"{key}.png")
+        finish(raws[key], out / f"{key}.png", size)
         tris = sum(len(p["tris"]) for p in built[key]["pieces"].values())
         print(f"  {key:<13} {len(built[key]['pieces']):>2} paints {tris:>5} tris -> {rel(out / (key + '.png'))}")
     images = {k: out / f"{k}.png" for k in list(table) + [k for k in built if k not in table]
               if (out / f"{k}.png").exists()}
     sheet = contact_sheet(images, out / spec["sheet"], columns=min(7, max(1, len(images))), title=spec["title"])
-    chk = check48(images, work / "check48.png")
-    print(f"wrote {rel(sheet)} and {rel(chk)}")
+    print(f"wrote {rel(sheet)}")
+    if spec.get("check48", True):
+        print(f"wrote {rel(check48(images, work / 'check48.png'))}")
 
 
 if __name__ == "__main__":

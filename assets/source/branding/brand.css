@@ -1,0 +1,81 @@
+/* Shared look of the game page art (icon.html, thumbnail1..3.html in assets/source).
+   "Sky Lab" art direction (docs/STYLE_GUIDE.md): candy-bright, chunky, Ink #233066 outlines.
+   Every page lays out one fixed-size #stage (1024 x 1024 icon, 1920 x 1080 thumbnails) with absolutely
+   positioned layers; brand.js draws the titles, ribbons, bolts and sparkles as SVG. */
+
+@font-face { font-family: "Luckiest Guy"; src: url("../fonts/LuckiestGuy-Regular.ttf"); }
+@font-face { font-family: "Fredoka One"; src: url("../fonts/FredokaOne-Regular.ttf"); }
+
+:root {
+  --ink: #233066;
+  --sky-top: #5cc8ff;
+  --sky-bottom: #2f86f2;
+  --bolt-top: #ffe15a;
+  --bolt-bottom: #ffaa1f;
+  --storm-top: #a98bff;
+  --storm-bottom: #6b4be6;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #2f86f2;
+}
+
+#stage {
+  position: relative;
+  overflow: hidden;
+  transform-origin: 0 0;
+}
+
+/* Any absolutely placed layer: images, svg, groups */
+.layer {
+  position: absolute;
+  display: block;
+}
+
+/* Pet / weather / egg renders: sticker art with a soft Ink shadow underneath */
+.sprite {
+  position: absolute;
+  display: block;
+  filter: drop-shadow(0 14px 0 rgba(35, 48, 102, 0.28)) drop-shadow(0 22px 26px rgba(20, 24, 70, 0.35));
+}
+
+.sprite.small-shadow {
+  filter: drop-shadow(0 8px 0 rgba(35, 48, 102, 0.25)) drop-shadow(0 12px 14px rgba(20, 24, 70, 0.3));
+}
+
+/* Map renders: the game's colours pushed a little brighter, like Roblox's ColorCorrection in game */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.35) contrast(1.08) brightness(1.03);
+}
+
+/* Light rays turning around a point (set --x / --y on the element) */
+.sunburst {
+  position: absolute;
+  inset: 0;
+  background: repeating-conic-gradient(from 0deg at var(--x, 50%) var(--y, 50%),
+    rgba(255, 255, 255, var(--ray, 0.16)) 0deg 7deg, rgba(255, 255, 255, 0) 7deg 15deg);
+  -webkit-mask-image: radial-gradient(circle at var(--x, 50%) var(--y, 50%), #000 0%, #000 22%, transparent var(--reach, 70%));
+  mask-image: radial-gradient(circle at var(--x, 50%) var(--y, 50%), #000 0%, #000 22%, transparent var(--reach, 70%));
+}
+
+/* Dark Ink corners that pull the eye to the middle */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 46%, rgba(35, 48, 102, 0) 52%, rgba(24, 28, 80, 0.55) 100%);
+}
+
+/* A soft coloured glow behind something (set background on the element) */
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+}

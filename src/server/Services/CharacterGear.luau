@@ -2,11 +2,18 @@
 -- Builds the gear every storm catcher carries: the Storm Vacuum tool, the Storm Tank
 -- backpack (its glowing fill shows how full your tank is) and the overhead name tag,
 -- and paints the tank and vacuum in the look the player's Climate Shifts unlock.
+--
+-- The vacuum and the tank are the SketchUp meshes "VacuumGun" and "VacuumPack" from the world prop
+-- pack (tools/world/sketchup/gear.py, placed with WorldProps.Place and welded to the Handle / Plate),
+-- or the part-built models below while the pack or those props are missing. Either way the parts other
+-- code uses are the same: the Tool's Handle with its NozzleAttachment, and the tank's Plate (welded to
+-- the torso) with its glowing Fill inside the glass.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ClimateShift = require(Shared.ClimateShift)
+local WorldProps = require(script.Parent.WorldProps)
 
 local CharacterGear = {}
 
@@ -45,6 +52,77 @@ local function gearPart(props)
 end
 
 ---------------------------------------------------------------------------
+-- Gear meshes from the world prop pack
+---------------------------------------------------------------------------
+-- The prop pack's gear (tools/world/PROPS.md, "gear"). Both are modelled around the point where they
+-- are held: VacuumGun around the grip (= the Handle), VacuumPack around its harness plate (= the Plate).
+local VACUUM_PROP = "VacuumGun"
+local TANK_PROP = "VacuumPack"
+local MESH_NOZZLE = Vector3.new(0, 0.66, -2.8) -- the VacuumGun's nozzle mouth
+local MESH_NOZZLE_GLOW = Vector3.new(0, 0.66, -2.55) -- its glowing inner ring
+local MESH_GLASS_TRANSPARENCY = { [VACUUM_PROP] = 0.35, [TANK_PROP] = 0.5 }
+
+-- Which look colour a pack piece takes, by its paint: the shell takes the look's Vacuum / Tank colour
+local function meshSlot(paint: string, shell: string): string?
+	if paint == "Primary" then
+		return shell
+	elseif paint == "Secondary" then
+		return "Trim"
+	elseif paint == "Tertiary" or string.sub(paint, 1, 5) == "Neon_" then
+		return "Glow"
+	end
+	return nil
+end
+
+-- Places the prop's meshes around `anchor` (its CFrame = the prop's origin turned by `turn`) and welds
+-- them to it. Returns false, building nothing, when the pack or the prop is missing.
+local function dressFromPack(container: Instance, anchor: BasePart, propId: string, shell: string, turn: CFrame): boolean
+	local ok, placed = pcall(WorldProps.Place, propId, nil, anchor.CFrame * turn, { Anchor = false, CastShadow = false })
+	if not ok or not placed then
+		return false
+	end
+	local parts = {}
+	for _, child in placed:GetChildren() do
+		if child:IsA("BasePart") then
+			table.insert(parts, child)
+		end
+	end
+	if #parts == 0 then
+		placed:Destroy()
+		return false
+	end
+	for _, part in parts do
+		local paint = string.match(part.Name, "^[^%.]+%.(.+)$") or ""
+		paint = string.gsub(paint, "_%d$", "") -- a pack mesh split in parts ("Primary_2")
+		local glass = string.sub(paint, 1, 6) == "Glass_"
+		part.Anchored = false
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.Massless = true
+		part.CastShadow = not glass and string.sub(paint, 1, 5) ~= "Neon_"
+		if glass then
+			part.Transparency = MESH_GLASS_TRANSPARENCY[propId] or part.Transparency
+		end
+		local slot = meshSlot(paint, shell)
+		if slot then
+			part:SetAttribute("GearSlot", slot)
+		end
+		local weld = Instance.new("Weld")
+		weld.Name = "Weld"
+		weld.Part0 = anchor
+		weld.Part1 = part
+		weld.C0 = anchor.CFrame:ToObjectSpace(part.CFrame)
+		weld.Parent = part
+		part.Parent = container
+	end
+	placed:Destroy()
+	anchor.Transparency = 1 -- the meshes are the model now; the anchor only holds them
+	container:SetAttribute("GearMesh", propId)
+	return true
+end
+
+---------------------------------------------------------------------------
 -- Storm Vacuum (Tool). Handle is the grip; the barrel points along -Z.
 ---------------------------------------------------------------------------
 function CharacterGear.BuildVacuum(): Tool
@@ -63,6 +141,28 @@ function CharacterGear.BuildVacuum(): Tool
 		Parent = tool,
 	})
 
+	if dressFromPack(tool, handle, VACUUM_PROP, "Vacuum", CFrame.identity) then
+		local nozzle = Instance.new("Attachment")
+		nozzle.Name = "NozzleAttachment"
+		nozzle.Position = MESH_NOZZLE
+		nozzle.Parent = handle
+
+		local glow = Instance.new("Attachment")
+		glow.Name = "NozzleGlow"
+		glow.Position = MESH_NOZZLE_GLOW
+		glow.Parent = handle
+
+		local light = Instance.new("PointLight")
+		light.Name = "NozzleLight"
+		light.Color = ACCENT
+		light.Brightness = 1
+		light.Range = 6
+		light.Shadows = false
+		light.Parent = glow
+		return tool
+	end
+
+	-- The part-built vacuum (no prop pack)
 	local function piece(props)
 		props.Parent = tool
 		local part = gearPart(props)
@@ -115,6 +215,15 @@ local function attachPiece(model: Model, plate: BasePart, props, offset: CFrame)
 	return part, weld
 end
 
+-- The part-built tank (no prop pack)
+local function buildTankParts(model: Model, plate: BasePart)
+	attachPiece(model, plate, { Name = "Glass", Shape = Enum.PartType.Cylinder, Size = Vector3.new(2, 1.25, 1.25), Color = GLASS, Material = Enum.Material.Glass, Transparency = 0.5 }, CFrame.new(0, 0, TANK_OFFSET_Z) * VERTICAL)
+	attachPiece(model, plate, { Name = "CapTop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.24, 1.42, 1.42), Color = LIGHT_METAL }, CFrame.new(0, 1.08, TANK_OFFSET_Z) * VERTICAL)
+	attachPiece(model, plate, { Name = "CapBottom", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.24, 1.42, 1.42), Color = LIGHT_METAL }, CFrame.new(0, -1.08, TANK_OFFSET_Z) * VERTICAL)
+	attachPiece(model, plate, { Name = "Band", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 1.32, 1.32), Color = ACCENT, Material = Enum.Material.Neon }, CFrame.new(0, 0.55, TANK_OFFSET_Z) * VERTICAL)
+	attachPiece(model, plate, { Name = "Valve", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 0.35, 0.35), Color = FULL }, CFrame.new(0, 1.3, TANK_OFFSET_Z) * VERTICAL)
+end
+
 function CharacterGear.BuildTank(): Model
 	local model = Instance.new("Model")
 	model.Name = "StormTank"
@@ -128,11 +237,11 @@ function CharacterGear.BuildTank(): Model
 	})
 	model.PrimaryPart = plate
 
-	attachPiece(model, plate, { Name = "Glass", Shape = Enum.PartType.Cylinder, Size = Vector3.new(2, 1.25, 1.25), Color = GLASS, Material = Enum.Material.Glass, Transparency = 0.5 }, CFrame.new(0, 0, TANK_OFFSET_Z) * VERTICAL)
-	attachPiece(model, plate, { Name = "CapTop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.24, 1.42, 1.42), Color = LIGHT_METAL }, CFrame.new(0, 1.08, TANK_OFFSET_Z) * VERTICAL)
-	attachPiece(model, plate, { Name = "CapBottom", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.24, 1.42, 1.42), Color = LIGHT_METAL }, CFrame.new(0, -1.08, TANK_OFFSET_Z) * VERTICAL)
-	attachPiece(model, plate, { Name = "Band", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 1.32, 1.32), Color = ACCENT, Material = Enum.Material.Neon }, CFrame.new(0, 0.55, TANK_OFFSET_Z) * VERTICAL)
-	attachPiece(model, plate, { Name = "Valve", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 0.35, 0.35), Color = FULL }, CFrame.new(0, 1.3, TANK_OFFSET_Z) * VERTICAL)
+	-- The pack's tank faces -Z (its show side); turned around it sits behind the wearer, its glass
+	-- centred TANK_OFFSET_Z behind the plate around the Fill below
+	if not dressFromPack(model, plate, TANK_PROP, "Tank", CFrame.Angles(0, math.pi, 0)) then
+		buildTankParts(model, plate)
+	end
 
 	local fill, fillWeld = attachPiece(model, plate, {
 		Name = "Fill",
@@ -259,7 +368,8 @@ function CharacterGear.ApplyCosmetic(gear: Instance, shifts: number)
 	local slots = if isVacuum then VACUUM_SLOTS else TANK_SLOTS
 	for _, descendant in gear:GetDescendants() do
 		if descendant:IsA("BasePart") then
-			local slot = slots[descendant.Name]
+			-- part-built gear by part name, pack meshes by the slot their paint gave them
+			local slot = slots[descendant.Name] or descendant:GetAttribute("GearSlot")
 			if slot then
 				descendant.Color = colors[slot]
 			end

@@ -34,7 +34,7 @@ export type Prop = {
 local WorldPropsData = {}
 
 WorldPropsData.RootSize = 1
-WorldPropsData.Order = { "AuroraArch", "Bench", "BushRound", "Cactus", "CitadelTower", "CliffSegment", "CloudBank", "CloudPuff", "CrystalCluster", "EggIncubator", "Fence", "FloatingIsland", "FlowerPatch", "ForecastTower", "GrassTuft", "HayBale", "IceCastleTower", "Igloo", "LampPost", "LavaSpire", "LeaderboardFrame", "LightningRod", "Mushroom", "OasisPool", "Planter", "Pyramid", "RebirthShrine", "RockCluster", "RockTall", "SandArch", "SellMachine", "SignPost", "Snowman", "StarLamp", "StationBooth", "SteamVent", "StormCloud", "TeslaTower", "TreePalm", "TreePine", "TreeRound", "TreeTall", "Volcano", "WeatherLab", "WeatherTower", "Windmill", "WindmillBlades", "ZoneGate" }
+WorldPropsData.Order = { "AuroraArch", "Bench", "BushRound", "Cactus", "CitadelTower", "CliffSegment", "CloudBank", "CloudPuff", "CrystalCluster", "EggIncubator", "Fence", "FloatingIsland", "FlowerPatch", "ForecastTower", "GrassTuft", "HayBale", "IceCastleTower", "Igloo", "LampPost", "LavaSpire", "LeaderboardFrame", "LightningRod", "Mushroom", "OasisPool", "Planter", "Pyramid", "RebirthShrine", "RockCluster", "RockTall", "SandArch", "SellMachine", "SignPost", "Snowman", "StarLamp", "StationBooth", "SteamVent", "StormCloud", "TeslaTower", "TreePalm", "TreePine", "TreeRound", "TreeTall", "VacuumGun", "VacuumPack", "Volcano", "WeatherLab", "WeatherTower", "Windmill", "WindmillBlades", "ZoneGate" }
 
 local Props: { [string]: Prop } = {
 	AuroraArch = {
@@ -619,6 +619,44 @@ local Props: { [string]: Prop } = {
 			{ Name = "TreeTall.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(255, 140, 198), Center = Vector3.new(-0.348, 11.33, -0.02), Size = Vector3.new(8.734, 11.801, 8.734), Collide = false, Tris = 1560 },
 			{ Name = "TreeTall.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(255, 196, 225), Center = Vector3.new(0.551, 11.778, -0.16), Size = Vector3.new(6.803, 4.136, 6.757), Collide = false, Tris = 768 },
 			{ Name = "TreeTall.Color_A8724C", Paint = "Color_A8724C", Kind = "Color", Color = Color3.fromRGB(168, 114, 76), Center = Vector3.new(-0.135, 5.95, 0.113), Size = Vector3.new(2.849, 12.5, 2.791), Collide = false, Tris = 284 },
+		},
+	},
+	VacuumGun = {
+		Category = "gear",
+		Size = Vector3.new(1.7, 2.261, 3.876),
+		Center = Vector3.new(0, 0.46, -0.803),
+		Footprint = 2.853,
+		Collide = false,
+		Tris = 2988,
+		Paints = { Primary = Color3.fromRGB(160, 170, 192), Secondary = Color3.fromRGB(58, 64, 82), Tertiary = Color3.fromRGB(70, 200, 255) },
+		Pieces = {
+			{ Name = "VacuumGun.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(160, 170, 192), Center = Vector3.new(0, 0.4, -0.93), Size = Vector3.new(1.56, 2.08, 3.54), Collide = false, Tris = 886 },
+			{ Name = "VacuumGun.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(58, 64, 82), Center = Vector3.new(0, 0.42, -0.85), Size = Vector3.new(1.7, 2.181, 3.781), Collide = false, Tris = 1034 },
+			{ Name = "VacuumGun.Tertiary", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(70, 200, 255), Center = Vector3.new(0, 0.66, 0.205), Size = Vector3.new(1.113, 1.237, 1.73), Collide = false, Tris = 320 },
+			{ Name = "VacuumGun.Color_233066", Paint = "Color_233066", Kind = "Color", Color = Color3.fromRGB(35, 48, 102), Center = Vector3.new(0, 0.66, -0.673), Size = Vector3.new(1.04, 1.04, 3.615), Collide = false, Tris = 84 },
+			{ Name = "VacuumGun.Color_FFC43C", Paint = "Color_FFC43C", Kind = "Color", Color = Color3.fromRGB(255, 196, 60), Center = Vector3.new(0, 0.02, -0.272), Size = Vector3.new(0.15, 0.389, 0.254), Collide = false, Tris = 96 },
+			{ Name = "VacuumGun.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0, 0.66, 1.05), Size = Vector3.new(0.38, 0.38, 0.1), Collide = false, Tris = 72 },
+			{ Name = "VacuumGun.Glass_C8F0FF", Paint = "Glass_C8F0FF", Kind = "Glass", Color = Color3.fromRGB(200, 240, 255), Center = Vector3.new(0, 1.34, -0.06), Size = Vector3.new(0.5, 0.5, 1.14), Collide = false, Tris = 144 },
+			{ Name = "VacuumGun.Neon_46C8FF", Paint = "Neon_46C8FF", Kind = "Neon", Color = Color3.fromRGB(70, 200, 255), Center = Vector3.new(0, 0.77, -1.13), Size = Vector3.new(1.2, 1.42, 2.98), Collide = false, Tris = 352 },
+		},
+	},
+	VacuumPack = {
+		Category = "gear",
+		Size = Vector3.new(1.74, 3.21, 2.343),
+		Center = Vector3.new(0, 0.205, -0.373),
+		Footprint = 1.545,
+		Collide = false,
+		Tris = 2368,
+		Paints = { Primary = Color3.fromRGB(160, 170, 192), Secondary = Color3.fromRGB(58, 64, 82), Tertiary = Color3.fromRGB(70, 200, 255) },
+		Pieces = {
+			{ Name = "VacuumPack.Primary", Paint = "Primary", Kind = "Tint", Color = Color3.fromRGB(160, 170, 192), Center = Vector3.new(0, 0.045, -0.72), Size = Vector3.new(1.52, 2.89, 1.52), Collide = false, Tris = 572 },
+			{ Name = "VacuumPack.Secondary", Paint = "Secondary", Kind = "Tint", Color = Color3.fromRGB(58, 64, 82), Center = Vector3.new(0, 0.37, -0.695), Size = Vector3.new(1.58, 2.78, 1.629), Collide = false, Tris = 332 },
+			{ Name = "VacuumPack.Tertiary", Paint = "Tertiary", Kind = "Tint", Color = Color3.fromRGB(70, 200, 255), Center = Vector3.new(0, -1.11, -0.72), Size = Vector3.new(1.59, 0.18, 1.59), Collide = false, Tris = 188 },
+			{ Name = "VacuumPack.Color_5B6A9E", Paint = "Color_5B6A9E", Kind = "Color", Color = Color3.fromRGB(91, 106, 158), Center = Vector3.new(0, 0.585, 0.399), Size = Vector3.new(1.68, 0.33, 0.798), Collide = false, Tris = 224 },
+			{ Name = "VacuumPack.Color_FFC43C", Paint = "Color_FFC43C", Kind = "Color", Color = Color3.fromRGB(255, 196, 60), Center = Vector3.new(0, 0.33, -0.706), Size = Vector3.new(1.74, 2.96, 1.672), Collide = false, Tris = 504 },
+			{ Name = "VacuumPack.Color_FFFFFF", Paint = "Color_FFFFFF", Kind = "Color", Color = Color3.fromRGB(255, 255, 255), Center = Vector3.new(0, 1.192, -1.413), Size = Vector3.new(0.32, 0.318, 0.191), Collide = false, Tris = 72 },
+			{ Name = "VacuumPack.Glass_C8F0FF", Paint = "Glass_C8F0FF", Kind = "Glass", Color = Color3.fromRGB(200, 240, 255), Center = Vector3.new(0, 0, -0.72), Size = Vector3.new(1.31, 1.96, 1.31), Collide = false, Tris = 236 },
+			{ Name = "VacuumPack.Neon_46C8FF", Paint = "Neon_46C8FF", Kind = "Neon", Color = Color3.fromRGB(70, 200, 255), Center = Vector3.new(0, 1.075, -0.72), Size = Vector3.new(1.65, 0.095, 1.65), Collide = false, Tris = 240 },
 		},
 	},
 	Volcano = {

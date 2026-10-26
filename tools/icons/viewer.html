@@ -18,6 +18,10 @@
          of the icon's front, raised above it, tilted) &fill=0.8 (share of the frame the icon spans)
          &lift=0.03 (shifts the icon up, room for the drop shadow) &noline=Color_FFFFFF,... (paints that
          get no ink line, e.g. shine streaks) &fov=24
+         &metal=Color_FFB52E,... (paints shaded as polished metal: the toon shade plus a reflected sky, a dark
+         horizon band and a stronger highlight; used by the store heroes for gold and steel)
+         &matte=Color_C92A62,... (paints with only a faint highlight: velvet, cloth, straw, wood)
+         &glass=0.34 (opacity of glass where it faces the camera; lower shows more of what is inside)
 -->
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
@@ -46,6 +50,9 @@ const fill = Number(params.get('fill') || 0.8);
 const lift = Number(params.get('lift') || 0.03);
 const fov = Number(params.get('fov') || 24);
 const noLine = new Set((params.get('noline') || '').split(',').filter(Boolean));
+const metal = new Set((params.get('metal') || '').split(',').filter(Boolean));
+const matte = new Set((params.get('matte') || '').split(',').filter(Boolean));
+const glassAlpha = Number(params.get('glass') || 0.34);
 const DEPTH_SCALE = 4096;  // studs -> 16-bit depth steps
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -97,6 +104,16 @@ const shadeFragment = `
       col = mix(col, min(base * 1.1 + 0.04, vec3(1.0)), top * 0.8);
       // bounce light from below keeps the shadow side from going muddy
       col += base * 0.08 * smoothstep(0.0, -0.8, n.y);
+      if (kind > 2.5) {
+        // Metal: the view-space reflection picks up a bright sky above, a dark horizon band and a warm floor,
+        // so gold reads as polished metal instead of plastic
+        vec3 r = reflect(-v, n);
+        float sky = smoothstep(-0.02, 0.38, r.y);
+        float band = 1.0 - smoothstep(0.0, 0.16, abs(r.y + 0.08));
+        vec3 deep = pow(base, vec3(1.9)) * 0.7;
+        col = mix(col, min(base * 1.16 + 0.08, vec3(1.0)), sky * 0.5);
+        col = mix(col, deep, band * 0.42 * (1.0 - top));
+      }
       // bright rim on the right / top edge
       float rimSide = smoothstep(-0.1, 0.55, dot(n, normalize(vec3(0.75, 0.5, -0.1))));
       col += vec3(0.92, 0.96, 1.0) * fres * 0.6 * rimSide;
@@ -104,8 +121,8 @@ const shadeFragment = `
       vec3 h = normalize(key + v);
       float sp = max(dot(n, h), 0.0);
       col = mix(col, vec3(1.0), gloss * (0.88 * smoothstep(0.95, 0.972, sp) + 0.15 * smoothstep(0.8, 0.95, sp)));
-      if (kind > 1.5) {  // Glass: see-through in the middle, denser at the rim
-        alpha = 0.34 + 0.55 * fres + 0.6 * smoothstep(0.955, 0.975, sp);
+      if (kind > 1.5 && kind < 2.5) {  // Glass: see-through in the middle, denser at the rim
+        alpha = ${glassAlpha.toFixed(3)} + 0.55 * fres + 0.6 * smoothstep(0.955, 0.975, sp);
         col = mix(col, vec3(1.0), 0.18);
       }
     }
@@ -136,9 +153,10 @@ function srgbHex(hex) {
 }
 
 function shadeMaterial(info) {
-  const kind = info.kind === 'Neon' ? 1 : info.kind === 'Glass' ? 2 : 0;
+  const kind = info.kind === 'Neon' ? 1 : info.kind === 'Glass' ? 2 : metal.has(info.paint) ? 3 : 0;
   const mat = new THREE.ShaderMaterial({
-    uniforms: { base: { value: srgbHex(info.rgb || 'C8C8C8') }, kind: { value: kind }, gloss: { value: 1.0 } },
+    uniforms: { base: { value: srgbHex(info.rgb || 'C8C8C8') }, kind: { value: kind },
+      gloss: { value: matte.has(info.paint) ? 0.22 : 1.0 } },
     vertexShader: shadeVertex, fragmentShader: shadeFragment,
     transparent: kind === 2, depthWrite: kind !== 2, side: kind === 2 ? THREE.DoubleSide : THREE.FrontSide,
   });
