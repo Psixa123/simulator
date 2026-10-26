@@ -161,14 +161,15 @@ const Brand = (() => {
 
   // A bank of cartoon clouds: puffs [[x, y, r], ...] (y measured from the top of a width x height box) on a
   // solid base that runs from the puffs' feet to the bottom. Ink outline, a vertical gradient and a white
-  // shine on every puff. opts: top / bottom colours, outline width, base (y where the solid base starts)
+  // shine on every puff. opts: top / bottom colours, outline width, base (y where the solid base starts; keep it
+  // above where neighbouring puffs cross, or the gap between them and the base becomes an Ink-filled hole)
   function cloudBank(width, height, puffs, opts = {}) {
     const outline = opts.outline ?? 9;
     const base = opts.base ?? Math.max(...puffs.map(([, y]) => y));
     const top = Math.min(...puffs.map(([, y, r]) => y - r));
     const face = uid("cloud");
     const shape = (grow) => puffs.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r + grow}"/>`).join("") +
-      `<rect x="${-outline}" y="${base}" width="${width + outline * 2}" height="${height - base + outline}"/>`;
+      `<rect x="${-outline}" y="${base - grow}" width="${width + outline * 2}" height="${height - base + outline + grow}"/>`;
     const shines = puffs.map(([x, y, r]) =>
       `<ellipse cx="${x - r * 0.3}" cy="${y - r * 0.45}" rx="${r * 0.32}" ry="${r * 0.16}" transform="rotate(-25 ${x - r * 0.3} ${y - r * 0.45})"/>`).join("");
     const inner = `
@@ -223,11 +224,9 @@ const Brand = (() => {
   // A Rainbow-tier pet: in the world its colours keep cycling through the rainbow (PetController), which a
   // still shows as a rainbow sheen over the render: a <canvas> with the render, a rainbow gradient blended in
   // "hue" mode (dark eyes and outlines stay dark), cut back to the render's shape. Same size opts as
-  // sprite(); async because it needs the decoded render.
+  // sprite(); async because it needs the loaded render.
   async function rainbowSprite(src, opts = {}) {
-    const image = new Image();
-    image.src = src;
-    await image.decode();
+    const image = await loadImage(src);
     const w = image.naturalWidth;
     const h = image.naturalHeight;
     let scale = 1;
@@ -260,6 +259,18 @@ const Brand = (() => {
     return element;
   }
 
+  // Loads an image for drawing on a canvas. Waits for its load event rather than image.decode(): headless
+  // Chrome's virtual time (render_art.py's --virtual-time-budget) waits for loads, but not for decode()'s
+  // off-thread work, so a page awaiting decode() could be screenshot half built.
+  function loadImage(src) {
+    const image = new Image();
+    return new Promise((resolve, reject) => {
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error(`can't load ${src}`));
+      image.src = src;
+    });
+  }
+
   // Resolves once every <img> on the page has loaded (so the screenshot never catches a missing render)
   function imagesLoaded() {
     const pending = [...document.images].filter((image) => !image.complete);
@@ -268,5 +279,5 @@ const Brand = (() => {
     })));
   }
 
-  return { INK, FILLS, ready, title, ribbon, bolt, sparkle, cloudBank, place, sprite, rainbowSprite, glow, imagesLoaded };
+  return { INK, FILLS, ready, title, ribbon, bolt, sparkle, cloudBank, place, sprite, rainbowSprite, glow, loadImage, imagesLoaded };
 })();

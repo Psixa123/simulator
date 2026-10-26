@@ -27,6 +27,8 @@ then  python3 tools/render_art.py icon thumbnail      to rebuild the icon and th
       python3 tools/branding/capture.py sheet          for build/branding/contact_sheet.png: the finished icon
                                                       and thumbnails big and at the sizes Roblox shows them
                                                       (icon 150/100/60 px, thumbnails 480 x 270)
+      python3 tools/render_art.py ads                  for the Ads Manager creatives (assets/source/ads.html), and
+      python3 tools/branding/capture.py ads-sheet      for build/ads/contact_sheet.png (each big and at 384 x 216)
 
 Requirements: Python 3.9+ with numpy and Pillow, Chrome/Chromium (CHROME_PATH or Playwright's headless
 shell), three.js (`npm install` in tools/pets and tools/preview) and, for the map, the `luau` command line
@@ -338,9 +340,35 @@ def contact_sheet():
     print("  wrote", rel(target))
 
 
+def ads_sheet():
+    """The ad creatives (assets/ads) on one page: each big, and at 384 x 216 like the Home feed shows them."""
+    ads = sorted((ROOT / "assets" / "ads").glob("ad_*.png"))
+    font = ImageFont.truetype(str(ROOT / "assets" / "source" / "fonts" / "FredokaOne-Regular.ttf"), 24)
+    margin, big_w, big_h, small_w, small_h = 30, 960, 540, 384, 216
+    columns = 2
+    cell_w = big_w + margin + small_w
+    cell_h = big_h + 50
+    rows = (len(ads) + columns - 1) // columns
+    sheet = Image.new("RGB", (margin + columns * (cell_w + margin), margin + 50 + rows * (cell_h + margin)), (234, 243, 255))
+    draw = ImageDraw.Draw(sheet)
+    draw.text((margin, margin), "Storm Catcher Simulator - ad creatives (1920 x 1080, and at 384 x 216)", fill=INK, font=font)
+    for index, path in enumerate(ads):
+        image = Image.open(path).convert("RGB")
+        x = margin + (index % columns) * (cell_w + margin)
+        y = margin + 50 + (index // columns) * (cell_h + margin)
+        sheet.paste(image.resize((big_w, big_h), Image.LANCZOS), (x, y))
+        sheet.paste(image.resize((small_w, small_h), Image.LANCZOS), (x + big_w + margin, y))
+        draw.text((x, y + big_h + 10), path.name, fill=INK, font=font)
+    target = ROOT / "build" / "ads" / "contact_sheet.png"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(target)
+    print("  wrote", rel(target))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("groups", nargs="*", help="pets, map, studio, sheet (default: pets and map, which includes studio)")
+    parser.add_argument("groups", nargs="*", help="pets, map, studio, sheet, ads-sheet (default: pets and map, which "
+                                                  "includes studio)")
     parser.add_argument("--pets", default="", help="comma-separated pet ids to try instead of the page set")
     parser.add_argument("--all", action="store_true", help="every pet and every studio model, not only the ones "
                                                           "the pages use (use with --out)")
@@ -357,8 +385,10 @@ def main():
             capture_studio(WORK / "raw" / "map", out_dir, args.all)
         elif group == "sheet":
             contact_sheet()
+        elif group == "ads-sheet":
+            ads_sheet()
         else:
-            parser.error(f"unknown group {group!r} (pets, map, studio, sheet)")
+            parser.error(f"unknown group {group!r} (pets, map, studio, sheet, ads-sheet)")
 
 
 if __name__ == "__main__":

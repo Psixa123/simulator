@@ -41,7 +41,7 @@ local ARENA_STORM = 5 -- Cosmic Maelstrom
 local STUDIO_ORIGIN = Vector3.new(0, 3000, 9000)
 local STUDIO_STEP = 300
 local EGG_HEIGHT = 4 -- studs, like the egg stations' display egg
-local AIM = 118 -- degrees the player's vacuum arm is raised from hanging down (90 = level): aiming up at a cloud
+local AIM = 104 -- degrees the player's vacuum arm is raised from hanging down (90 = level): aiming up at a cloud
 local SKIN = Color3.fromRGB(255, 205, 148)
 local HAIR = Color3.fromRGB(92, 58, 40)
 local SHIRT = Color3.fromRGB(92, 200, 255)
