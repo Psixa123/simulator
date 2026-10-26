@@ -21,7 +21,12 @@ Usage (from the repo root):
                                                       (studio only, from the last map run's build/branding/raw/map)
     python3 tools/branding/capture.py pets --pets AuroraGryphon,VoltWyrm --out build/branding/try
                                                       try other pets without touching assets/source
-then  python3 tools/render_art.py icon thumbnail      to rebuild the icon and the thumbnails.
+    python3 tools/branding/capture.py --all --out build/branding/all
+                                                      every pet and every weather cell / egg / Mega Storm
+then  python3 tools/render_art.py icon thumbnail      to rebuild the icon and the thumbnails, and
+      python3 tools/branding/capture.py sheet          for build/branding/contact_sheet.png: the finished icon
+                                                      and thumbnails big and at the sizes Roblox shows them
+                                                      (icon 150/100/60 px, thumbnails 480 x 270)
 
 Requirements: Python 3.9+ with numpy and Pillow, Chrome/Chromium (CHROME_PATH or Playwright's headless
 shell), three.js (`npm install` in tools/pets and tools/preview) and, for the map, the `luau` command line
@@ -42,7 +47,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = ROOT / "tools" / "branding"
@@ -54,25 +59,20 @@ INK = (35, 48, 102)
 SUPERSAMPLE = 2
 
 # (pet id, tier, view, size in px): the pets the pages use. view: hero (3/4 from the left), three4 (3/4 from
-# the right) or front; t = the animation pose (wings out), like tools/pets/build_pets.py --anim.
+# the right) or front. --all renders every pet of Pets.luau (hero view) for trying out other line-ups.
 PETS = [
-    ("AuroraGryphon", "Normal", "front", 1024),
+    ("AuroraGryphon", "Normal", "front", 1024),  # the icon
     ("AuroraGryphon", "Normal", "hero", 1024),
-    ("AuroraGryphon", "Golden", "hero", 640),
-    ("AuroraGryphon", "Rainbow", "hero", 640),
     *[(pet, "Normal", "hero", 640) for pet in (
-        "Puffling", "Droplet", "Sunny", "Prism", "BreezeKing",
-        "Static", "Zappy", "VoltBat", "ThunderPup", "StormLord",
-        "Sandy", "CactusCub", "DustBunny", "Scarab", "MirageDjinn",
-        "Snowball", "Icicle", "Frostbite", "AuroraFox", "YetiKing",
-        "Ember", "Coal", "LavaPup", "PhoenixChick", "InfernoDrake",
-        "Stardust", "Comet", "Nebula", "Moonbeam", "GalaxyGuardian",
-        "Sunbeam",
+        "BreezeKing", "ThunderPup", "PhoenixChick", "AuroraFox",  # thumbnail 1 (and 2)
+        "Droplet", "Zappy", "CactusCub", "Icicle", "LavaPup", "Nebula", "Sunny", "VoltBat", "Scarab", "Moonbeam",
+        "Ember", "InfernoDrake",  # thumbnail 2
     )],
-    *[(pet, "Normal", "three4", 640) for pet in (
+    ("ThunderPup", "Golden", "hero", 640),
+    ("AuroraFox", "Rainbow", "hero", 640),
+    *[(pet, "Normal", "three4", 640) for pet in (  # thumbnail 3: the Mega Storm exclusives
         "TempestTitan", "VoltWyrm", "FrostColossus", "CycloneDrake", "MaelstromSpirit", "RainbowRoc",
     )],
-    *[(pet, tier, "hero", 640) for pet in ("ThunderPup", "AuroraFox") for tier in ("Golden", "Rainbow")],
 ]
 
 # Studio models (BrandingScene.luau buildStudio): name prefix -> (size in px, camera azimuth, elevation)
@@ -80,6 +80,11 @@ STUDIO = {
     "Weather_": (1024, -20, 12),
     "Egg_": (512, -25, 10),
     "MegaStorm_": (1024, -20, 6),
+}
+# The studio models the pages use (--all renders every one)
+STUDIO_USED = {
+    "Weather_StormCloud", "Weather_RainbowMist", "Weather_Starstorm", "Weather_CosmicVortex",
+    "Egg_MeadowEgg", "Egg_ThunderEgg", "Egg_DuneEgg", "Egg_FrostEgg", "Egg_MagmaEgg", "Egg_CosmicEgg",
 }
 # BrandingScene.luau's studio slots
 STUDIO_ORIGIN = (0, 3000, 9000)
@@ -91,10 +96,8 @@ MAP_SHOTS = {
     "islands": "pos=-430,250,0 look=420,40,0 fov=46 light=hub fog=900,5200 size=2400x1350",
     # thumbnail 2: Sunny Plains around its egg incubator
     "plains": "target=150,10,0 az=125 el=16 dist=170 fov=50 light=1 size=2400x1350",
-    # thumbnail 3: the Mega Storm (Cosmic Maelstrom) in the Storm Station arena
-    "arena": "target=-112,46,0 az=250 el=6 dist=140 fov=60 light=hub size=2400x1350",
-    # icon backdrop: Thunder Valley's field full of storm clouds
-    "thunder": "target=520,10,0 az=118 el=14 dist=150 fov=50 light=2 size=1600x1600",
+    # thumbnail 3: the Mega Storm (Cosmic Maelstrom) in the Storm Station arena, from low down
+    "arena": "target=-112,75,0 az=235 el=-2 dist=135 fov=66 light=hub size=2400x1350",
 }
 
 
@@ -208,10 +211,16 @@ def pet_name(pet, tier, view):
     return name
 
 
-def capture_pets(out_dir, only=None):
+def all_pet_ids():
+    """Every pet id of Pets.luau (the `Id = { Name = ...` lines of Pets.Pets)."""
+    source = PETS_LUAU.read_text(encoding="utf-8")
+    return re.findall(r"^\t(\w+) = \{ Name = ", source, flags=re.M)
+
+
+def capture_pets(out_dir, only=None, everything=False):
     pets = PETS
-    if only:
-        pets = [(pet, tier, view, 640) for pet in only for tier, view in (("Normal", "hero"),)]
+    if only or everything:
+        pets = [(pet, "Normal", "hero", 640) for pet in (only or all_pet_ids())]
     raw_dir = WORK / "raw" / "pets"
     jobs = []
     for pet, tier, view, size in pets:
@@ -225,7 +234,7 @@ def capture_pets(out_dir, only=None):
         print("  wrote", rel(target))
 
 
-def capture_map(out_dir):
+def capture_map(out_dir, everything=False):
     raw_dir = WORK / "raw" / "map"
     command = [sys.executable, str(ROOT / "tools" / "preview_map.py"), "--script", str(HERE / "BrandingScene.luau"),
                "--out", str(raw_dir)]
@@ -238,7 +247,7 @@ def capture_map(out_dir):
         target.parent.mkdir(parents=True, exist_ok=True)
         Image.open(raw_dir / f"{name}.png").convert("RGB").save(target, quality=90, optimize=True)
         print("  wrote", rel(target))
-    capture_studio(raw_dir, out_dir)
+    capture_studio(raw_dir, out_dir, everything)
 
 
 def studio_slots(world):
@@ -251,8 +260,8 @@ def studio_slots(world):
     return slots
 
 
-def capture_studio(raw_dir, out_dir):
-    """Cuts every studio slot out of the map run's scene.json and renders it with stage.html."""
+def capture_studio(raw_dir, out_dir, everything=False):
+    """Cuts the studio slots out of the map run's scene.json and renders them with stage.html."""
     world = json.loads((raw_dir / "world.json").read_text(encoding="utf-8"))
     scene = json.loads((raw_dir / "scene.json").read_text(encoding="utf-8"))
     slots = studio_slots(world)
@@ -261,6 +270,8 @@ def capture_studio(raw_dir, out_dir):
     stage_dir.mkdir(parents=True, exist_ok=True)
     jobs, finish = [], []
     for slot, name in sorted(slots.items()):
+        if not everything and name not in STUDIO_USED:
+            continue
         cx, cy, cz = STUDIO_ORIGIN[0] + slot * STUDIO_STEP, STUDIO_ORIGIN[1], STUDIO_ORIGIN[2]
         rows = []
         for row in scene["parts"]:
@@ -283,23 +294,59 @@ def capture_studio(raw_dir, out_dir):
         print("  wrote", rel(target))
 
 
+def contact_sheet():
+    """The finished game page art on one page: big, and at the small sizes the game page and lists use."""
+    assets = ROOT / "assets"
+    icon = Image.open(assets / "icon_1024.png").convert("RGB")
+    thumbs = [Image.open(assets / "thumbnails" / f"thumbnail_{i}.png").convert("RGB") for i in (1, 2, 3)]
+    font = ImageFont.truetype(str(ROOT / "assets" / "source" / "fonts" / "FredokaOne-Regular.ttf"), 26)
+    margin, big_w = 40, 960
+    width = margin * 4 + big_w + 480 + 300
+    height = margin * 2 + 60 + max(512 + 300, 3 * (540 + 50))
+    sheet = Image.new("RGB", (width, height), (234, 243, 255))
+    draw = ImageDraw.Draw(sheet)
+    ink = INK
+    draw.text((margin, margin), "Storm Catcher Simulator - game page art", fill=ink, font=font)
+    top = margin + 60
+    x_big, x_small, x_icon = margin, margin * 2 + big_w, margin * 3 + big_w + 480
+    for index, thumb in enumerate(thumbs):
+        y = top + index * (540 + 50)
+        sheet.paste(thumb.resize((big_w, 540), Image.LANCZOS), (x_big, y))
+        sheet.paste(thumb.resize((480, 270), Image.LANCZOS), (x_small, y))
+        draw.text((x_small, y + 280), f"thumbnail_{index + 1} at 480 x 270", fill=ink, font=font)
+    sheet.paste(icon.resize((300, 300), Image.LANCZOS), (x_icon, top))
+    y = top + 320
+    for size in (150, 100, 60):
+        sheet.paste(icon.resize((size, size), Image.LANCZOS), (x_icon, y))
+        draw.text((x_icon + size + 12, y + size // 2 - 14), f"{size} px", fill=ink, font=font)
+        y += size + 20
+    target = WORK / "contact_sheet.png"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(target)
+    print("  wrote", rel(target))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("groups", nargs="*", help="pets, map, studio (default: pets and map, which includes studio)")
+    parser.add_argument("groups", nargs="*", help="pets, map, studio, sheet (default: pets and map, which includes studio)")
     parser.add_argument("--pets", default="", help="comma-separated pet ids to try instead of the page set")
+    parser.add_argument("--all", action="store_true", help="every pet and every studio model, not only the ones "
+                                                          "the pages use (use with --out)")
     parser.add_argument("--out", default=None, help=f"output folder (default {OUT.relative_to(ROOT)})")
     args = parser.parse_args()
     groups = args.groups or ["pets", "map"]
     out_dir = Path(args.out).resolve() if args.out else OUT
     for group in groups:
         if group == "pets":
-            capture_pets(out_dir, [p for p in args.pets.split(",") if p])
+            capture_pets(out_dir, [p for p in args.pets.split(",") if p], args.all)
         elif group == "map":
-            capture_map(out_dir)
+            capture_map(out_dir, args.all)
         elif group == "studio":
-            capture_studio(WORK / "raw" / "map", out_dir)
+            capture_studio(WORK / "raw" / "map", out_dir, args.all)
+        elif group == "sheet":
+            contact_sheet()
         else:
-            parser.error(f"unknown group {group!r} (pets, map, studio)")
+            parser.error(f"unknown group {group!r} (pets, map, studio, sheet)")
 
 
 if __name__ == "__main__":

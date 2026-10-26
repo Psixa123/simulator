@@ -2,80 +2,118 @@
 <html>
 <head>
 <meta charset="utf-8">
+<!--
+  Thumbnail 3 (1920 x 1080): "BATTLE MEGA STORMS!" - a real Mega Storm (the Cosmic Maelstrom, built by
+  WeatherModels.BuildMegaStorm) raging in the Storm Station arena, the storm-darkened sky around it, and the six
+  exclusive pets the Mega Storms drop (GameConfig.MegaStorm: Tempest Twister, Thunder Titan, Blizzard Behemoth,
+  Inferno Cyclone, Cosmic Maelstrom and the Rainbow Hurricane). Renders: tools/branding/capture.py.
+-->
+<link rel="stylesheet" href="branding/brand.css">
 <style>
-  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
-  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
-  html, body { margin: 0; padding: 0; background: #0b3a5c; overflow: hidden; }
-  svg { display: block; }
+  #stage { width: 1920px; height: 1080px; }
+  .storm-sky {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(38, 18, 104, 0.92) 0%, rgba(84, 40, 170, 0.7) 28%, rgba(120, 70, 220, 0.25) 50%, rgba(120, 70, 220, 0) 62%);
+  }
+  /* the storm darkens everything around it, and lights up pink inside */
+  .storm-dark {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 560px 520px at 50% 64%, rgba(30, 14, 80, 0) 0%, rgba(30, 14, 80, 0) 45%, rgba(30, 14, 80, 0.5) 100%);
+  }
+  .storm-glow {
+    position: absolute;
+    left: 660px;
+    top: 420px;
+    width: 600px;
+    height: 560px;
+    background: radial-gradient(ellipse, rgba(255, 80, 230, 0.9) 0%, rgba(160, 60, 255, 0.5) 50%, rgba(160, 60, 255, 0) 72%);
+    mix-blend-mode: overlay;
+  }
+  .ground-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(35, 30, 102, 0.6) 0%, rgba(35, 30, 102, 0) 32%);
+  }
 </style>
-<script src="art.js"></script>
+<script src="branding/brand.js"></script>
 </head>
 <body>
+<div id="stage">
+  <img class="backdrop" decoding="sync" src="branding/map/arena.jpg" style="filter: saturate(1.6) contrast(1.2) brightness(0.95)">
+  <div class="storm-sky"></div>
+  <div class="storm-dark"></div>
+  <div class="storm-glow"></div>
+  <div class="sunburst" style="--x: 50%; --y: 48%; --ray: 0.08; --reach: 60%"></div>
+  <div class="ground-shade"></div>
+  <div class="vignette"></div>
+</div>
 <script>
-  // Thumbnail 3: hatch Stormlings + golden/rainbow tiers + six biomes (1920x1080)
-  const W = 1920, H = 1080;
-  let c = "";
-  c += sky(W, H, ["#8fe9ff", "#2f8fd6", "#0b2f5c"], 0.5, 0.45);
-  c += rays(960, 560, 1900, 22, "#ffffff", 0.08);
+const stage = document.getElementById("stage");
+const ART = "branding/";
+const glow = "rgba(255, 236, 120, 0.95)";
 
-  c += `<g opacity="0.55">`;
-  for (const [x, y, s] of [[200, 160, 1.6], [620, 110, 1.9], [1320, 120, 1.9], [1740, 170, 1.6]]) {
-    c += cloud(x, y, s, "#c9ecff", "#a8daf5", null);
-  }
-  c += `</g>`;
+// The Mega Storm banner's health bar (HudController's storm banner), drawn big: the storm's name over a
+// glass track with the remaining health
+function healthBar(name, fraction, width = 560) {
+  const height = 64;
+  const outline = 7;
+  const fill = (width - 16) * fraction;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${width + outline * 2}" height="${height + 92}" overflow="visible">
+    <defs>
+      <linearGradient id="hp" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffb3f0"/><stop offset="0.5" stop-color="#ff5ad2"/><stop offset="1" stop-color="#c23ad8"/>
+      </linearGradient>
+    </defs>
+    <text x="${width / 2 + outline}" y="56" text-anchor="middle" font-family="Luckiest Guy" font-size="52" letter-spacing="2"
+      fill="#ffffff" stroke="${Brand.INK}" stroke-width="12" stroke-linejoin="round" paint-order="stroke">${name}</text>
+    <g transform="translate(${outline} 80)">
+      <rect width="${width}" height="${height}" rx="${height / 2}" fill="#d5e5fb" stroke="${Brand.INK}" stroke-width="${outline}"/>
+      <rect x="8" y="8" width="${fill}" height="${height - 16}" rx="${(height - 16) / 2}" fill="url(#hp)"/>
+      <rect x="22" y="13" width="${fill - 28}" height="12" rx="6" fill="#ffffff" opacity="0.55"/>
+    </g>
+  </svg>`;
+  return wrapper.firstChild;
+}
 
-  // biome strip along the bottom
-  const biomes = [
-    { name: "MEADOWS", c1: "#9ff07a", c2: "#3fae3a" },
-    { name: "THUNDER", c1: "#b7a2ff", c2: "#5a44c8" },
-    { name: "DUNES", c1: "#ffd98a", c2: "#d9922e" },
-    { name: "FROSTPEAK", c1: "#e6f6ff", c2: "#79b9ef" },
-    { name: "VOLCANO", c1: "#ff9a6a", c2: "#c2361a" },
-    { name: "SKY", c1: "#ffb6f0", c2: "#8a52e0" },
+async function build() {
+  await Brand.ready();
+
+  // lightning around the storm
+  Brand.place(stage, Brand.bolt(250, { glow }), [545, 520], { rotate: 20 });
+  Brand.place(stage, Brand.bolt(290, { glow }), [1385, 520], { rotate: -16 });
+  Brand.place(stage, Brand.bolt(150, { glow }), [300, 330], { rotate: -10 });
+  Brand.place(stage, Brand.bolt(170, { glow }), [1640, 330], { rotate: 14 });
+
+  // the six Mega Storm exclusives, three on each side
+  const pets = [
+    ["TempestTitan_three4", 290, [290, 630], -6],
+    ["FrostColossus_three4", 270, [205, 880], -8],
+    ["VoltWyrm_three4", 280, [460, 870], -4],
+    ["MaelstromSpirit_three4", 290, [1630, 630], 6],
+    ["RainbowRoc_three4", 280, [1715, 880], 8],
+    ["CycloneDrake_three4", 280, [1460, 870], 4],
   ];
-  const cardW = 290, gap = 16, startX = (W - (cardW * 6 + gap * 5)) / 2;
-  biomes.forEach((b, i) => {
-    const g = lin([[0, b.c1], [1, b.c2]]);
-    const x = startX + i * (cardW + gap), y = 930;
-    c += `<defs>${g.def}</defs>`;
-    c += `<rect x="${x}" y="${y + 8}" width="${cardW}" height="110" rx="26" fill="#0d1030" opacity="0.8"/>`;
-    c += `<rect x="${x}" y="${y}" width="${cardW}" height="110" rx="26" fill="${g.url}" stroke="#0d1030" stroke-width="8"/>`;
-    c += `<rect x="${x + 12}" y="${y + 10}" width="${cardW - 24}" height="26" rx="13" fill="#ffffff" opacity="0.3"/>`;
-    c += `<text x="${x + cardW / 2}" y="${y + 72}" font-family="Luckiest Guy" font-size="40" text-anchor="middle" fill="#ffffff" stroke="#0d1030" stroke-width="7" paint-order="stroke" letter-spacing="1">${b.name}</text>`;
-  });
+  for (const [pet, fit, at, rotate] of pets) {
+    Brand.place(stage, Brand.sprite(ART + `pets/${pet}.png`, { fit }), at, { rotate });
+  }
+  Brand.place(stage, healthBar("COSMIC MAELSTROM", 0.62, 520), [960, 392]);
+  Brand.place(stage, Brand.ribbon("WIN EXCLUSIVE PETS!", { size: 56, colors: "coral", padX: 46 }), [960, 985], { rotate: -1 });
 
-  // eggs cluster (left)
-  c += `<g filter="url(#softGlow)" opacity="0.55"><circle cx="400" cy="650" r="260" fill="#ffffff"/></g>`;
-  c += egg(250, 700, 1.35, "#96e66e", "#fff08c", -14);
-  c += egg(560, 700, 1.35, "#b7a2ff", "#ffe36b", 12);
-  c += egg(400, 600, 1.7, "#7ec8ff", "#e0f4ff", 0);
-
-  // pets: normal -> golden -> rainbow (right)
-  c += pet(1060, 760, 1.35, { body: "bean", color: "#ffe14a", accent: "#fff9d0", features: ["bunny", "bolt"] });
-  c += pet(1360, 700, 1.55, { body: "bean", color: "#ffc61a", accent: "#fff2a0", features: ["bunny", "crown"] });
-  const rb = lin([[0, "#ff6b6b"], [0.2, "#ffb347"], [0.4, "#fff46b"], [0.6, "#6bff95"], [0.8, "#6bc8ff"], [1, "#c56bff"]], 0, 0, 1, 1);
-  c += `<defs>${rb.def}</defs>`;
-  c += `<g filter="url(#softGlow)" opacity="0.6"><circle cx="1690" cy="640" r="150" fill="#ffffff"/></g>`;
-  c += pet(1690, 650, 1.8, { body: "bean", color: "#ffd0f0", fill: rb.url, accent: "#ffffff", features: ["bunny", "halo"] });
-
-  // arrows between tiers
-  const arrow = (x, y) =>
-    `<g transform="translate(${x},${y})"><polygon points="-34,-26 10,-26 10,-48 50,0 10,48 10,26 -34,26" fill="#ffffff" stroke="#0d1030" stroke-width="9" stroke-linejoin="round"/></g>`;
-  c += arrow(1205, 735);
-  c += arrow(1525, 690);
-  c += ribbon(1060, 870, 200, 62, "NORMAL", { size: 34, c1: "#9fb0c8", c2: "#5f6f8a" });
-  c += ribbon(1360, 870, 200, 62, "GOLDEN", { size: 34, c1: "#ffd84a", c2: "#f09a1a" });
-  c += ribbon(1690, 870, 220, 62, "RAINBOW", { size: 34, c1: "#ff7ac0", c2: "#8a52e0" });
-
-  for (const [x, y, r] of [[160, 440, 24], [700, 480, 20], [880, 620, 18], [1540, 470, 26], [1840, 470, 20], [1210, 560, 16], [1830, 800, 18]]) {
-    c += sparkle(x, y, r, "#ffffff", 0.95);
+  for (const [x, y, s] of [[690, 660, 42], [1240, 640, 38], [80, 520, 38], [1840, 520, 40]]) {
+    Brand.place(stage, Brand.sparkle(s), [x, y]);
   }
 
   // title
-  c += title(W / 2, 230, "HATCH STORMLINGS!", 172, { stroke: 38 });
-  c += ribbon(W / 2, 330, 700, 92, "6 BIOMES TO EXPLORE", { size: 54, c1: "#ff7ac0", c2: "#c93a8f", spacing: 2, rot: -1.5 });
+  Brand.place(stage, Brand.ribbon("BATTLE", { size: 64, colors: "storm", padX: 50 }), [960, 72], { rotate: -2 });
+  Brand.place(stage, Brand.title("MEGA STORMS!", { size: 200, maxWidth: 1500, fill: "bolt" }), [960, 230]);
 
-  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${baseDefs()}${c}</svg>`;
+  await Brand.imagesLoaded();
+}
+
+build();
 </script>
 </body>
 </html>

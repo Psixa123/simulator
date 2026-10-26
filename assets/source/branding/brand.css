@@ -42,10 +42,6 @@ html, body {
   filter: drop-shadow(0 14px 0 rgba(35, 48, 102, 0.28)) drop-shadow(0 22px 26px rgba(20, 24, 70, 0.35));
 }
 
-.sprite.small-shadow {
-  filter: drop-shadow(0 8px 0 rgba(35, 48, 102, 0.25)) drop-shadow(0 12px 14px rgba(20, 24, 70, 0.3));
-}
-
 /* Map renders: the game's colours pushed a little brighter, like Roblox's ColorCorrection in game */
 .backdrop {
   position: absolute;
@@ -71,11 +67,4 @@ html, body {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 50% 46%, rgba(35, 48, 102, 0) 52%, rgba(24, 28, 80, 0.55) 100%);
-}
-
-/* A soft coloured glow behind something (set background on the element) */
-.glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(40px);
 }

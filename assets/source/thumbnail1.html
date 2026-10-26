@@ -26,7 +26,7 @@
 </head>
 <body>
 <div id="stage">
-  <img class="backdrop" src="branding/map/islands.jpg">
+  <img class="backdrop" decoding="sync" src="branding/map/islands.jpg" style="filter: saturate(1.55) contrast(1.18) brightness(1.02)">
   <div class="sky-wash"></div>
   <div class="sunburst" style="--x: 50%; --y: 30%; --ray: 0.12; --reach: 60%"></div>
   <div class="ground-shade"></div>
@@ -41,33 +41,33 @@ async function build() {
   await Brand.ready();
 
   // weather cells around the islands (real WeatherModels)
-  Brand.place(stage, Brand.sprite(ART + "studio/Weather_StormCloud.png", { width: 360 }), [250, 520], { rotate: -6 });
-  Brand.place(stage, Brand.sprite(ART + "studio/Weather_FireTornado.png", { width: 170 }), [470, 700], { rotate: 8 });
-  Brand.place(stage, Brand.sprite(ART + "studio/Weather_RainbowMist.png", { width: 320 }), [1680, 500], { rotate: 6 });
-  Brand.place(stage, Brand.sprite(ART + "studio/Weather_SnowCloud.png", { width: 220 }), [1450, 680], { rotate: -4 });
-  Brand.place(stage, Brand.bolt(150, { glow }), [90, 380], { rotate: -18 });
-  Brand.place(stage, Brand.bolt(120, { glow }), [1840, 360], { rotate: 18 });
+  Brand.place(stage, Brand.sprite(ART + "studio/Weather_StormCloud.png", { width: 360 }), [255, 520], { rotate: -6 });
+  Brand.glow(Brand.place(stage, Brand.sprite(ART + "studio/Weather_Starstorm.png", { width: 200 }), [490, 690], { rotate: 10 }),
+    "rgba(255, 240, 150, 0.9)", 36);
+  Brand.place(stage, Brand.sprite(ART + "studio/Weather_RainbowMist.png", { width: 330 }), [1665, 510], { rotate: 6 });
+  Brand.glow(Brand.place(stage, Brand.sprite(ART + "studio/Weather_CosmicVortex.png", { width: 170 }), [1420, 690], { rotate: 8 }),
+    "rgba(200, 120, 255, 0.7)", 30);
+  Brand.place(stage, Brand.bolt(150, { glow }), [95, 390], { rotate: -18 });
+  Brand.place(stage, Brand.bolt(120, { glow }), [1835, 370], { rotate: 18 });
 
   // the Stormlings: the Aurora Gryphon in the middle, friends from every zone around it
   const pets = [
-    ["Zappy", 190, [770, 790], -4],
-    ["Nebula", 210, [1160, 790], 4],
-    ["BreezeKing", 290, [420, 905], -6],
-    ["ThunderPup", 280, [680, 935], -3],
-    ["PhoenixChick", 270, [1250, 940], 3],
-    ["AuroraFox", 290, [1510, 905], 6],
-    ["AuroraGryphon", 470, [960, 880], 0],
+    ["BreezeKing", 290, [395, 910], -6],
+    ["ThunderPup", 270, [655, 950], -3],
+    ["PhoenixChick", 260, [1270, 955], 3],
+    ["AuroraFox", 290, [1530, 910], 6],
+    ["AuroraGryphon", 560, [960, 880], 0],
   ];
   for (const [pet, width, at, rotate] of pets) {
     Brand.place(stage, Brand.sprite(ART + `pets/${pet}.png`, { width }), at, { rotate });
   }
-  for (const [x, y, s] of [[600, 560, 50], [1330, 600, 44], [180, 760, 40], [1760, 760, 46], [960, 640, 36]]) {
+  for (const [x, y, s] of [[640, 600, 50], [1300, 640, 44], [180, 770, 40], [1760, 770, 46]]) {
     Brand.place(stage, Brand.sparkle(s), [x, y]);
   }
 
-  // title
-  Brand.place(stage, Brand.title("STORM CATCHER", { size: 200, maxWidth: 1480, fill: "bolt" }), [960, 160]);
-  Brand.place(stage, Brand.ribbon("SIMULATOR", { size: 74, colors: "sky", padX: 70 }), [960, 318], { rotate: -2 });
+  // title: the name, with the SIMULATOR ribbon tucked under it
+  Brand.place(stage, Brand.title("STORM CATCHER", { size: 190, maxWidth: 1440, fill: "bolt" }), [960, 128]);
+  Brand.place(stage, Brand.ribbon("SIMULATOR", { size: 58, colors: "sky", padX: 60 }), [960, 258], { rotate: -2 });
 
   await Brand.imagesLoaded();
 }

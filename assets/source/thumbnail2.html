@@ -2,83 +2,85 @@
 <html>
 <head>
 <meta charset="utf-8">
+<!--
+  Thumbnail 2 (1920 x 1080): "COLLECT 38 STORMLING PETS!" - a crowd of real Stormlings in front of the six real
+  eggs, with a Golden and a Rainbow pet (5 of a pet craft a Golden one, 5 Golden a Rainbow one), over Sunny
+  Plains around its egg incubator. src/shared/Config/Pets.luau has 38 pets, but only 30 hatch from the six eggs
+  (6 are Mega Storm exclusives, Sunbeam a daily reward, the Aurora Gryphon a shop pet), so the title says
+  COLLECT 38, not HATCH 38. Renders: tools/branding/capture.py.
+-->
+<link rel="stylesheet" href="branding/brand.css">
 <style>
-  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
-  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
-  html, body { margin: 0; padding: 0; background: #12062e; overflow: hidden; }
-  svg { display: block; }
+  #stage { width: 1920px; height: 1080px; }
+  .light {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 62%, rgba(255, 255, 240, 0.85) 0%, rgba(255, 250, 220, 0.4) 30%, rgba(255, 255, 255, 0) 62%);
+  }
+  .sky-wash {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(47, 134, 242, 0.8) 0%, rgba(92, 200, 255, 0.35) 30%, rgba(92, 200, 255, 0) 50%);
+  }
 </style>
-<script src="art.js"></script>
+<script src="branding/brand.js"></script>
 </head>
 <body>
+<div id="stage">
+  <img class="backdrop" decoding="sync" src="branding/map/plains.jpg" style="filter: blur(5px) saturate(1.4) brightness(1.05)">
+  <div class="sky-wash"></div>
+  <div class="light"></div>
+  <div class="sunburst" style="--x: 50%; --y: 62%; --ray: 0.3; --reach: 75%"></div>
+  <div class="vignette"></div>
+</div>
 <script>
-  // Thumbnail 2: the server-wide Mega Storm event (1920x1080)
-  const W = 1920, H = 1080;
-  let c = "";
-  c += sky(W, H, ["#c08cff", "#5a1fc8", "#12062e"], 0.5, 0.42);
-  c += rays(960, 470, 1900, 24, "#ffffff", 0.07);
+const stage = document.getElementById("stage");
+const ART = "branding/";
 
-  // storm ceiling
-  c += `<g opacity="0.65">`;
-  for (const [x, y, s] of [[180, 110, 2.4], [560, 70, 2.8], [960, 60, 3.2], [1380, 70, 2.8], [1760, 110, 2.4]]) {
-    c += cloud(x, y, s, "#7b4fe0", "#6238c8", null);
+async function build() {
+  await Brand.ready();
+
+  // the six eggs (zone order), in an arc behind the crowd
+  const eggs = ["MeadowEgg", "ThunderEgg", "DuneEgg", "FrostEgg", "MagmaEgg", "CosmicEgg"];
+  eggs.forEach((egg, index) => {
+    const t = index / (eggs.length - 1) - 0.5;
+    const x = 960 + t * 1500;
+    const y = 470 + Math.abs(t) * 2 * 60 + (Math.abs(t) < 0.2 ? 20 : 0);
+    Brand.place(stage, Brand.sprite(ART + `studio/Egg_${egg}.png`, { height: 210 }), [x, y], { rotate: t * 18 });
+  });
+
+  // back row: one pet from every egg
+  const back = ["Droplet", "Zappy", "CactusCub", "Icicle", "LavaPup", "Nebula", "Sunny", "VoltBat", "Scarab", "Moonbeam", "Ember"];
+  back.forEach((pet, index) => {
+    const t = index / (back.length - 1) - 0.5;
+    Brand.place(stage, Brand.sprite(ART + `pets/${pet}.png`, { fit: 190 }), [960 + t * 1560, 640 + Math.abs(t) * 40], { rotate: t * 14 });
+  });
+
+  // middle row: Legendaries at the sides
+  const middle = [["BreezeKing", 215, 820], ["InfernoDrake", 1705, 820]];
+  for (const [pet, x, y] of middle) {
+    Brand.place(stage, Brand.sprite(ART + `pets/${pet}.png`, { fit: 240 }), [x, y], { rotate: (x - 960) / 120 });
   }
-  c += `</g>`;
 
-  // giant mega tornado
-  c += `<g filter="url(#softGlow)" opacity="0.55"><ellipse cx="960" cy="520" rx="420" ry="460" fill="#d6b0ff"/></g>`;
-  c += tornado(960, 130, 2.3, { bands: 11, step: 50, rTop: 210, rBot: 30, dark: "#5b2bd4", light: "#f8eeff", mid: "#b98cff", phase: 2.6 });
+  // front: a Golden and a Rainbow pet around the Aurora Gryphon
+  Brand.place(stage, Brand.sprite(ART + "pets/ThunderPup_Golden.png", { fit: 330 }), [470, 880], { rotate: -5 });
+  Brand.place(stage, await Brand.rainbowSprite(ART + "pets/AuroraFox_Rainbow.png", { fit: 330 }), [1450, 880], { rotate: 5 });
+  Brand.place(stage, Brand.sprite(ART + "pets/AuroraGryphon.png", { width: 540 }), [960, 870]);
+  Brand.place(stage, Brand.ribbon("GOLDEN", { size: 46, colors: "bolt", padX: 34, textStroke: "#9a5a00" }), [470, 1010], { rotate: -4 });
+  Brand.place(stage, Brand.ribbon("RAINBOW", { size: 46, colors: "storm", padX: 34 }), [1450, 1010], { rotate: 4 });
 
-  c += bolt(330, 250, 1.6, -16);
-  c += bolt(1560, 230, 1.7, 14);
-  c += bolt(1290, 560, 0.9, -6);
-  c += bolt(560, 560, 0.85, 10);
-
-  // ground
-  c += hills(W, 920, 30, "#3a2c8a", 0.5, 1.4);
-  c += hills(W, 960, 22, "#4f3ab0", 2.4, 2.1);
-  c += hills(W, 1010, 14, "#6a4fd0", 4.0, 3.0);
-
-  // storm chasers vacuuming from both sides
-  function chaser(x, y, s, arm, flip, jacket, tx, ty) {
-    let out = "";
-    const hand = characterHand(0, 0, s, arm);
-    const vacX = hand.x + 24 * s / 1.6, vacY = hand.y - 56 * s / 1.6, vacS = s * 0.82;
-    const a = (arm * Math.PI) / 180;
-    const tipX = vacX + Math.cos(a) * 150 * vacS, tipY = vacY + Math.sin(a) * 150 * vacS;
-    const sx = flip ? -1 : 1;
-    out += `<g transform="translate(${x},${y}) scale(${sx},1)">`;
-    out += beam(tipX, tipY, (tx - x) * sx, ty - y, 20 * s / 1.4, 90, "#7fe8ff");
-    out += character(0, 0, s, { armAngle: arm, jacket });
-    out += vacuum(vacX, vacY, vacS, arm);
-    out += `</g>`;
-    return out;
-  }
-  c += chaser(250, 1030, 1.45, -28, false, "#33b5f5", 840, 560);
-  c += chaser(1690, 1030, 1.45, -28, true, "#ff7a5c", 1080, 560);
-  c += chaser(540, 990, 0.95, -36, false, "#7be36d", 880, 640);
-  c += chaser(1390, 990, 0.95, -36, true, "#ffd23c", 1040, 640);
-
-  // health bar of the storm
-  const barW = 900, barX = (W - barW) / 2, barY = 905;
-  const fill = lin([[0, "#ff6bd5"], [1, "#a14bff"]]);
-  c += `<defs>${fill.def}</defs>`;
-  c += `<rect x="${barX - 8}" y="${barY - 8 + 8}" width="${barW + 16}" height="${72}" rx="30" fill="#0d1030" opacity="0.85"/>`;
-  c += `<rect x="${barX - 8}" y="${barY - 8}" width="${barW + 16}" height="72" rx="30" fill="#1d1450" stroke="#0d1030" stroke-width="8"/>`;
-  c += `<rect x="${barX + 4}" y="${barY + 4}" width="${barW * 0.38}" height="48" rx="22" fill="${fill.url}"/>`;
-  c += `<rect x="${barX + 14}" y="${barY + 10}" width="${barW * 0.38 - 20}" height="14" rx="7" fill="#ffffff" opacity="0.35"/>`;
-  c += `<text x="${W / 2}" y="${barY + 44}" font-family="Luckiest Guy" font-size="40" text-anchor="middle" fill="#ffffff" stroke="#0d1030" stroke-width="7" paint-order="stroke" letter-spacing="2">COSMIC MAELSTROM  38%</text>`;
-
-  for (const [x, y, r] of [[700, 380, 26], [1240, 330, 22], [820, 760, 20], [1120, 790, 24], [120, 520, 18], [1800, 520, 20], [420, 680, 16], [1500, 690, 18]]) {
-    c += sparkle(x, y, r, "#ffffff", 0.95);
+  for (const [x, y, s] of [[300, 760, 46], [1640, 760, 50], [700, 560, 40], [1230, 560, 40], [1300, 900, 38], [620, 900, 36]]) {
+    Brand.place(stage, Brand.sparkle(s), [x, y]);
   }
 
   // title
-  c += title(W / 2, 205, "MEGA STORMS!", 190, { stroke: 40 });
-  c += ribbon(W / 2, 300, 720, 92, "TEAM UP WITH THE SERVER", { size: 52, c1: "#58d5ff", c2: "#2b86e6", spacing: 2, rot: -1.5 });
-  c += ribbon(1740, 905, 300, 80, "TOP REWARDS", { size: 40, c1: "#ffd84a", c2: "#f09a1a", rot: 6, spacing: 2 });
+  Brand.place(stage, Brand.title("COLLECT 38", { size: 190, maxWidth: 1300, fill: "bolt" }), [960, 122]);
+  Brand.place(stage, Brand.title("STORMLING PETS!", { size: 130, maxWidth: 1400, fill: "cloud" }), [960, 285]);
 
-  document.body.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${baseDefs()}${c}</svg>`;
+  await Brand.imagesLoaded();
+}
+
+build();
 </script>
 </body>
 </html>

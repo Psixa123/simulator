@@ -56,8 +56,7 @@ const Brand = (() => {
 
   // A big title line: gradient fill, thick Ink outline, a solid Ink extrusion underneath, a white gloss on
   // the upper half and a soft shadow. opts: size (font px), fill (FILLS key or stops), stroke, depth,
-  // spacing (letter spacing px), font, maxWidth (shrinks the line to fit), gloss (0..1), arc (px the line
-  // bends up in the middle; 0 = straight)
+  // spacing (letter spacing px), font, maxWidth (shrinks the line to fit), gloss (0..1)
   function title(text, opts = {}) {
     const font = opts.font || "Luckiest Guy";
     let size = opts.size || 160;
@@ -69,48 +68,28 @@ const Brand = (() => {
     }
     const stroke = opts.stroke ?? size * 0.17;
     const depth = opts.depth ?? size * 0.09;
-    const arc = opts.arc || 0;
     const pad = stroke + 8;
     const width = Math.ceil(box.width + pad * 2);
-    const height = Math.ceil(box.height + pad * 2 + depth + arc);
-    const baseline = pad + arc - box.y;
+    const height = Math.ceil(box.height + pad * 2 + depth);
+    const baseline = pad - box.y;
     const fill = gradient(typeof opts.fill === "string" ? FILLS[opts.fill] : (opts.fill || FILLS.bolt));
     const gloss = gradient([[0, "#ffffff"], [0.5, "#ffffff"], [0.5001, "#ffffff", 0], [1, "#ffffff", 0]]);
     const shadowId = uid("shadow");
-    const pathId = uid("arc");
-    const textAt = (dy) => {
-      if (!arc) {
-        return `x="${width / 2}" y="${baseline + dy}" text-anchor="middle"`;
-      }
-      return "";
-    };
-    // A text line, straight or along a gentle arc
-    const line = (attributes, dy = 0) => {
-      const common = `font-family="${font}" font-size="${size}" letter-spacing="${spacing}" ${attributes}`;
-      if (!arc) {
-        return `<text ${textAt(dy)} ${common}>${text}</text>`;
-      }
-      return `<text ${common} text-anchor="middle" transform="translate(0 ${dy})"><textPath href="#${pathId}" startOffset="50%">${text}</textPath></text>`;
-    };
-    const glossLine = line(`fill="url(#${gloss.id})" opacity="${opts.gloss ?? 0.35}"`);
+    const line = (attributes, dy = 0) => `<text x="${width / 2}" y="${baseline + dy}" text-anchor="middle"
+      font-family="${font}" font-size="${size}" letter-spacing="${spacing}" ${attributes}>${text}</text>`;
+    const outline = `fill="${INK}" stroke="${INK}" stroke-width="${stroke}" stroke-linejoin="round" stroke-linecap="round"`;
     const inner = `
       <defs>
         ${fill.def}${gloss.def}
-        <path id="${pathId}" d="M ${pad - width * 0.1} ${baseline + arc} Q ${width / 2} ${baseline - arc} ${width + width * 0.1 - pad} ${baseline + arc}"/>
         <filter id="${shadowId}" x="-10%" y="-20%" width="120%" height="160%">
           <feDropShadow dx="0" dy="${depth * 0.6}" stdDeviation="${size * 0.06}" flood-color="#0c1240" flood-opacity="0.45"/>
         </filter>
       </defs>
-      <g filter="url(#${shadowId})">
-        ${line(`fill="${INK}" stroke="${INK}" stroke-width="${stroke}" stroke-linejoin="round" stroke-linecap="round"`, depth)}
-      </g>
-      ${line(`fill="${INK}" stroke="${INK}" stroke-width="${stroke}" stroke-linejoin="round" stroke-linecap="round"`)}
+      <g filter="url(#${shadowId})">${line(outline, depth)}</g>
+      ${line(outline)}
       ${line(`fill="url(#${fill.id})"`)}
-      ${glossLine}`;
-    const svg = svgElement(width, height, inner);
-    svg.dataset.width = width;
-    svg.dataset.height = height;
-    return svg;
+      ${line(`fill="url(#${gloss.id})" opacity="${opts.gloss ?? 0.35}"`)}`;
+    return svgElement(width, height, inner);
   }
 
   // Candy ribbon: a pill with a gradient face, a darker lip, a shine, an Ink outline and white text with a
@@ -142,10 +121,7 @@ const Brand = (() => {
       <rect x="${m + radius * 0.55}" y="${m + bodyHeight * 0.1}" width="${width - radius * 1.1}" height="${bodyHeight * 0.3}" rx="${bodyHeight * 0.15}" fill="#ffffff" opacity="0.35"/>
       <text x="${m + width / 2}" y="${baseline}" text-anchor="middle" font-family="${font}" font-size="${size}" letter-spacing="${spacing}"
         fill="${opts.textFill || "#ffffff"}" stroke="${textStroke}" stroke-width="${size * 0.16}" stroke-linejoin="round" paint-order="stroke">${text}</text>`;
-    const svg = svgElement(totalW, totalH, inner);
-    svg.dataset.width = totalW;
-    svg.dataset.height = totalH;
-    return svg;
+    return svgElement(totalW, totalH, inner);
   }
 
   // Chunky lightning bolt (Bolt gradient, Ink outline, white highlight), about `height` px tall
@@ -182,27 +158,26 @@ const Brand = (() => {
   }
 
   // A bank of cartoon clouds: puffs [[x, y, r], ...] (y measured from the top of a width x height box) on a
-  // solid base that runs from the puffs' feet to the bottom. Ink outline, vertical gradient, soft shading
-  // in the lower part of every puff. opts: top / bottom colours, shade colour, outline width, base (y where
-  // the solid base starts)
+  // solid base that runs from the puffs' feet to the bottom. Ink outline, a vertical gradient and a white
+  // shine on every puff. opts: top / bottom colours, outline width, base (y where the solid base starts)
   function cloudBank(width, height, puffs, opts = {}) {
     const outline = opts.outline ?? 9;
     const base = opts.base ?? Math.max(...puffs.map(([, y]) => y));
-    const face = gradient([[0, opts.top || "#ffffff"], [1, opts.bottom || "#cfe2ff"]]);
-    const clip = uid("clip");
+    const top = Math.min(...puffs.map(([, y, r]) => y - r));
+    const face = uid("cloud");
     const shape = (grow) => puffs.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r + grow}"/>`).join("") +
       `<rect x="${-outline}" y="${base}" width="${width + outline * 2}" height="${height - base + outline}"/>`;
-    const shades = puffs.map(([x, y, r]) => `<circle cx="${x + r * 0.25}" cy="${y + r * 0.75}" r="${r * 0.75}"/>`).join("");
     const shines = puffs.map(([x, y, r]) =>
       `<ellipse cx="${x - r * 0.3}" cy="${y - r * 0.45}" rx="${r * 0.32}" ry="${r * 0.16}" transform="rotate(-25 ${x - r * 0.3} ${y - r * 0.45})"/>`).join("");
     const inner = `
       <defs>
-        ${face.def.replace("<linearGradient ", `<linearGradient gradientUnits="userSpaceOnUse" `).replace('x1="0" y1="0" x2="0" y2="1"', `x1="0" y1="${Math.min(...puffs.map(([, y, r]) => y - r))}" x2="0" y2="${height}"`)}
-        <clipPath id="${clip}">${shape(0)}</clipPath>
+        <linearGradient id="${face}" gradientUnits="userSpaceOnUse" x1="0" y1="${top}" x2="0" y2="${height}">
+          <stop offset="0" stop-color="${opts.top || "#ffffff"}"/>
+          <stop offset="1" stop-color="${opts.bottom || "#cfe2ff"}"/>
+        </linearGradient>
       </defs>
       <g fill="${INK}">${shape(outline)}</g>
-      <g fill="url(#${face.id})">${shape(0)}</g>
-      <g clip-path="url(#${clip})" fill="${opts.shade || "#9fc0f5"}" opacity="0.22">${shades}</g>
+      <g fill="url(#${face})">${shape(0)}</g>
       <g fill="#ffffff" opacity="0.85">${shines}</g>`;
     return svgElement(width, height, inner);
   }
@@ -226,14 +201,61 @@ const Brand = (() => {
     return element;
   }
 
-  // A render (pet, weather, egg) as an <img class="sprite">, `width` px wide (or height: opts.height)
+  // A render (pet, weather, egg) as an <img class="sprite">: `width` px wide, or `height` px tall, or `fit`:
+  // as big as fits in a fit x fit box (so tall and wide pets look the same size)
   function sprite(src, opts = {}) {
     const image = document.createElement("img");
+    // decode while painting: headless Chrome's screenshot must never catch a render that isn't decoded yet
+    image.decoding = "sync";
     image.src = src;
-    image.className = "sprite" + (opts.className ? ` ${opts.className}` : "");
+    image.className = "sprite";
     if (opts.width) image.style.width = `${opts.width}px`;
     if (opts.height) image.style.height = `${opts.height}px`;
+    if (opts.fit) {
+      image.style.maxWidth = `${opts.fit}px`;
+      image.style.maxHeight = `${opts.fit}px`;
+    }
     return image;
+  }
+
+  // A Rainbow-tier pet: in the world its colours keep cycling through the rainbow (PetController), which a
+  // still shows as a rainbow sheen over the render: a <canvas> with the render, a rainbow gradient blended in
+  // "hue" mode (dark eyes and outlines stay dark), cut back to the render's shape. Same size opts as
+  // sprite(); async because it needs the decoded render.
+  async function rainbowSprite(src, opts = {}) {
+    const image = new Image();
+    image.src = src;
+    await image.decode();
+    const w = image.naturalWidth;
+    const h = image.naturalHeight;
+    let scale = 1;
+    if (opts.width) scale = opts.width / w;
+    else if (opts.height) scale = opts.height / h;
+    else if (opts.fit) scale = Math.min(opts.fit / w, opts.fit / h);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = `${Math.round(w * scale)}px`;
+    canvas.style.height = `${Math.round(h * scale)}px`;
+    canvas.className = "sprite";
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0);
+    const sheen = context.createLinearGradient(0, 0, w, h);
+    const colors = ["#ff5a6e", "#ffb347", "#ffe95a", "#6ee88a", "#54c8ff", "#a77bff", "#ff7ad9"];
+    colors.forEach((color, index) => sheen.addColorStop(index / (colors.length - 1), color));
+    context.globalCompositeOperation = "hue";
+    context.fillStyle = sheen;
+    context.fillRect(0, 0, w, h);
+    context.globalCompositeOperation = "destination-in";
+    context.drawImage(image, 0, 0);
+    return canvas;
+  }
+
+  // Adds a coloured glow around an element (on top of its own filter), e.g. for Neon weather orbs
+  function glow(element, color, radius = 30) {
+    const own = element.style.filter || getComputedStyle(element).filter;
+    element.style.filter = `drop-shadow(0 0 ${radius * 0.4}px ${color}) drop-shadow(0 0 ${radius}px ${color}) ${own === "none" ? "" : own}`;
+    return element;
   }
 
   // Resolves once every <img> on the page has loaded (so the screenshot never catches a missing render)
@@ -244,5 +266,5 @@ const Brand = (() => {
     })));
   }
 
-  return { INK, FILLS, ready, title, ribbon, bolt, sparkle, cloudBank, place, sprite, imagesLoaded };
+  return { INK, FILLS, ready, title, ribbon, bolt, sparkle, cloudBank, place, sprite, rainbowSprite, glow, imagesLoaded };
 })();
