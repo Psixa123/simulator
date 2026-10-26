@@ -222,7 +222,7 @@ GameConfig.PetMeshAssetId = 132937654772394
 -- "Prop kit"). When the place has no ServerStorage/ReplicatedStorage.WorldProps, the server's WorldProps
 -- module inserts this model into ServerStorage.WorldProps; 0 = the map keeps its part-built props.
 -- tools/roblox/upload_model.py --file assets/models/StormWorldProps.glb --config-key WorldPropsAssetId fills it in.
-GameConfig.WorldPropsAssetId = 102104549753593
+GameConfig.WorldPropsAssetId = 77879372221205
 
 ---------------------------------------------------------------------------
 -- Gamepass effects & boosts

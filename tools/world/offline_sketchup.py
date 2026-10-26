@@ -360,7 +360,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     (out / "extract.json").write_text(json.dumps(extraction, separators=(",", ":")), encoding="utf-8")
     written = import_sketchup.import_extraction(extraction, out, replace=True)
-    print("wrote " + ", ".join(str(p.relative_to(ROOT)) for p in written))
+    print("wrote " + ", ".join(str(p.resolve().relative_to(ROOT) if p.resolve().is_relative_to(ROOT) else p) for p in written))
 
 
 if __name__ == "__main__":

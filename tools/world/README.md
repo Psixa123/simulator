@@ -25,9 +25,13 @@ SketchUp API, for `--check` and quick previews), `viewer.html` (three.js preview
 
 **Gear props** (`gear.py`) are not map props: `src/server/Services/CharacterGear.luau` places them with
 `WorldProps.Place` and welds them to the player's Tool Handle / tank Plate. Their origin is where they are held
-(see `PROPS.md`, "gear"), so they are in `build_world_pack.py`'s `PIVOT_PROPS`. To preview them on a character,
-run a small module through `tools/preview_map.py --script` that builds a rig and calls `CharacterGear.BuildVacuum`
-/ `BuildTank` / `AttachTank` (see the vacuum-model notes in the gear.py header).
+(see `PROPS.md`, "gear"), so they are in `build_world_pack.py`'s `PIVOT_PROPS`. To see them on characters (the
+real CharacterGear, four Climate Shift looks and tank fills):
+
+```
+python3 tools/preview_map.py --script tools/world/GearPreview.luau --out build/preview/gear \
+    --shot "back target=0.5,3.8,0 az=25 el=20 dist=9" --shot "row target=12,3.5,0 az=25 el=15 dist=30 size=1400x600"
+```
 
 ## The contract
 
