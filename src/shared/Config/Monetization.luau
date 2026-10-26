@@ -14,7 +14,7 @@ local Monetization = {}
 
 Monetization.Gamepasses = {
 	VIP = {
-		Id = 0,
+		Id = 2037311046,
 		Image = 127403723161922, -- assets/gamepasses/VIP.png
 		Order = 1,
 		Name = "VIP",
@@ -24,7 +24,7 @@ Monetization.Gamepasses = {
 		Description = "+25% Volts and energy, a VIP chat tag and a golden crown above your head.",
 	},
 	DoubleVolts = {
-		Id = 0,
+		Id = 2042270358,
 		Image = 116165976519745, -- assets/gamepasses/DoubleVolts.png
 		Order = 2,
 		Name = "2x Volts",
@@ -34,7 +34,7 @@ Monetization.Gamepasses = {
 		Description = "Earn double Volts every time you sell energy.",
 	},
 	DoubleEnergy = {
-		Id = 0,
+		Id = 2038264980,
 		Image = 98414846011193, -- assets/gamepasses/DoubleEnergy.png
 		Order = 3,
 		Name = "2x Energy",
@@ -44,7 +44,7 @@ Monetization.Gamepasses = {
 		Description = "Your vacuum collects double energy from all weather.",
 	},
 	AutoCatch = {
-		Id = 0,
+		Id = 2039728774,
 		Image = 119205295981536, -- assets/gamepasses/AutoCatch.png
 		Order = 4,
 		Name = "Auto Catch",
@@ -54,7 +54,7 @@ Monetization.Gamepasses = {
 		Description = "Your vacuum automatically catches the nearest weather. No clicking needed!",
 	},
 	RemoteSell = {
-		Id = 0,
+		Id = 2052810552,
 		Image = 103170135392724, -- assets/gamepasses/RemoteSell.png
 		Order = 5,
 		Name = "Remote Sell",
@@ -64,7 +64,7 @@ Monetization.Gamepasses = {
 		Description = "Sell from anywhere and automatically sell whenever your tank is full.",
 	},
 	MegaTank = {
-		Id = 0,
+		Id = 2053854589,
 		Image = 120754468211847, -- assets/gamepasses/MegaTank.png
 		Order = 6,
 		Name = "Mega Tank",
@@ -75,7 +75,7 @@ Monetization.Gamepasses = {
 	},
 	-- No tank limit (Formulas.HasInfiniteTank). Rewards and Volts products still count normal full tanks.
 	InfiniteTank = {
-		Id = 0,
+		Id = 2052756580,
 		Image = 125171723070743, -- assets/gamepasses/InfiniteTank.png
 		Order = 7,
 		Name = "Infinite Tank",
@@ -85,7 +85,7 @@ Monetization.Gamepasses = {
 		Description = "Your Storm Tank never fills up: catch weather nonstop and sell whenever you like.",
 	},
 	LuckyHatcher = {
-		Id = 0,
+		Id = 2053194607,
 		Image = 73259738950338, -- assets/gamepasses/LuckyHatcher.png
 		Order = 8,
 		Name = "Lucky Hatcher",
@@ -95,7 +95,7 @@ Monetization.Gamepasses = {
 		Description = "+50% luck for Rare, Epic and Legendary pets from every egg.",
 	},
 	TripleHatch = {
-		Id = 0,
+		Id = 2054142623,
 		Image = 89960649556054, -- assets/gamepasses/TripleHatch.png
 		Order = 9,
 		Name = "Triple Hatch",
@@ -105,7 +105,7 @@ Monetization.Gamepasses = {
 		Description = "Hatch 3 eggs at once.",
 	},
 	AutoHatch = {
-		Id = 0,
+		Id = 2054250494,
 		Image = 99891956329462, -- assets/gamepasses/AutoHatch.png
 		Order = 10,
 		Name = "Auto Hatch",
@@ -115,7 +115,7 @@ Monetization.Gamepasses = {
 		Description = "Keep hatching eggs automatically while you stand next to them.",
 	},
 	PetSlots = {
-		Id = 0,
+		Id = 2053008551,
 		Image = 137574833831934, -- assets/gamepasses/PetSlots.png
 		Order = 11,
 		Name = "+3 Pet Slots",
@@ -125,7 +125,7 @@ Monetization.Gamepasses = {
 		Description = "Equip 3 more pets at the same time.",
 	},
 	StormRadar = {
-		Id = 0,
+		Id = 2052732532,
 		Image = 124803896997456, -- assets/gamepasses/StormRadar.png
 		Order = 12,
 		Name = "Storm Radar",
@@ -140,7 +140,7 @@ Monetization.Gamepasses = {
 -- valuable at every stage of the game (see Formulas.VoltsUnit).
 Monetization.Products = {
 	VoltsSmall = {
-		Id = 0,
+		Id = 3722512002,
 		Image = 96350967025071, -- assets/products/VoltsSmall.png
 		Order = 1,
 		Category = "Volts",
@@ -151,7 +151,7 @@ Monetization.Products = {
 		Amount = 4,
 	},
 	VoltsMedium = {
-		Id = 0,
+		Id = 3722512074,
 		Image = 106239033232780, -- assets/products/VoltsMedium.png
 		Order = 2,
 		Category = "Volts",
@@ -162,7 +162,7 @@ Monetization.Products = {
 		Amount = 15,
 	},
 	VoltsLarge = {
-		Id = 0,
+		Id = 3722512199,
 		Image = 115014003587990, -- assets/products/VoltsLarge.png
 		Order = 3,
 		Category = "Volts",
@@ -173,7 +173,7 @@ Monetization.Products = {
 		Amount = 60,
 	},
 	VoltsHuge = {
-		Id = 0,
+		Id = 3722512318,
 		Image = 115566008270002, -- assets/products/VoltsHuge.png
 		Order = 4,
 		Category = "Volts",
@@ -184,7 +184,7 @@ Monetization.Products = {
 		Amount = 200,
 	},
 	EnergyBoost = {
-		Id = 0,
+		Id = 3722512480,
 		Image = 140236491284484, -- assets/products/EnergyBoost.png
 		Order = 5,
 		Category = "Boosts",
@@ -196,7 +196,7 @@ Monetization.Products = {
 		Duration = 1800,
 	},
 	LuckBoost = {
-		Id = 0,
+		Id = 3722512541,
 		Image = 86026195694680, -- assets/products/LuckBoost.png
 		Order = 6,
 		Category = "Boosts",
@@ -208,7 +208,7 @@ Monetization.Products = {
 		Duration = 1800,
 	},
 	SummonMegaStorm = {
-		Id = 0,
+		Id = 3722512616,
 		Image = 85777659133015, -- assets/products/SummonMegaStorm.png
 		Order = 7,
 		Category = "Boosts",
