@@ -168,3 +168,85 @@ In the game: `Icons.luau` has a `Zone_<Key>` line per emblem (uploaded with
 `python3 tools/roblox/upload_icons.py --only Zone_Hub,Zone_Meadows,Zone_Thunder,Zone_Dunes,Zone_Frost,Zone_Volcano,Zone_Sky`),
 and a new zone needs a `Zone_<Key>` model, an entry in `ZONE_ICONS` in `render_icons.py` and a line in
 `Icons.luau` (until then the title card shows the zone's emoji on a round badge).
+
+## Store icons
+
+The gamepass and developer product icons (`assets/gamepasses/<Key>.png`, `assets/products/<Key>.png`, one per key
+of `src/shared/Config/Monetization.luau`; the in-game Shop shows the same pictures as its card art) are sunburst
+badges built around a big glossy **3D hero model** of the item. The heroes are more detailed than the 48 px UI
+icons (jewels, coin stacks, rivets, straws, glass with glowing liquid) and are rendered at 1024 px with the same
+toon shading, Ink outline and part lines, plus three store-only touches of `viewer.html`: polished-metal gold and
+steel (`metal`), soft velvet/straw/wood (`matte`) and clearer glass (`glass`, `clear`; the outline stays outside
+see-through glass). `assets/source/store3d.html` then lays out each badge: the item's colour as a sunburst, a soft
+glow and contact shadow, the hero, sparkles and chunky candy labels with thick Ink outlines (everything that
+matters inside the centred circle of radius ~430 on the 1024 grid, because Roblox crops pass icons to a circle).
+
+![store heroes](../../assets/source/store3d/_sheet.png)
+
+| Key | Hero | Label |
+| --- | --- | --- |
+| VIP | jewelled gold crown with a velvet cushion and pearl tips | VIP |
+| DoubleVolts | stacks of volt coins and a big coin flipping in front | 2X |
+| DoubleEnergy | glowing energy drop with an embossed bolt and an energy ring | 2X |
+| AutoCatch | the game's Storm Vacuum (gear.py `VacuumGun`) sucking a cloud through a glowing beam | AUTO |
+| RemoteSell | handheld remote beaming radio waves and coins | AUTO SELL |
+| MegaTank | big storm tank: glass drum, glowing cyan liquid, gold trim, valve wheel | 2X |
+| InfiniteTank | the storm tank full of violet glow with a big gold infinity sign | INFINITE |
+| LuckyHatcher | spotted egg with a four-leaf clover and a gold star | +50% |
+| TripleHatch | three spotted eggs in a straw nest | X3 |
+| AutoHatch | pink egg circled by two fat arrows | AUTO |
+| PetSlots | three real pets: Puffling, Thunder Pup, Zappy (`tools/pets`) | +3 SLOTS |
+| StormRadar | radar scope with a glowing sweep, blips and a storm cloud popping out | RADAR |
+| VoltsSmall | small blue pouch of volts with spilled coins | |
+| VoltsMedium | open money sack full of coins | |
+| VoltsLarge | wooden crate overflowing with coins | |
+| VoltsHuge | steel vault with a heap of coins, stacks and gold bars | BEST VALUE |
+| EnergyBoost | hourglass with glowing blue sand and a lightning bolt | 2X, 30 MIN |
+| LuckBoost | hourglass with glowing green sand and a clover | 2X, 30 MIN |
+| SummonMegaStorm | swirling tornado under a purple thundercloud with lightning | SUMMON |
+| AuroraGryphon | the real Aurora Gryphon pet (`tools/pets`) under aurora lights | EXCLUSIVE |
+
+| Path | What |
+| --- | --- |
+| `tools/icons/sketchup_store_icons.py` | the SketchUp models: 10 `# ===== chunk` blocks (2 of store helpers in `session_state["ST"]`, 8 of heroes), one group `Prop_Store_<Key>` per hero; built on the icon helpers (chunks 1–2 of `sketchup_icons.py`) |
+| `tools/icons/store_scenes.py` | heroes made from the game's own models: the pets (`tools/pets/pet_geometry.py`) for AuroraGryphon and PetSlots, and the Storm Vacuum (`assets/source/world/gear.json`) added to Store_AutoCatch (`GUN` must stay in step with `NOZZLE` in chunk 10) |
+| `tools/icons/digest.py` | a short digest of an extraction, sent in the same `build_model` call as `extract.py` to check the SketchUp model against the dry run without pulling megabytes of polygons |
+| `assets/source/world/store_icons.json` | the extracted SketchUp polygons (`storm-icons-source/1`) |
+| `assets/source/world/StormStoreIcons.skp` | the SketchUp model |
+| `assets/source/store3d/Store_<Key>.png` | the 1024 px hero renders; `_sheet.png` is their contact sheet |
+| `assets/source/store3d.html`, `store3d.js` | the badge layouts (per-item colours, hero placement, labels) and their drawing helpers (on top of `art.js`) |
+
+### Rebuild
+
+```sh
+python3 tools/icons/import_icons.py --set store offline          # dry run -> build/icons/store/offline/icons.json
+python3 tools/icons/render_icons.py --set store --source build/icons/store/offline/icons.json --size 512   # quick look
+python3 tools/icons/render_icons.py --set store                  # the committed source -> assets/source/store3d (1024 px, ~2 min a hero)
+python3 tools/render_art.py gamepasses products                  # the badges -> assets/gamepasses, assets/products
+python3 tools/roblox/upload_store_icons.py --only VIP,DoubleVolts,... --force   # the Shop's card art (see below)
+```
+
+Angles, framing and the store shading options per hero are in `STORE_ICONS` in `render_icons.py`; badge colours,
+hero placement and labels in `D` in `store3d.html`.
+
+SketchUp build order (`build_model`): `tools/world/sketchup/lib.py` (4 chunks, the first with `clean: true`),
+chunks 1–2 of `tools/icons/sketchup_icons.py`, the 10 chunks of `sketchup_store_icons.py` (consecutive chunks may
+share a call), then `tools/world/sketchup/extract.py` followed by `tools/icons/digest.py` as ONE call. Save that
+result to a file and run `python3 tools/icons/import_icons.py --set store verify <file>`: it runs the same two
+scripts on the dry run and reports, per hero, whether SketchUp built exactly the same polygons. Then pull the
+polygons with `extract.py` in batches (`ONLY = [...]`, about 1.5 MB each: `[VIP, DoubleVolts, DoubleEnergy,
+MegaTank, InfiniteTank, AutoCatch]`, `[RemoteSell, StormRadar, LuckyHatcher, TripleHatch, AutoHatch]`,
+`[VoltsSmall, VoltsMedium, EnergyBoost, LuckBoost, SummonMegaStorm]`, `[VoltsLarge, VoltsHuge]`, all keys
+`Store_`-prefixed), save each result and import them with `python3 tools/icons/import_icons.py --set store import
+<file>` (`--replace` on the first). Finish with `save_model` as `StormStoreIcons.skp`. In the last build the
+digest matched for all 18 heroes and the imported source was byte-identical to the dry run.
+
+A new item needs a hero (a chunk function, or a scene in `store_scenes.py`), an entry in `STORE_ICONS`, a design in
+`D` in `store3d.html` and its key in `PASSES` / `PRODUCTS` in `tools/render_art.py`.
+
+### In the game
+
+`python3 tools/roblox/upload_store_icons.py --only <keys> --force` uploads the badges as images and writes each id
+into the item's `Image =` line in `Monetization.luau` (the Shop draws the badge once Roblox has approved it). Pass
+the badge keys with `--only`: a plain `--force` would also upload the Shop's sunburst and Robux pieces again. The
+pass and product icons on the Creator Dashboard are uploaded by hand (`docs/STORE_LISTING.md`).

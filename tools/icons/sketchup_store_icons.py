@@ -837,17 +837,17 @@ AIM = L["v_norm"]([math.cos(math.radians(32)), 0.0, math.sin(math.radians(32))])
 
 def auto_catch():
     p = ST["new_store"]("AutoCatch", 17)
-    far = L["v_add"](NOZZLE, L["v_mul"](AIM, 3.1))
-    ST["cloud"](p, (far[0] + 0.7, far[1] + 0.3, far[2] + 0.7), 1.2, P["white"], seed=3, flat=P["cloud"])
-    beam = L["lathe"]([(0.0, 0.0), (0.66, 0.0), (1.65, 3.0), (0.0, 3.0)], n=40)
+    far = L["v_add"](NOZZLE, L["v_mul"](AIM, 2.3))
+    ST["cloud"](p, (far[0] + 0.55, far[1] + 0.3, far[2] + 0.6), 1.1, P["white"], seed=3, flat=P["cloud"])
+    beam = L["lathe"]([(0.0, 0.0), (0.66, 0.0), (1.45, 2.3), (0.0, 2.3)], n=40)
     L["piece"](p, "Glass_8FF0FF", IC["align"](beam, AIM, L["v_add"](NOZZLE, L["v_mul"](AIM, 0.1))), crease=60)
     # raindrops and a little bolt being pulled into the nozzle
-    for k, s in ((1.2, 0.22), (2.1, 0.28), (2.8, 0.2)):
+    for k, s in ((0.9, 0.2), (1.5, 0.26), (2.0, 0.2)):
         c = L["v_add"](NOZZLE, L["v_mul"](AIM, k))
-        off = 0.35 if k != 2.1 else -0.4
+        off = 0.32 if k != 1.5 else -0.38
         L["piece"](p, P["rain"], L["ball"]((c[0], c[1] - 0.2, c[2] + off), [s, s, s * 1.3], seg=4), crease=60)
-    bolt = IC["rot2"](IC["bolt_shape"](0.9), 30)
-    c = L["v_add"](NOZZLE, L["v_mul"](AIM, 1.7))
+    bolt = IC["rot2"](IC["bolt_shape"](0.85), 30)
+    c = L["v_add"](NOZZLE, L["v_mul"](AIM, 1.2))
     L["piece"](p, P["bolt"], IC["slab"](bolt, 0.25, 0.05, y=c[1] - 0.3, x=c[0], z=c[2] - 0.25, corner=0.08),
                crease=50)
     return p

@@ -12,10 +12,12 @@
 </head>
 <body>
 <script>
-  // Gamepass and developer product icons (512x512, designed on a 1024 grid).
-  // Roblox shows pass icons cropped to a circle, so everything important stays inside
-  // a centered circle of radius ~430.
-  //   badge.html?id=VIP   -> one icon (ids match Monetization.luau keys)
+  // The first, flat (2D SVG) gamepass and developer product icons (512x512, designed on a 1024 grid).
+  // The icons in assets/gamepasses and assets/products are now the 3D badges of store3d.html
+  // (tools/render_art.py); this page still draws the Shop's card pieces (RAW below) and keeps the
+  // flat designs for reference. Roblox shows pass icons cropped to a circle, so everything
+  // important stays inside a centered circle of radius ~430.
+  //   badge.html?id=VIP   -> one flat icon (ids match Monetization.luau keys)
   //   badge.html?id=ShopRays&size=512, ?id=Robux&size=128 -> transparent pieces the in-game Shop draws
   //   its cards with (assets/ui/shop, see RAW below)
   const params = new URLSearchParams(location.search);

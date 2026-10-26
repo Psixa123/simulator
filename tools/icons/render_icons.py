@@ -25,6 +25,10 @@ Usage (from the repo root):
     python3 tools/icons/render_icons.py --set zones          the zone emblems (assets/source/world/zone_emblems.json
                                                              -> assets/ui/icons3d/Zone_<Key>.png + _zones.png)
     python3 tools/icons/render_icons.py --set zones --source build/icons/zones/offline/icons.json
+    python3 tools/icons/render_icons.py --set store          the store heroes (assets/source/world/store_icons.json +
+                                                             store_scenes.py -> assets/source/store3d/Store_<Key>.png,
+                                                             1024 px; the badges are made by tools/render_art.py)
+    python3 tools/icons/render_icons.py --set store --source build/icons/store/offline/icons.json --size 512
 
 Requirements: Python 3.9+, numpy, Pillow, Chrome/Chromium (CHROME_PATH or Playwright's headless shell) and
 three.js (`npm install` in tools/world).
@@ -117,7 +121,7 @@ ZONE_ICONS = {f"Zone_{key}": dict(ZONE_VIEW) for key in
 # and the vacuum gun): the 3D art of the gamepass / product badges, rendered at 1024 px into assets/source/store3d
 # and put on the badges by assets/source/store3d.html (tools/render_art.py).
 METALS = "Color_FFB52E,Color_FFC23A,Color_FFCF3A,Color_F59A23,Color_C3CCF0,Color_8794CC"
-MATTES = "Color_C92A62,Color_D9A250,Color_F0C470,Color_D9884A,Color_A45F2E,Color_6447C9"
+MATTES = "Color_C92A62,Color_D9A250,Color_F0C470,Color_D9884A,Color_A45F2E,Color_6447C9,Color_8A72EC"
 STORE_VIEW = {"yaw": -20, "pitch": 12, "fill": 0.9, "metal": METALS, "matte": MATTES, "glass": 0.2}
 STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
     ("VIP", {"yaw": -18, "pitch": 16}),
@@ -137,7 +141,7 @@ STORE_ICONS = {f"Store_{key}": dict(STORE_VIEW, **view) for key, view in (
     ("EnergyBoost", {"yaw": -16, "pitch": 10, "clear": 1}),
     ("LuckBoost", {"yaw": -16, "pitch": 10, "clear": 1}),
     ("SummonMegaStorm", {"yaw": -12, "pitch": 6}),
-    ("AutoCatch", {"yaw": -10, "pitch": 8}),
+    ("AutoCatch", {"yaw": -10, "pitch": 8, "roll": -12}),
     # the pets (store_scenes.py): no ink line round their blush (pre-mixed solid pink, store_scenes.blush_paint)
     ("AuroraGryphon", {"yaw": -16, "pitch": 8, "noline": "Neon_FFFFFF,Color_B77BBC"}),
     ("PetSlots", {"yaw": -8, "pitch": 8, "noline": "Neon_FFFFFF,Color_FDB9CC,Color_FFAE82,Color_BA85B8"}),
@@ -259,7 +263,15 @@ def shift(a, dx, dy):
 
 
 def dilate(a, r):
-    """Round, antialiased dilation of a coverage map a (0..1) by r pixels."""
+    """Round, antialiased dilation of a coverage map a (0..1) by r pixels. Big radii (the outline of the 1024 px
+    store heroes) are grown at half resolution, which is about 16 times faster and invisible after the 2x
+    downsampling of the finished image."""
+    if r > 20:
+        h, w = a.shape
+        small = a[:h // 2 * 2, :w // 2 * 2].reshape(h // 2, 2, w // 2, 2).max(axis=(1, 3))
+        grown = np.clip(dilate(small, r / 2.0) * 255.0 + 0.5, 0, 255).astype(np.uint8)
+        up = np.asarray(Image.fromarray(grown, "L").resize((w, h), Image.BILINEAR), dtype=np.float32) / 255.0
+        return np.maximum(up, a)
     out = a.copy()
     n = int(math.ceil(r + 1))
     for dy in range(-n, n + 1):

@@ -75,12 +75,12 @@ function banner(x, y, w, h, text, o = {}) {
   const bandPath = `${top} L${half},${h / 2} Q0,${h / 2 + 2 * sag} ${-half},${h / 2} Z`;
   const mid = `M${-half + 20},${6} Q0,${6 + 2 * sag} ${half - 20},${6}`;
   const tail = (s) => {
-    const x0 = s * (half - 30), x1 = s * (half + 70), yb = h * 0.18;
-    return `<path d="M${x0},${-h / 2 + yb} L${x1},${-h / 2 + yb} L${x1 - s * 34},${yb * 0.3 + 10} L${x1},${h / 2 + yb} L${x0},${h / 2 + yb} Z" ` +
+    const x0 = s * (half - 30), x1 = s * (half + 56), yb = h * 0.18;
+    return `<path d="M${x0},${-h / 2 + yb} L${x1},${-h / 2 + yb} L${x1 - s * 28},${yb * 0.3 + 10} L${x1},${h / 2 + yb} L${x0},${h / 2 + yb} Z" ` +
       `fill="${c3}" stroke="${INK3}" stroke-width="10" stroke-linejoin="round"/>` +
       `<path d="M${s * (half - 30)},${h / 2 + yb} L${s * half},${h / 2} L${s * half},${h / 2 + yb + 4} Z" fill="${INK3}"/>`;
   };
-  const size = o.size || h * 0.6;
+  const size = o.size || h * 0.7;
   let out = `<defs>${band.def}<path id="${id}" d="${mid}"/></defs><g transform="translate(${x},${y}) rotate(${o.rot || 0})">`;
   out += tail(-1) + tail(1);
   out += `<path d="${bandPath}" transform="translate(0,12)" fill="${INK3}" opacity="0.9"/>`;

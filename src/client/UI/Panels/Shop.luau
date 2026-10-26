@@ -1,7 +1,7 @@
 --!nonstrict
 -- Shop panel: the featured lobby pet, gamepasses, boosts and Volts packs, drawn like the store badges
--- (assets/gamepasses, assets/products, rendered from assets/source/badge.html): every item is a big card
--- whose art is its badge (sunburst rays in the item's colour, a cel-shaded illustration with thick ink
+-- (assets/gamepasses, assets/products, rendered from assets/source/store3d.html): every item is a big card
+-- whose art is its badge (sunburst rays in the item's colour, a glossy 3D model of the item with thick ink
 -- outlines and a candy ribbon), with candy tags and a green price button carrying the Robux glyph.
 -- A badge shows once its Monetization `Image` id is set (tools/roblox/upload_store_icons.py) and Roblox has
 -- approved the picture; until then the card draws the same sunburst with the item's 3D icon on it.
