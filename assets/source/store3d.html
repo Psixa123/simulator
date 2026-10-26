@@ -28,20 +28,20 @@
   const GOLD = ["#fff2a8", "#ffbe2e", "#c46a00"];
   const SKY = ["#a8f0ff", "#3ab8f5", "#174f9c"];
   const CLOVER = ["#d6ffb8", "#62d45a", "#1f7a34"];
-  const TAG_2X = (x = 250, y = 300) => label3d(x, y, "2X", 200, { rot: -12 });
+  const TAG_2X = (x = 330, y = 360) => label3d(x, y, "2X", 175, { rot: -12 });
   const SPARKS = [[175, 250, 26], [850, 210, 30], [150, 640, 22], [880, 610, 24], [300, 135, 16], [735, 120, 18]];
 
   const D = {
     VIP: { bg: GOLD, hero: [512, 455, 720], glow: [512, 450, 360], floor: [512, 735, 270, 40],
            labels: label3d(512, 875, "VIP", 190, { colors: ["#ffffff", "#ffe1f0", "#ff7ab8"] }) },
-    DoubleVolts: { bg: GOLD, hero: [545, 520, 720], glow: [540, 500, 360], floor: [545, 800, 290, 40], labels: TAG_2X(255, 285) },
-    DoubleEnergy: { bg: SKY, hero: [535, 500, 670], glow: [530, 480, 330], floor: [535, 800, 200, 32], labels: TAG_2X(250, 290) },
+    DoubleVolts: { bg: GOLD, hero: [560, 530, 690], glow: [555, 510, 350], floor: [560, 800, 280, 40], labels: TAG_2X() },
+    DoubleEnergy: { bg: SKY, hero: [560, 510, 660], glow: [555, 490, 330], floor: [560, 800, 200, 32], labels: TAG_2X() },
     AutoCatch: { bg: ["#c4ffd8", "#4fd28a", "#1c7a4a"], hero: [500, 445, 760], glow: [510, 430, 370],
                  labels: banner(512, 825, 470, 132, "AUTO", { c1: "#6fdcff", c2: "#2b86e6" }) },
     RemoteSell: { bg: ["#ffd8b8", "#ff8c4a", "#b43c14"], hero: [520, 475, 700], glow: [520, 450, 350],
                   labels: banner(512, 825, 590, 132, "AUTO SELL", { c1: "#ffe066", c2: "#f09a1a", size: 86 }) },
     MegaTank: { bg: ["#c8d2ff", "#6c7cff", "#26308f"], hero: [560, 495, 720], glow: [555, 480, 350],
-                floor: [560, 800, 230, 36], labels: TAG_2X(255, 300) },
+                floor: [560, 800, 230, 36], labels: TAG_2X() },
     InfiniteTank: { bg: ["#e2d6ff", "#7860ff", "#2a1580"], hero: [512, 450, 740], glow: [512, 440, 360],
                     labels: banner(512, 825, 590, 132, "INFINITE", { c1: "#ffe066", c2: "#f0a01a", size: 92 }) },
     LuckyHatcher: { bg: CLOVER, hero: [530, 445, 700], glow: [520, 430, 350], floor: [520, 735, 240, 36],
@@ -59,9 +59,9 @@
     VoltsLarge: { bg: ["#fff2a8", "#ffa62e", "#b85000"], hero: [512, 495, 800], glow: [512, 470, 380], floor: [512, 790, 320, 44] },
     VoltsHuge: { bg: ["#fff6b8", "#ffb21e", "#a84600"], hero: [512, 450, 760], glow: [512, 430, 380],
                  labels: banner(512, 825, 600, 132, "BEST VALUE", { c1: "#ff7a9a", c2: "#d93a62", size: 82 }) },
-    EnergyBoost: { bg: SKY, hero: [560, 445, 680], glow: [550, 430, 330], labels: TAG_2X(250, 280) +
+    EnergyBoost: { bg: SKY, hero: [560, 445, 680], glow: [550, 430, 330], labels: TAG_2X(330, 340) +
                    banner(512, 825, 470, 124, "30 MIN", { c1: "#ffe066", c2: "#f09a1a", size: 88 }) },
-    LuckBoost: { bg: CLOVER, hero: [560, 445, 680], glow: [550, 430, 330], labels: TAG_2X(250, 280) +
+    LuckBoost: { bg: CLOVER, hero: [560, 445, 680], glow: [550, 430, 330], labels: TAG_2X(330, 340) +
                  banner(512, 825, 470, 124, "30 MIN", { c1: "#ffe066", c2: "#f09a1a", size: 88 }) },
     SummonMegaStorm: { bg: ["#dcb8ff", "#7c3aed", "#2a0e6a"], hero: [512, 450, 760], glow: [512, 420, 380],
                        labels: banner(512, 825, 560, 132, "SUMMON", { c1: "#ff8ac8", c2: "#c93a8f" }) },
