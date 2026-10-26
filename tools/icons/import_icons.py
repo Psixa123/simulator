@@ -25,6 +25,9 @@ icon helpers in chunks 1-2 of sketchup_icons.py, kept in assets/source/world/zon
 also built on the icon helpers, kept in assets/source/world/store_icons.json):
 
     python3 tools/icons/import_icons.py --set store offline   -> build/icons/store/offline/icons.json
+    python3 tools/icons/import_icons.py --set store verify digest.txt [--write]
+        compare a SketchUp digest (extract.py + tools/icons/digest.py sent as one build_model call) with the same
+        digest of the offline dry run; --write stores the dry run as the source when every prop matches
 
 icons.json and zone_emblems.json use the world source layout (tools/world/import_sketchup.py) with their
 own format tag "storm-icons-source/1", so the world prop pack (tools/world/build_world_pack.py) skips them.
@@ -39,6 +42,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = ROOT / "tools" / "icons"
 WORLD = ROOT / "tools" / "world"
 SCRIPT = HERE / "sketchup_icons.py"
+DIGEST = HERE / "digest.py"
 SOURCE = ROOT / "assets" / "source" / "world" / "icons.json"
 OFFLINE = ROOT / "build" / "icons" / "offline" / "icons.json"
 FORMAT = "storm-icons-source/1"
@@ -155,8 +159,10 @@ def face_problems(props):
     return out
 
 
-def dry_run(name="icons"):
-    """lib.py + the set's helper chunks + its script + extract.py in one offline SketchUp stand-in session."""
+def dry_run(name="icons", digest=False):
+    """lib.py + the set's helper chunks + its script + extract.py in one offline SketchUp stand-in session.
+    digest=True also returns the digest of the extraction (extract.py + digest.py in one call, as sent to
+    SketchUp)."""
     spec = SETS[name]
     session = offline_sketchup.Session()
     session.run_file(WORLD / "sketchup" / "lib.py")
@@ -166,8 +172,12 @@ def dry_run(name="icons"):
     reports = []
     for res in session.run_file(spec["script"]):
         reports.extend((res or {}).get("built", []))
-    extraction = session.call((WORLD / "sketchup" / "extract.py").read_text(encoding="utf-8"), "extract.py")
-    return reports, extraction
+    extract = (WORLD / "sketchup" / "extract.py").read_text(encoding="utf-8")
+    extraction = session.call(extract, "extract.py")
+    if not digest:
+        return reports, extraction
+    summary = session.call(extract + "\n" + DIGEST.read_text(encoding="utf-8"), "extract.py+digest.py")
+    return reports, extraction, summary
 
 
 def cmd_offline(args):
@@ -190,6 +200,60 @@ def cmd_import(args):
     merged = {} if args.replace else load_source(out)
     merged.update(props)
     write_source(merged, out)
+
+
+def find_digest(obj, depth=0):
+    """The digest.py result inside a saved tool result (dicts, lists, JSON text)."""
+    if depth > 8:
+        return None
+    if isinstance(obj, dict):
+        if "storm_icons_digest" in obj:
+            return obj
+        obj = list(obj.values())
+    if isinstance(obj, list):
+        for value in obj:
+            found = find_digest(value, depth + 1)
+            if found is not None:
+                return found
+    elif isinstance(obj, str) and "storm_icons_digest" in obj:
+        start = obj.find("{")
+        while start >= 0:
+            try:
+                return find_digest(json.JSONDecoder().raw_decode(obj, start)[0], depth + 1)
+            except ValueError:
+                start = obj.find("{", start + 1)
+    return None
+
+
+def cmd_verify(args):
+    text = Path(args.result).read_text(encoding="utf-8")
+    try:
+        data = json.loads(text)
+    except ValueError:
+        data = text
+    remote = find_digest(data)
+    if remote is None:
+        sys.exit(f"{args.result}: no digest.py result (key 'storm_icons_digest') found")
+    _, extraction, local = dry_run(args.set, digest=True)
+    keys = sorted(set(remote["props"]) | set(local["props"]))
+    bad = 0
+    for key in keys:
+        a, b = remote["props"].get(key), local["props"].get(key)
+        if a == b:
+            state = "same"
+        elif a is None or b is None:
+            state = "only in " + ("the dry run" if a is None else "SketchUp")
+        elif a[:3] == b[:3] and a[4] == b[4]:
+            state = "same geometry, other order"
+        else:
+            state = f"DIFFERENT (SketchUp {a[:3]}, dry run {b[:3]})"
+        bad += state != "same"
+        print(f"  {key:<24} {state}")
+    if bad:
+        sys.exit(f"{bad} prop(s) differ: import a full extraction of those instead (extract.py with ONLY = [...])")
+    print(f"all {len(keys)} props match the offline dry run")
+    if args.write:
+        write_source(to_source(extraction), args.out or SETS[args.set]["source"])
 
 
 def check_set(name, table, out):
@@ -266,6 +330,11 @@ def main():
     p.add_argument("--out", default=None, help="default assets/source/world/icons.json (zones: zone_emblems.json, "
                                                "store: store_icons.json)")
     p.set_defaults(fn=cmd_import)
+    p = sub.add_parser("verify", help="compare a SketchUp digest (extract.py + digest.py) with the dry run")
+    p.add_argument("result")
+    p.add_argument("--write", action="store_true", help="store the dry run as the source when everything matches")
+    p.add_argument("--out", default=None, help="default: the set's source (assets/source/world/...)")
+    p.set_defaults(fn=cmd_verify)
     p = sub.add_parser("check", help="sandbox safety, dry run, source + renders complete")
     p.set_defaults(fn=cmd_check)
     args = parser.parse_args()

@@ -1,8 +1,11 @@
-"""Renders the game icon, thumbnails, gamepass/product icons and the Shop's card pieces to PNG with headless Chrome.
+"""Renders the game icon, thumbnails, gamepass/product badges and the Shop's card pieces to PNG with headless Chrome.
 
-Usage:  python tools/render_art.py            (render everything)
-        python tools/render_art.py icon       (only names containing "icon")
-Sources live in assets/source (plain HTML + SVG), output goes to assets/.
+Usage:  python tools/render_art.py                  (render everything)
+        python tools/render_art.py icon             (only names containing "icon")
+        python tools/render_art.py icon thumbnail   (the game icon and the three thumbnails)
+Sources live in assets/source (plain HTML + SVG), output goes to assets/. The game icon and thumbnails
+(icon.html, thumbnail1..3.html) lay out 3D renders of the real game content from assets/source/branding,
+which tools/branding/capture.py makes.
 """
 
 import glob
@@ -30,7 +33,10 @@ BROWSERS = [
     "/opt/pw-browsers/chromium",
 ]
 
-PASSES = ["VIP", "DoubleVolts", "DoubleEnergy", "AutoCatch", "RemoteSell", "MegaTank", "LuckyHatcher", "TripleHatch", "AutoHatch", "PetSlots", "StormRadar"]
+# Gamepass and product badges: store3d.html puts each item's 3D hero render (assets/source/store3d/Store_<Key>.png,
+# tools/icons/render_icons.py --set store) on a sunburst badge with candy labels (tools/icons/README.md, "Store icons")
+PASSES = ["VIP", "DoubleVolts", "DoubleEnergy", "AutoCatch", "RemoteSell", "MegaTank", "InfiniteTank", "LuckyHatcher",
+          "TripleHatch", "AutoHatch", "PetSlots", "StormRadar"]
 PRODUCTS = ["VoltsSmall", "VoltsMedium", "VoltsLarge", "VoltsHuge", "EnergyBoost", "LuckBoost", "SummonMegaStorm", "AuroraGryphon"]
 # Transparent pieces the in-game Shop draws its cards with (badge.html RAW; uploaded by upload_store_icons.py)
 SHOP_ART = [("ShopRays", 1024), ("Robux", 128)]
@@ -47,8 +53,8 @@ JOBS = [
     ("thumbnails/thumbnail_2.png", "thumbnail2.html", "", 1920, 1080),
     ("thumbnails/thumbnail_3.png", "thumbnail3.html", "", 1920, 1080),
 ]
-JOBS += [(f"gamepasses/{name}.png", "badge.html", f"?id={name}", 512, 512) for name in PASSES]
-JOBS += [(f"products/{name}.png", "badge.html", f"?id={name}", 512, 512) for name in PRODUCTS]
+JOBS += [(f"gamepasses/{name}.png", "store3d.html", f"?id={name}", 512, 512) for name in PASSES]
+JOBS += [(f"products/{name}.png", "store3d.html", f"?id={name}", 512, 512) for name in PRODUCTS]
 JOBS += [(f"ui/{name}.png", "ui_icons.html", f"?id={name}", 256, 256) for name in UI_ICONS]
 JOBS += [(f"ui/shop/{name}.png", "badge.html", f"?id={name}&size={size}", size, size) for name, size in SHOP_ART]
 

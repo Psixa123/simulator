@@ -20,7 +20,7 @@
 # Sandbox rules (checked by `python3 tools/icons/import_icons.py check`): no imports (math is
 # pre-loaded), no eval/exec/open/type/setattr, no dunders, no classes, no any()/all().
 
-# ===== chunk 1/12: store helpers (session_state["ST"]) - paints, facing, coins, coin stacks, gems =====
+# ===== chunk 1/10: store helpers (session_state["ST"]) - paints, facing, coins, coin stacks, gems =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state.setdefault("ST", {})
@@ -112,7 +112,7 @@ ST.update({"Q": Q, "new_store": new_store, "facing": facing, "put": put, "coin_p
            "coin_stack": coin_stack, "gem_parts": gem_parts, "gem": gem, "front_lathe": front_lathe})
 result = {"chunk": 1, "helpers": len(ST)}
 
-# ===== chunk 2/12: store helpers - eggs, clovers, clouds, arrows, hourglasses, surface wraps =====
+# ===== chunk 2/10: store helpers - eggs, clovers, clouds, arrows, hourglasses, surface wraps =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]
@@ -245,7 +245,7 @@ ST.update({"egg_point": egg_point, "egg": egg, "heart": heart, "clover_parts": c
            "arrow": arrow, "lookup": lookup, "wrap": wrap, "hourglass": hourglass})
 result = {"chunk": 2, "helpers": len(ST)}
 
-# ===== chunk 3/12: VIP (jewelled crown), DoubleVolts (coin stacks and a flipping coin) =====
+# ===== chunk 3/10: VIP (jewelled crown), DoubleVolts (coin stacks and a flipping coin) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]
@@ -315,7 +315,7 @@ def double_volts():
 
 result = {"built": [L["report"](f()) for f in (vip, double_volts)]}
 
-# ===== chunk 4/12: DoubleEnergy (glowing drop), MegaTank and InfiniteTank (storm tanks) =====
+# ===== chunk 4/10: DoubleEnergy (glowing drop), MegaTank and InfiniteTank (storm tanks) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]
@@ -422,7 +422,7 @@ def infinite_tank():
 
 result = {"built": [L["report"](f()) for f in (double_energy, mega_tank, infinite_tank)]}
 
-# ===== chunk 5/12: RemoteSell (remote control beaming coins), StormRadar (radar scope with a sweep) =====
+# ===== chunk 5/10: RemoteSell (remote control beaming coins), StormRadar (radar scope with a sweep) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]
@@ -507,7 +507,7 @@ def storm_radar():
 
 result = {"built": [L["report"](f()) for f in (remote_sell, storm_radar)]}
 
-# ===== chunk 6/12: LuckyHatcher (egg and clover), TripleHatch (nest of three eggs), AutoHatch (egg in arrows) =====
+# ===== chunk 6/10: LuckyHatcher (egg and clover), TripleHatch (nest of three eggs), AutoHatch (egg in arrows) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]
@@ -576,7 +576,7 @@ def auto_hatch():
 
 result = {"built": [L["report"](f()) for f in (lucky_hatcher, triple_hatch, auto_hatch)]}
 
-# ===== chunk 7/12: coin heaps, VoltsSmall (pouch of volts), VoltsMedium (bag of volts) =====
+# ===== chunk 7/10: coin heaps, VoltsSmall (pouch of volts), VoltsMedium (bag of volts) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]
@@ -669,7 +669,7 @@ def volts_medium():
 ST.update({"heap": heap, "sack": sack, "open_sack": open_sack})
 result = {"built": [L["report"](f()) for f in (volts_small, volts_medium)]}
 
-# ===== chunk 8/12: VoltsLarge (crate of volts), VoltsHuge (vault of volts) =====
+# ===== chunk 8/10: VoltsLarge (crate of volts), VoltsHuge (vault of volts) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]
@@ -763,7 +763,7 @@ def volts_huge():
 
 result = {"built": [L["report"](f()) for f in (volts_large, volts_huge)]}
 
-# ===== chunk 9/12: EnergyBoost and LuckBoost (30-minute hourglasses) =====
+# ===== chunk 9/10: EnergyBoost and LuckBoost (30-minute hourglasses) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]
@@ -789,7 +789,7 @@ def luck_boost():
 
 result = {"built": [L["report"](f()) for f in (energy_boost, luck_boost)]}
 
-# ===== chunk 10/12: SummonMegaStorm (tornado under a thundercloud), AutoCatch (the cloud and the suction beam) =====
+# ===== chunk 10/10: SummonMegaStorm (tornado under a thundercloud), AutoCatch (the cloud and the suction beam) =====
 L = session_state["L"]
 IC = session_state["IC"]
 ST = session_state["ST"]

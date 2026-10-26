@@ -519,7 +519,8 @@ Requirements: Python 3 and **Google Chrome or Microsoft Edge** installed in the 
 `CHROME_PATH` environment variable to point at any other Chromium-based browser). Output goes to
 `assets/icon.png`, `assets/icon_1024.png`, `assets/thumbnails/`, `assets/gamepasses/` and
 `assets/products/`. The sources are plain HTML/SVG pages in `assets/source/` (`icon.html`,
-`thumbnail1-3.html`, and `badge.html` for every gamepass and product icon).
+`thumbnail1-3.html`, and `store3d.html` for every gamepass and product icon, which places the 3D hero renders
+of `assets/source/store3d/` on the badges; see `tools/icons/README.md`, "Store icons").
 
 ### Regenerating the audio
 

@@ -9,8 +9,13 @@ Everything to type into the Creator Dashboard, with the icon for each item. The 
 - **Developer products**: **Monetization → Developer Products → Create a Developer Product**. Upload the icon and
   set the name, description and price.
 
-Icons are 512×512 PNGs (Roblox shows pass icons in a circle; the art stays inside it). They are rendered from
-`assets/source/badge.html` with `python tools/render_art.py gamepasses products`.
+Icons are 512×512 PNGs (Roblox shows pass icons in a circle; the art stays inside it): a sunburst badge in the
+item's colour with a glossy 3D hero model of the item and candy labels ("2X", "AUTO", "30 MIN"...). The hero
+models are made in Trimble SketchUp (`tools/icons/sketchup_store_icons.py`; the Aurora Gryphon and +3 Pet Slots
+use the game's real pet models, Auto Catch the game's Storm Vacuum) and rendered by
+`python tools/icons/render_icons.py --set store` into `assets/source/store3d/`; `assets/source/store3d.html` lays
+out each badge and `python tools/render_art.py gamepasses products` renders them (see `tools/icons/README.md`,
+"Store icons").
 
 The in-game Shop shows the same pictures as its card art. They are uploaded separately, as plain images, by
 `python tools/roblox/upload_store_icons.py`, which writes each id into the item's `Image` field (see
