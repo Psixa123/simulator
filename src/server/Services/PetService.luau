@@ -45,6 +45,13 @@ local function findPet(data, uid: string)
 	return nil, nil
 end
 
+-- Pets in the player's open trade offer can't be equipped, deleted or crafted (TradeService)
+local function inTrade(player: Player, uid: string): boolean
+	local TradeService = Registry.TradeService
+	return TradeService ~= nil and TradeService.IsOffered(player, uid)
+end
+local IN_TRADE = "That pet is in your trade offer! Take it out of the trade first."
+
 local function roll(eggId: string, luck: number): string
 	local chances = Formulas.HatchChances(eggId, luck)
 	local pick = rng:NextNumber()
@@ -58,8 +65,15 @@ local function roll(eggId: string, luck: number): string
 	return chances[#chances].Id
 end
 
-local function equipBest(data)
-	local sorted = table.clone(data.Pets)
+local function equipBest(player: Player, data)
+	local sorted = {}
+	for _, pet in data.Pets do
+		if inTrade(player, pet.Uid) then
+			pet.Equipped = false
+		else
+			table.insert(sorted, pet)
+		end
+	end
 	table.sort(sorted, function(a, b)
 		return Formulas.PetBonus(a.Id, Pets.TierOf(a)) > Formulas.PetBonus(b.Id, Pets.TierOf(b))
 	end)
@@ -198,12 +212,20 @@ local function craft(player: Player, data, petId, tier: string)
 	end
 	local required = recipe.Requirement
 	local candidates = {}
+	local traded = 0
 	for _, pet in data.Pets do
 		if pet.Id == petId and Pets.TierOf(pet) == recipe.From then
-			table.insert(candidates, pet)
+			if inTrade(player, pet.Uid) then
+				traded += 1 -- never crafted away while offered in a trade
+			else
+				table.insert(candidates, pet)
+			end
 		end
 	end
 	if #candidates < required then
+		if #candidates + traded >= required then
+			return Net.Fail(IN_TRADE)
+		end
 		return Net.Fail(string.format(recipe.Message, required, def.Name))
 	end
 	table.sort(candidates, function(a, b)
@@ -247,6 +269,9 @@ local function petAction(player: Player, action: string, argument)
 			return Net.Fail("Pet not found.")
 		end
 		if not pet.Equipped then
+			if inTrade(player, pet.Uid) then
+				return Net.Fail(IN_TRADE)
+			end
 			if Formulas.EquippedCount(data) >= Formulas.EquipSlots(data) then
 				return Net.Fail("All pet slots are full! Unequip a pet or get the 🐾 +3 Pet Slots pass.")
 			end
@@ -262,6 +287,9 @@ local function petAction(player: Player, action: string, argument)
 		local pet, index = findPet(data, argument)
 		if not pet then
 			return Net.Fail("Pet not found.")
+		end
+		if inTrade(player, pet.Uid) then
+			return Net.Fail(IN_TRADE)
 		end
 		table.remove(data.Pets, index)
 	elseif action == "DeleteMany" then
@@ -284,7 +312,7 @@ local function petAction(player: Player, action: string, argument)
 		local kept, removed = {}, 0
 		for _, pet in data.Pets do
 			local def = Pets.Pets[pet.Id]
-			if wanted[pet.Uid] and not pet.Equipped and def and def.Egg then
+			if wanted[pet.Uid] and not pet.Equipped and def and def.Egg and not inTrade(player, pet.Uid) then
 				removed += 1
 			else
 				table.insert(kept, pet)
@@ -297,7 +325,7 @@ local function petAction(player: Player, action: string, argument)
 		refresh(player, data)
 		return { Ok = true, Count = removed }
 	elseif action == "EquipBest" then
-		equipBest(data)
+		equipBest(player, data)
 	elseif action == "UnequipAll" then
 		for _, pet in data.Pets do
 			pet.Equipped = false
@@ -316,6 +344,11 @@ function PetService.Init()
 	Remotes.Hatch.OnServerInvoke = function(player, eggId, count)
 		if not Net.RateLimit(player, "Hatch", 0.45) then
 			return Net.Fail("Slow down!")
+		end
+		-- hatching ends an open trade (the egg panel closes the trade window on the client too)
+		local TradeService = Registry.TradeService
+		if TradeService and TradeService.IsTrading(player) then
+			TradeService.EndFor(player, "started hatching")
 		end
 		return PetService.Hatch(player, eggId, count, false)
 	end

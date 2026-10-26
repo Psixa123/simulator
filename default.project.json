@@ -24,10 +24,12 @@
         "Sell": { "$className": "RemoteFunction" },
         "DevGrant": { "$className": "RemoteFunction" },
         "AdminCommand": { "$className": "RemoteFunction" },
+        "TradeAction": { "$className": "RemoteFunction" },
         "Catch": { "$className": "RemoteEvent" },
         "DataChanged": { "$className": "RemoteEvent" },
         "Notify": { "$className": "RemoteEvent" },
-        "Effect": { "$className": "RemoteEvent" }
+        "Effect": { "$className": "RemoteEvent" },
+        "TradeEvent": { "$className": "RemoteEvent" }
       },
       "MegaStormState": {
         "$className": "Configuration"

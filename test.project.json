@@ -51,6 +51,9 @@
         "AdminCommand": {
           "$className": "RemoteFunction"
         },
+        "TradeAction": {
+          "$className": "RemoteFunction"
+        },
         "Catch": {
           "$className": "RemoteEvent"
         },
@@ -61,6 +64,9 @@
           "$className": "RemoteEvent"
         },
         "Effect": {
+          "$className": "RemoteEvent"
+        },
+        "TradeEvent": {
           "$className": "RemoteEvent"
         }
       },

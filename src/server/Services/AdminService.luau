@@ -338,6 +338,10 @@ end
 -- Everything a brand new player starts with; keeps settings, receipts, gamepasses and NextPetId
 -- (pet ids are never reused)
 local function resetData(player: Player, data)
+	-- an open trade would hand over pets that no longer exist
+	if Registry.TradeService then
+		Registry.TradeService.EndFor(player, "had their data reset")
+	end
 	Registry.WeatherService.StopCatch(player)
 	data.Volts = 0
 	data.TotalVolts = 0

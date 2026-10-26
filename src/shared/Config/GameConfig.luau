@@ -344,6 +344,7 @@ GameConfig.DefaultSettings = {
 	OtherPets = true,
 	LowGraphics = false,
 	AutoCatch = true,
+	AllowTrades = true,
 }
 
 GameConfig.SettingsInfo = {
@@ -352,6 +353,19 @@ GameConfig.SettingsInfo = {
 	{ Key = "OtherPets", Name = "Other Players' Pets", Icon = "🐾", Description = "Show pets that follow other players" },
 	{ Key = "LowGraphics", Name = "Performance Mode", Icon = "⚙️", Description = "Fewer particles and effects" },
 	{ Key = "AutoCatch", Name = "Auto Catch", Icon = "🤖", Description = "Requires the Auto Catch gamepass" },
+	{ Key = "AllowTrades", Name = "Allow Trade Requests", Icon = "🔄", Description = "Let other players ask you to trade pets" },
+}
+
+---------------------------------------------------------------------------
+-- Trading pets between players in the same server (TradeService)
+---------------------------------------------------------------------------
+GameConfig.Trading = {
+	MaxPets = 8, -- pets each player can put in one trade
+	Countdown = 5, -- seconds between both players pressing Ready and the swap
+	RequestTimeout = 20, -- seconds a trade request waits for an answer
+	RequestCooldown = 10, -- seconds before asking the same player again
+	RequestInterval = 2, -- seconds between any two requests from one player
+	MaxPendingRequests = 5, -- requests one player can have waiting at once
 }
 
 return GameConfig

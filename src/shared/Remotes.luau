@@ -25,10 +25,12 @@ return {
 	Sell = get("Sell") :: RemoteFunction,
 	DevGrant = get("DevGrant") :: RemoteFunction,
 	AdminCommand = get("AdminCommand") :: RemoteFunction, -- owner-only admin panel (AdminService)
+	TradeAction = get("TradeAction") :: RemoteFunction, -- pet trading between players (TradeService)
 
 	-- RemoteEvents
 	Catch = get("Catch") :: RemoteEvent, -- client -> server
 	DataChanged = get("DataChanged") :: RemoteEvent, -- server -> client
 	Notify = get("Notify") :: RemoteEvent, -- server -> client
 	Effect = get("Effect") :: RemoteEvent, -- server -> client
+	TradeEvent = get("TradeEvent") :: RemoteEvent, -- server -> client: trade requests and the open trade
 }

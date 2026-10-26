@@ -15,6 +15,7 @@ local ORDER = {
 	"ZoneService",
 	"PetService",
 	"PetMeshService",
+	"TradeService", -- pet trading between players (uses DataService and PetService)
 	"BoostService",
 	"RewardService",
 	"RebirthService",
