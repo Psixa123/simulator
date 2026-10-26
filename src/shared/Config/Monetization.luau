@@ -15,7 +15,7 @@ local Monetization = {}
 Monetization.Gamepasses = {
 	VIP = {
 		Id = 0,
-		Image = 100393013004490, -- assets/gamepasses/VIP.png
+		Image = 127403723161922, -- assets/gamepasses/VIP.png
 		Order = 1,
 		Name = "VIP",
 		Icon = "👑",
@@ -25,7 +25,7 @@ Monetization.Gamepasses = {
 	},
 	DoubleVolts = {
 		Id = 0,
-		Image = 99136771217045, -- assets/gamepasses/DoubleVolts.png
+		Image = 116165976519745, -- assets/gamepasses/DoubleVolts.png
 		Order = 2,
 		Name = "2x Volts",
 		Icon = "💰",
@@ -35,7 +35,7 @@ Monetization.Gamepasses = {
 	},
 	DoubleEnergy = {
 		Id = 0,
-		Image = 87921211077404, -- assets/gamepasses/DoubleEnergy.png
+		Image = 98414846011193, -- assets/gamepasses/DoubleEnergy.png
 		Order = 3,
 		Name = "2x Energy",
 		Icon = "⚡",
@@ -45,7 +45,7 @@ Monetization.Gamepasses = {
 	},
 	AutoCatch = {
 		Id = 0,
-		Image = 81964604068022, -- assets/gamepasses/AutoCatch.png
+		Image = 119205295981536, -- assets/gamepasses/AutoCatch.png
 		Order = 4,
 		Name = "Auto Catch",
 		Icon = "🤖",
@@ -55,7 +55,7 @@ Monetization.Gamepasses = {
 	},
 	RemoteSell = {
 		Id = 0,
-		Image = 109752266361726, -- assets/gamepasses/RemoteSell.png
+		Image = 103170135392724, -- assets/gamepasses/RemoteSell.png
 		Order = 5,
 		Name = "Remote Sell",
 		Icon = "📡",
@@ -65,7 +65,7 @@ Monetization.Gamepasses = {
 	},
 	MegaTank = {
 		Id = 0,
-		Image = 133210350948491, -- assets/gamepasses/MegaTank.png
+		Image = 120754468211847, -- assets/gamepasses/MegaTank.png
 		Order = 6,
 		Name = "Mega Tank",
 		Icon = "🛢️",
@@ -76,6 +76,7 @@ Monetization.Gamepasses = {
 	-- No tank limit (Formulas.HasInfiniteTank). Rewards and Volts products still count normal full tanks.
 	InfiniteTank = {
 		Id = 0,
+		Image = 125171723070743, -- assets/gamepasses/InfiniteTank.png
 		Order = 7,
 		Name = "Infinite Tank",
 		Icon = "♾️",
@@ -85,7 +86,7 @@ Monetization.Gamepasses = {
 	},
 	LuckyHatcher = {
 		Id = 0,
-		Image = 102402065772985, -- assets/gamepasses/LuckyHatcher.png
+		Image = 73259738950338, -- assets/gamepasses/LuckyHatcher.png
 		Order = 8,
 		Name = "Lucky Hatcher",
 		Icon = "🍀",
@@ -95,7 +96,7 @@ Monetization.Gamepasses = {
 	},
 	TripleHatch = {
 		Id = 0,
-		Image = 76355958585841, -- assets/gamepasses/TripleHatch.png
+		Image = 89960649556054, -- assets/gamepasses/TripleHatch.png
 		Order = 9,
 		Name = "Triple Hatch",
 		Icon = "🥚",
@@ -105,7 +106,7 @@ Monetization.Gamepasses = {
 	},
 	AutoHatch = {
 		Id = 0,
-		Image = 79617656373971, -- assets/gamepasses/AutoHatch.png
+		Image = 99891956329462, -- assets/gamepasses/AutoHatch.png
 		Order = 10,
 		Name = "Auto Hatch",
 		Icon = "🔁",
@@ -115,7 +116,7 @@ Monetization.Gamepasses = {
 	},
 	PetSlots = {
 		Id = 0,
-		Image = 112901940566422, -- assets/gamepasses/PetSlots.png
+		Image = 137574833831934, -- assets/gamepasses/PetSlots.png
 		Order = 11,
 		Name = "+3 Pet Slots",
 		Icon = "🐾",
@@ -125,7 +126,7 @@ Monetization.Gamepasses = {
 	},
 	StormRadar = {
 		Id = 0,
-		Image = 77877781185717, -- assets/gamepasses/StormRadar.png
+		Image = 124803896997456, -- assets/gamepasses/StormRadar.png
 		Order = 12,
 		Name = "Storm Radar",
 		Icon = "🛰️",
@@ -140,7 +141,7 @@ Monetization.Gamepasses = {
 Monetization.Products = {
 	VoltsSmall = {
 		Id = 0,
-		Image = 135134907190251, -- assets/products/VoltsSmall.png
+		Image = 96350967025071, -- assets/products/VoltsSmall.png
 		Order = 1,
 		Category = "Volts",
 		Name = "Pouch of Volts",
@@ -151,7 +152,7 @@ Monetization.Products = {
 	},
 	VoltsMedium = {
 		Id = 0,
-		Image = 118657798664840, -- assets/products/VoltsMedium.png
+		Image = 106239033232780, -- assets/products/VoltsMedium.png
 		Order = 2,
 		Category = "Volts",
 		Name = "Bag of Volts",
@@ -162,7 +163,7 @@ Monetization.Products = {
 	},
 	VoltsLarge = {
 		Id = 0,
-		Image = 101266040940702, -- assets/products/VoltsLarge.png
+		Image = 115014003587990, -- assets/products/VoltsLarge.png
 		Order = 3,
 		Category = "Volts",
 		Name = "Crate of Volts",
@@ -173,7 +174,7 @@ Monetization.Products = {
 	},
 	VoltsHuge = {
 		Id = 0,
-		Image = 129918054893334, -- assets/products/VoltsHuge.png
+		Image = 115566008270002, -- assets/products/VoltsHuge.png
 		Order = 4,
 		Category = "Volts",
 		Name = "Vault of Volts",
@@ -184,7 +185,7 @@ Monetization.Products = {
 	},
 	EnergyBoost = {
 		Id = 0,
-		Image = 135875865409054, -- assets/products/EnergyBoost.png
+		Image = 140236491284484, -- assets/products/EnergyBoost.png
 		Order = 5,
 		Category = "Boosts",
 		Name = "2x Energy (30 min)",
@@ -196,7 +197,7 @@ Monetization.Products = {
 	},
 	LuckBoost = {
 		Id = 0,
-		Image = 110697412654227, -- assets/products/LuckBoost.png
+		Image = 86026195694680, -- assets/products/LuckBoost.png
 		Order = 6,
 		Category = "Boosts",
 		Name = "2x Luck (30 min)",
@@ -208,7 +209,7 @@ Monetization.Products = {
 	},
 	SummonMegaStorm = {
 		Id = 0,
-		Image = 113012758796423, -- assets/products/SummonMegaStorm.png
+		Image = 85777659133015, -- assets/products/SummonMegaStorm.png
 		Order = 7,
 		Category = "Boosts",
 		Name = "Summon Mega Storm",
@@ -222,7 +223,7 @@ Monetization.Products = {
 	-- Developer product "Aurora Gryphon" (Creator Dashboard -> Monetization -> Developer Products), R$2,000.
 	AuroraGryphon = {
 		Id = 3722233930,
-		Image = 94134933806491, -- assets/products/AuroraGryphon.png
+		Image = 136949961075464, -- assets/products/AuroraGryphon.png
 		Order = 0,
 		Category = "Featured",
 		Name = "Aurora Gryphon",
