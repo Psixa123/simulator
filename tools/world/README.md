@@ -6,7 +6,8 @@ contract live in `docs/STYLE_GUIDE.md` ("Prop kit (SketchUp)"); this file is the
 
 ```
 tools/world/sketchup/lib.py        helper library, sent to SketchUp in 4 chunks (session_state["L"])
-tools/world/sketchup/<category>.py  prop build scripts (common.py = TreeRound, RockCluster, LampPost)
+tools/world/sketchup/<category>.py  prop build scripts (common.py = TreeRound, RockCluster, LampPost;
+                                    gear.py = VacuumGun, VacuumPack, the player's gear for CharacterGear)
 tools/world/sketchup/extract.py     sent to SketchUp: returns every Prop_* group as polygons
             │  (build_model result, saved by the agent harness to a tool-result file)
             ▼
@@ -19,7 +20,14 @@ tools/world/build_world_pack.py     → assets/models/StormWorldProps.glb
 
 Other files: `offline_sketchup.py` (runs the SketchUp scripts locally against a stand-in of the
 SketchUp API, for `--check` and quick previews), `viewer.html` (three.js preview renderer),
-`assets/source/world/StormWorldProps_prototypes.skp` (showcase model of the prototypes).
+`assets/source/world/StormWorldProps_prototypes.skp` (showcase model of the prototypes), and one
+`StormWorldProps_<category>.skp` per category as last built in SketchUp (e.g. `StormWorldProps_gear.skp`).
+
+**Gear props** (`gear.py`) are not map props: `src/server/Services/CharacterGear.luau` places them with
+`WorldProps.Place` and welds them to the player's Tool Handle / tank Plate. Their origin is where they are held
+(see `PROPS.md`, "gear"), so they are in `build_world_pack.py`'s `PIVOT_PROPS`. To preview them on a character,
+run a small module through `tools/preview_map.py --script` that builds a rig and calls `CharacterGear.BuildVacuum`
+/ `BuildTank` / `AttachTank` (see the vacuum-model notes in the gear.py header).
 
 ## The contract
 

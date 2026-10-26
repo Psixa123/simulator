@@ -73,3 +73,14 @@ SurfaceGuis) and places these around them, so leave the noted openings and flat 
 | SignPost | 6 × 8 × 1 | Primary (post), board `Color_FFFFFF`, Secondary trim | a sign board on two round posts; flat board front 5 × 2.5 studs centred 6 studs up |
 | Planter | 9 × 2 × 9 | Primary | round planter ring (a tree goes in it) |
 | LeaderboardFrame | 20 × 24 × 3 | Primary, Secondary, `Color_EEF0FF` | a stand with a flat screen 16 × 18 studs centred 13 studs up (MapService adds the SurfaceGui) |
+
+## gear (`sketchup/gear.py`)
+Character gear, placed by `src/server/Services/CharacterGear.luau` (not MapService) and welded to the player;
+it falls back to its part-built vacuum and tank while these are missing from the pack. Unlike map props the
+origin is where the gear is held (both are in `build_world_pack.py`'s `PIVOT_PROPS`). Paints follow the Climate
+Shift looks (`GameConfig.Rebirth.Cosmetics`): CharacterGear paints Primary with the look's Vacuum / Tank colour,
+Secondary with its Trim, Tertiary (matte stripes) and Neon with its Glow. Glass stays.
+| Id | Size | Paints | Notes |
+| --- | --- | --- | --- |
+| VacuumGun | 1.7 × 2.3 × 3.9 | shell Primary, trim Secondary, stripes + dial bezel Tertiary, `Neon_46C8FF` (core, vent slots, mouth ring), chamber `Glass_C8F0FF`, trigger `Color_FFC43C`, dial `Color_FFFFFF` + `Color_233066` | the Storm Vacuum: origin = the pistol grip's centre (the Tool's Handle, Grip = identity), barrel along −Z with its axis 0.66 up, nozzle mouth at z = −2.75 (NozzleAttachment at (0, 0.66, −2.8)); ribbed neck, flared bell with a glowing inner ring, vents, glass energy chamber on a spine, rear pressure dial; ≤ 3,000 tris |
+| VacuumPack | 1.7 × 3.2 × 2.3 | caps Primary, plate / rails / port Secondary, stripe Tertiary, `Neon_46C8FF` ring, `Glass_C8F0FF` jar, straps `Color_5B6A9E`, bolts / buckles / collar / badge `Color_FFC43C` | the Storm Tank: origin = the harness plate's centre (the tank's Plate); the show side (glass jar) faces −Z, CharacterGear turns it 180° so the jar sits 0.72 studs behind the plate around the glowing Fill (1.05 wide, up to 1.8 tall, centred on the plate's height - keep the glass at least that big); straps hook over the shoulders, the hose port points to the wearer's right |
