@@ -20,6 +20,7 @@ local UI = require(script.Parent.Parent.UI)
 local Theme = require(script.Parent.Parent.Theme)
 local Icons = require(script.Parent.Parent.Icons)
 local Viewport = require(script.Parent.Parent.Viewport)
+local Secret = require(script.Parent.Parent.Secret)
 
 local EggPanel = {}
 
@@ -40,6 +41,8 @@ local player = Players.LocalPlayer
 
 local TILE_WIDTH, TILE_HEIGHT = 112, 140
 local COLUMN_HEIGHT = 196
+local SECRET_HEIGHT = 74 -- the egg's secret pets strip under the regular pets
+local SECRET_CARD_WIDTH = 158
 
 -- Still at the egg's incubator (after a hatch the panel comes back): the PromptController's rule, the
 -- one that opens and closes the panel as you walk up and away
@@ -126,7 +129,7 @@ function EggPanel.Build()
 		Name = "Egg",
 		Title = "Egg",
 		IconKey = "Eggs",
-		Size = UDim2.fromOffset(680, 474),
+		Size = UDim2.fromOffset(680, 474 + SECRET_HEIGHT + 8),
 		Padding = { 20, 16, 18 },
 	})
 	local content = window.Content
@@ -151,8 +154,51 @@ function EggPanel.Build()
 		UI.List(Enum.FillDirection.Horizontal, 14, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top),
 	})
 
+	-- Secret pets strip: a dark cosmic bar with a card per secret ("???" silhouette + odds until discovered)
+	local secretStrip = frame({
+		Name = "Secrets",
+		Size = UDim2.new(1, -4, 0, SECRET_HEIGHT),
+		Position = UDim2.fromOffset(2, 50 + COLUMN_HEIGHT + 6),
+		Parent = content,
+		UI.Corner(16),
+		UI.Gradient(Secret.Top, Secret.Bottom),
+	})
+	local stripRim = UI.Stroke(3, Secret.Edge)
+	stripRim.Parent = secretStrip
+	Secret.Gradient(0).Parent = stripRim
+	local secretTitle = UI.Text({
+		Name = "Title",
+		Text = "SECRET",
+		TextSize = 24,
+		Stroke = Color3.fromRGB(30, 14, 60),
+		Size = UDim2.fromOffset(112, 30),
+		Position = UDim2.fromOffset(10, 8),
+		Parent = secretStrip,
+	})
+	Secret.Gradient(0).Parent = secretTitle
+	UI.Text({
+		Name = "Hint",
+		Text = "✦ ultra rare ✦",
+		Font = Theme.BodyFont,
+		TextSize = 13,
+		Color = Color3.fromRGB(210, 190, 255),
+		Size = UDim2.fromOffset(112, 18),
+		Position = UDim2.fromOffset(10, 40),
+		Parent = secretStrip,
+	})
+	local secretRow = frame({
+		Name = "Cards",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, -136, 1, -12),
+		Position = UDim2.fromOffset(128, 6),
+		Parent = secretStrip,
+		UI.List(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
+	})
+
 	local currentEgg: string? = nil
 	local cards = {} -- [petId] = { Chance = TextLabel }
+	local secretCards = {} -- [petId] = { Odds = TextLabel }
+	local secretKey = "" -- which of the egg's secrets were discovered when the cards were built
 	local busy = false
 	local auto = false
 	local hatchOne, hatchThree, autoButton
@@ -190,6 +236,91 @@ function EggPanel.Build()
 		end
 	end
 
+	-- One card per secret pet of the egg: a silhouette and "???" until the player has hatched it
+	local function buildSecrets(eggId: string)
+		local egg = Pets.Eggs[eggId]
+		local data = Registry.DataController.Data
+		for _, child in secretRow:GetChildren() do
+			if child:IsA("Frame") then
+				child:Destroy()
+			end
+		end
+		table.clear(secretCards)
+		secretKey = ""
+		for index, entry in egg.Secrets do
+			local def = Pets.Pets[entry.Id]
+			local discovered = data ~= nil and data.Index[entry.Id] == true
+			secretKey ..= if discovered then "1" else "0"
+			local card = frame({
+				Name = entry.Id,
+				BackgroundColor3 = Color3.fromRGB(22, 10, 48),
+				BackgroundTransparency = 0.15,
+				Size = UDim2.fromOffset(SECRET_CARD_WIDTH, SECRET_HEIGHT - 16),
+				LayoutOrder = index,
+				Parent = secretRow,
+				UI.Corner(12),
+				UI.Stroke(2, Color3.fromRGB(120, 80, 210)),
+			})
+			Viewport.Pet(entry.Id, false, {
+				Parent = card,
+				Silhouette = not discovered,
+				Size = UDim2.fromOffset(62, 62),
+				Position = UDim2.new(0, 2, 0.5, -3),
+				AnchorPoint = Vector2.new(0, 0.5),
+				ZIndex = card.ZIndex + 2,
+			})
+			if not discovered then
+				UI.Text({
+					Name = "Mystery",
+					Text = "?",
+					TextSize = 30,
+					Stroke = Color3.fromRGB(30, 14, 60),
+					Color = Color3.fromRGB(230, 210, 255),
+					Size = UDim2.fromOffset(62, 58),
+					Position = UDim2.fromOffset(2, 0),
+					ZIndex = card.ZIndex + 4,
+					Parent = card,
+				})
+			end
+			UI.Text({
+				Name = "Name",
+				Text = if discovered then def.Name else "???",
+				TextSize = 15,
+				Scaled = true,
+				Color = WHITE,
+				X = Enum.TextXAlignment.Left,
+				Size = UDim2.new(1, -72, 0, 18),
+				Position = UDim2.fromOffset(68, 6),
+				ZIndex = card.ZIndex + 1,
+				Parent = card,
+			})
+			local odds = UI.Text({
+				Name = "Odds",
+				Text = Secret.OddsText(entry.Id),
+				TextSize = 17,
+				Color = Secret.Text,
+				X = Enum.TextXAlignment.Left,
+				Size = UDim2.new(1, -72, 0, 18),
+				Position = UDim2.fromOffset(68, 24),
+				ZIndex = card.ZIndex + 1,
+				Parent = card,
+			})
+			UI.Text({
+				Name = "Bonus",
+				Text = Format.Bonus(def.Bonus) .. " Energy",
+				Font = Theme.BodyFont,
+				TextSize = 12,
+				Color = Color3.fromRGB(130, 255, 170),
+				X = Enum.TextXAlignment.Left,
+				Size = UDim2.new(1, -72, 0, 14),
+				Position = UDim2.fromOffset(68, 42),
+				ZIndex = card.ZIndex + 1,
+				Parent = card,
+			})
+			secretCards[entry.Id] = { Odds = odds }
+		end
+	end
+
 	local function refresh()
 		local data = Registry.DataController.Data
 		local eggId = currentEgg
@@ -201,10 +332,20 @@ function EggPanel.Build()
 		costLabel.Text = Format.Number(egg.Cost) .. ' <font color="#5B6A9E">each</font>'
 		luckLabel.Text = '<font color="#5B6A9E">Luck</font> ' .. Format.Multiplier(luck)
 
+		local key = ""
+		for _, entry in egg.Secrets do
+			key ..= if data.Index[entry.Id] then "1" else "0"
+		end
+		if key ~= secretKey then
+			buildSecrets(eggId)
+		end
 		for _, entry in Formulas.HatchChances(eggId, luck) do
 			local card = cards[entry.Id]
+			local secretCard = secretCards[entry.Id]
 			if card then
 				card.Chance.Text = Format.Chance(entry.Chance)
+			elseif secretCard then
+				secretCard.Odds.Text = Secret.OddsText(entry.Id, entry.Chance)
 			end
 		end
 
@@ -289,6 +430,7 @@ function EggPanel.Build()
 			})
 			cards[entry.Id] = { Chance = chance }
 		end
+		buildSecrets(eggId)
 		refresh()
 	end
 
@@ -325,7 +467,7 @@ function EggPanel.Build()
 		Name = "Tip",
 		BackgroundColor3 = SETS.Bolt.Tint,
 		Size = UDim2.new(1, -4, 0, 46),
-		Position = UDim2.fromOffset(2, 50 + COLUMN_HEIGHT + 10),
+		Position = UDim2.fromOffset(2, 50 + COLUMN_HEIGHT + SECRET_HEIGHT + 14),
 		Parent = content,
 		UI.Corner(14),
 		UI.Stroke(2, SETS.Bolt.Tint2),
@@ -406,7 +548,7 @@ function EggPanel.Build()
 	_, oneTagLabel = priceTag(hatchOne)
 	threeTag, threeTagLabel = priceTag(hatchThree)
 
-	Registry.DataController.ObserveMany({ "Volts", "Passes", "Boosts" }, refresh)
+	Registry.DataController.ObserveMany({ "Volts", "Passes", "Boosts", "Index" }, refresh)
 
 	return {
 		Window = window,

@@ -20,6 +20,7 @@ local Theme = require(script.Parent.Parent.Theme)
 local Icons = require(script.Parent.Parent.Icons)
 local Viewport = require(script.Parent.Parent.Viewport)
 local Confirm = require(script.Parent.Parent.Overlays.Confirm)
+local Secret = require(script.Parent.Parent.Secret)
 
 local PetsPanel = {}
 
@@ -450,6 +451,9 @@ function PetsPanel.Build()
 		if not def or not def.Egg then
 			return "Exclusive pets can only be deleted one at a time."
 		end
+		if def.Rarity == "Secret" then
+			return "Secret pets can only be deleted one at a time."
+		end
 		return nil
 	end
 
@@ -532,6 +536,11 @@ function PetsPanel.Build()
 		stageGradient.Color = ColorSequence.new(colors.Top:Lerp(WHITE, 0.75), colors.Top:Lerp(WHITE, 0.35))
 		pedestal.BackgroundColor3 = colors.Edge
 		pedestalGradient.Color = ColorSequence.new(colors.Top, colors.Bottom)
+		if def.Rarity == "Secret" then
+			-- secret pets stand on a rainbow pedestal in a deep cosmic stage
+			stageGradient.Color = ColorSequence.new(Secret.Top, Secret.Bottom)
+			pedestalGradient.Color = Secret.Rainbow()
+		end
 
 		nameLabel.Text = Pets.DisplayName(pet.Id, tier)
 		nameGradient.Enabled = tier == "Rainbow"
@@ -857,7 +866,9 @@ function PetsPanel.Build()
 
 		-- Golden pets get a warm tile, rainbow ones a pastel tile with a shimmering rainbow outline
 		local shimmer = nil
-		if tier == "Golden" then
+		if def.Rarity == "Secret" and tier == "Normal" then
+			Secret.StyleTile(tile, true, Format.Bonus(Formulas.PetBonus(pet.Id, tier)))
+		elseif tier == "Golden" then
 			UI.Gradient(SETS.Bolt.Tint, SETS.Bolt.Tint2).Parent = tile.Body
 		elseif tier == "Rainbow" then
 			UI.Gradient(SETS.Storm.Tint, SETS.Pink.Tint2).Parent = tile.Body
@@ -992,6 +1003,9 @@ function PetsPanel.Build()
 		if discovered then
 			table.insert(parts, Format.Bonus(def.Bonus) .. " Energy")
 		end
+		if def.Odds then
+			table.insert(parts, Secret.OddsText(petId) .. " per hatch")
+		end
 		if source ~= "" then
 			table.insert(parts, source)
 		end
@@ -1017,7 +1031,25 @@ function PetsPanel.Build()
 			Silhouette = not discovered,
 			ZIndex = tile.Frame.ZIndex + 3,
 		})
-		if not discovered then
+		if def.Rarity == "Secret" then
+			Secret.StyleTile(tile, discovered)
+			if not discovered then
+				-- undiscovered secrets show their odds over the silhouette
+				UI.Text({
+					Name = "Odds",
+					Text = Secret.OddsText(petId),
+					TextSize = 13,
+					Scaled = true,
+					Color = Secret.Text,
+					Stroke = Color3.fromRGB(30, 14, 60),
+					Size = UDim2.new(1, -14, 0, 16),
+					Position = UDim2.new(0.5, 0, 0.5, 4),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					ZIndex = tile.Frame.ZIndex + 6,
+					Parent = tile.Lift,
+				})
+			end
+		elseif not discovered then
 			tile.Body.BackgroundColor3 = Theme.Mist
 			tile.Title.TextColor3 = Theme.InkSoft
 		end

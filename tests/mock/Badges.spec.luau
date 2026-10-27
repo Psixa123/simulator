@@ -200,7 +200,7 @@ end
 AchievementService.Init()
 
 ------------------------------------------------------------------------ config
-check("config: 17 badges", #Badges.List == 17, #Badges.List)
+check("config: 18 badges", #Badges.List == 18, #Badges.List)
 local seen = {}
 for _, badge in Badges.List do
 	local key = badge.Key
@@ -304,6 +304,12 @@ local STEPS = {
 		data.Zone = 6
 		Registry.DataService.Replicate(player, "Volts", "Zone")
 	end },
+	{ "SecretPet", function()
+		table.insert(data.Pets, { Uid = "p6", Id = "EyeOfTheStorm", Golden = false, Rainbow = false })
+		data.Index.EyeOfTheStorm = true
+		data.Stats.EggsHatched += 1
+		Registry.DataService.Replicate(player, "Volts", "Index")
+	end },
 }
 local covered = { Welcome = true }
 for _, step in STEPS do
@@ -318,8 +324,8 @@ end
 for _, badge in Badges.List do
 	check("rule: " .. badge.Key .. " covered by the test", covered[badge.Key] == true)
 end
-check("rule: 17 awards in all", #Roblox.AwardCalls == 17, #Roblox.AwardCalls)
-check("rule: one ownership lookup per badge", #Roblox.HasCalls == 17, #Roblox.HasCalls)
+check("rule: 18 awards in all", #Roblox.AwardCalls == 18, #Roblox.AwardCalls)
+check("rule: one ownership lookup per badge", #Roblox.HasCalls == 18, #Roblox.HasCalls)
 
 -- Nothing is awarded twice, however often the data changes
 local before = #Roblox.AwardCalls
@@ -329,7 +335,7 @@ for _ = 1, 5 do
 end
 flush(60)
 check("once: no award repeats", #Roblox.AwardCalls == before, #Roblox.AwardCalls - before)
-check("once: no lookup repeats", #Roblox.HasCalls == 17, #Roblox.HasCalls)
+check("once: no lookup repeats", #Roblox.HasCalls == 18, #Roblox.HasCalls)
 
 -- The lobby shop's exclusive (Source "Lobby shop") is not a Mega Storm win; a Legendary-less index is no luck
 reset()

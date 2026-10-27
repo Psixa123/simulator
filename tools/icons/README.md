@@ -277,11 +277,12 @@ label. Roblox crops badge icons to a circle, so the medal and everything on it s
 | MegaStorm | Steel | the purple tornado under a thundercloud (`Store_SummonMegaStorm`) |
 | StormChampion | Royal | a gold trophy with a bolt badge on a plinth |
 | Millionaire | Emerald | coin stacks and a big Volts coin (`Store_DoubleVolts`) + "1M" |
+| SecretPet | Rainbow, on a deep cosmic sunburst | the Hypercane (the rarest Secret pet, `tools/pets`) |
 
 | Path | What |
 | --- | --- |
 | `tools/icons/sketchup_badge_icons.py` | the SketchUp models: 4 `# ===== chunk` blocks (1 of badge helpers in `session_state["BG"]`, the medals `Badge_Ring_<Colour>` and face-less zone frames `Badge_Frame_<Colour>`, the trophy, the egg shell `Badge_HatchEgg` / `Badge_HatchCap`); built on the icon helpers (chunks 1–2 of `sketchup_icons.py`) |
-| `tools/icons/badge_scenes.py` | models made from the game's other models: the zone medals (a frame + the zone emblem's face and scene from `zone_emblems.json`), the hatch scene (egg + Puffling + cap), the Legendary / Golden / Rainbow pets (`tools/pets`, in the tier colours of `PetModels.luau`) and the rare-weather rainbow (`icons.json`) |
+| `tools/icons/badge_scenes.py` | models made from the game's other models: the zone medals (a frame + the zone emblem's face and scene from `zone_emblems.json`), the hatch scene (egg + Puffling + cap), the Legendary / Golden / Rainbow / Secret pets (`tools/pets`, in the tier colours of `PetModels.luau`) and the rare-weather rainbow (`icons.json`) |
 | `assets/source/world/badge_icons.json` | the extracted SketchUp polygons (`storm-icons-source/1`) |
 | `assets/source/world/StormBadgeIcons.skp` | the SketchUp model |
 | `assets/source/badges3d/Badge_<Name>.png` | the 1024 px medal and hero renders; `_sheet.png` is their contact sheet |

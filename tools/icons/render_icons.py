@@ -166,6 +166,7 @@ BADGE_ICONS.update({f"Badge_{key}": dict(BADGE_HERO, **view) for key, view in (
                    "noline": "Neon_FFFFFF,Color_FFAE82,Color_FFB36E,Color_FFA88E"}),
     ("PetRainbow", {"yaw": -12, "pitch": 8, "noline": "Neon_FFFFFF,Color_FFAE82,Color_FFB59E,Color_FFB5BA"}),
     ("RareWeather", {"yaw": -14, "pitch": 10}),
+    ("PetSecret", {"yaw": -12, "pitch": 8, "noline": "Neon_FFFFFF"}),
 )})
 # Models only used as parts of the scenes above (badge_scenes.py), not rendered on their own
 BADGE_PARTS = ("Badge_Frame_", "Badge_HatchEgg", "Badge_HatchCap")

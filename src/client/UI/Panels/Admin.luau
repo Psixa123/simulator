@@ -782,6 +782,7 @@ function Admin.Build()
 		local rarity = Pets.Rarities[def.Rarity]
 		petName.Text = Pets.DisplayName(selectedPet, selectedTier)
 		petRarity.Text = rarity.Name .. "  •  " .. (def.Source or (def.Egg and Pets.Eggs[def.Egg].Name) or "")
+			.. (if def.Odds then "  •  " .. Format.Odds(1 / def.Odds) else "")
 		petRarity.TextColor3 = Theme.Shade(rarity.Color, 0.7)
 		previewGradient.Color = ColorSequence.new(rarity.Color:Lerp(WHITE, 0.82), rarity.Color:Lerp(WHITE, 0.55))
 		for tierName, tierButton in tierButtons do

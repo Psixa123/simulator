@@ -1,6 +1,6 @@
 # Badges
 
-17 achievement badges, each with a 3D icon. The keys match `src/shared/Config/Badges.luau`; the game awards a badge
+18 achievement badges, each with a 3D icon. The keys match `src/shared/Config/Badges.luau`; the game awards a badge
 as soon as its `Id` there is set (see "In the game" below). Until then nothing is awarded (Studio prints
 `[Achievements] <player> would earn '<badge>' (no badge Id yet)` instead).
 
@@ -25,6 +25,7 @@ as soon as its `Id` there is set (see "In the game" below). Until then nothing i
 | `MegaStorm` | Mega Storm Survivor | Helped take on a Mega Storm in the arena. | Damage a Mega Storm (`Stats.MegaStorms` ≥ 1) | `assets/badges/MegaStorm.png` |
 | `StormChampion` | Storm Champion | Won an exclusive pet from a Mega Storm. | A Mega Storm exclusive pet is in the pet index (the lobby shop's Aurora Gryphon doesn't count) | `assets/badges/StormChampion.png` |
 | `Millionaire` | Millionaire | Earned 1,000,000 Volts. | `TotalVolts` (lifetime Volts earned) ≥ 1,000,000 | `assets/badges/Millionaire.png` |
+| `SecretPet` | Secret Discovered | Hatched a Secret Stormling, one of the rarest pets in the game! | A Secret pet is in the pet index (hatched from an egg at 1 in 250K-5M, or given by an admin) | `assets/badges/SecretPet.png` |
 
 Every rule reads the player's saved data, so players who already qualify get the badge the next time they join
 (zones, rebirths, pets, catches, hatches, Mega Storms, Volts). The one exception is `RareCatch`: rare catches were not
@@ -43,12 +44,12 @@ counted before, so it is earned by the next rare cell caught.
 
 **Cost:** Roblox lets you create **5 badges per experience for free in each 24-hour period (GMT)**; each further
 badge in that period costs **100 Robux** (create.roblox.com/docs/production/publishing/badges, checked October 2026).
-All 17 for free takes 4 days, e.g.:
+All 18 for free takes 4 days, e.g.:
 
 - Day 1: Welcome, FirstCatch, FirstHatch, Zone_Thunder, ClimateShift (the ones most players earn first)
 - Day 2: RareCatch, Zone_Dunes, MegaStorm, GoldenPet, LegendaryPet
 - Day 3: StormChaser, Zone_Frost, Zone_Volcano, Millionaire, StormChampion
-- Day 4: Zone_Sky, RainbowPet
+- Day 4: Zone_Sky, RainbowPet, SecretPet
 
 ## In the game
 

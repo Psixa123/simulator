@@ -1,12 +1,12 @@
 # Stormling pet meshes
 
-The 37 pets ("Stormlings") as polished cartoon meshes: smooth chibi bodies, big glossy eyes with
+The 47 pets ("Stormlings", 9 of them Secret pets) as polished cartoon meshes: smooth chibi bodies, big glossy eyes with
 highlights, blush, little mouths, layered wings, curled tails, inner ears, toe beans, crowns, halos...
 Every pet keeps its look from `src/shared/Config/Pets.luau` (body type, features, colours, effect).
 
 | File | What it is |
 | --- | --- |
-| `pet_geometry.py` | **Sandbox-safe** pure-Python geometry library + all 37 pet designs. |
+| `pet_geometry.py` | **Sandbox-safe** pure-Python geometry library + all 47 pet designs. |
 | `build_pets.py` | Exports the Roblox mesh pack and renders previews (normal Python). |
 | `viewer.html` | three.js preview page used for the renders (works in any browser too). |
 | `../../assets/models/StormlingPets.glb` | Mesh pack: `PetMeshes -> <PetId> -> <PetId>.<Role>` nodes. |
@@ -92,9 +92,40 @@ as the GLB/OBJ, with its preview colour, e.g. one group per `entry["name"]`. Roo
 ## Budgets
 
 * At most **4,000 triangles per pet** (`TRI_BUDGET`): `build_pet` lowers the tessellation level
-  until the pet fits. Currently every pet is 2.7k-4.0k triangles, about 130k for all 37.
+  until the pet fits. Currently every pet is 2.7k-4.0k triangles, about 169k for all 47.
 * At most **12 visible meshes per pet** (Root/Pivot markers not counted): static pieces with the same
   role are merged (both eyes are one `Eye` mesh, all shines one `Shine` mesh, ...).
+
+## Secret pets
+
+The nine Secret pets (rarity `Secret`, `Pets.Eggs[*].Secrets`: Eye of the Storm, Thunderclap Kirin, Sandstorm
+Sphinx, Blizzard Monarch, Tempest Phoenix, Pyroclasm Dragon, Void Leviathan, Nova Seraph, Hypercane) are built
+from the same parts plus a premium kit that only their `DESIGN` entries switch on (so every older pet stays
+byte-identical): `orbit` (tilted rings with stars, bolts, shards, pyramids, fireballs or moons that spin with
+`SpinY`), `cyclone` (hurricane spiral arms), `spiral_mark` / `snowflake_mark` (glowing forehead emblems), `mane`
+(a crest of lightning bolts), `nemes` + `uraeus` (sphinx headdress over a `wide_patch` hood, cobra and beard),
+`gills`, `dorsal`, `glow_spots`, `crown_style` (`ice` crystals or `magma` spikes, seated with the exact
+`surface_height`), `horns: antler`, `wings: seraph | fin`, `tail: kirin | phoenix`, `feet: hoof`. These run after
+the features (`LATE_DETAILS`). Within the same 4,000-triangle budget a secret pet keeps a finer body and face
+(`body_q`) and walks a finer quality ladder (`SECRET_LADDER`) so the extra parts don't coarsen the body. They
+are appended at the end of `PET_IDS` (the pack grid), so the older pets keep their grid places.
+
+The SketchUp model of the secret pets is `assets/source/world/SecretStormlings.skp` (one `SecretStormlings`
+group, a group per pet, a sub-group per role mesh). It was built in the Trimble SketchUp MCP sandbox from
+readable chunks of this file:
+
+```sh
+python3 tools/pets/make_sketchup_steps.py --max-lines 190 --out build/sketchup_secret --extract \
+    --pets EyeOfTheStorm,ThunderKirin,SandstormSphinx,BlizzardMonarch,TempestPhoenix,PyroclasmDragon,VoidLeviathan,NovaSeraph,Hypercane
+```
+
+`chunk1.py` (`clean: true`) ... `chunk17.py` (each under 190 lines, normal indentation), then a checksum of
+`sketchup_layout()` for those pets (it matched the offline build exactly: 35,037 triangles in 100 meshes), the
+build steps, and `step_extract.py`, which reads every role group back out of SketchUp (faces, unique vertices,
+a vertex checksum, bounds) for comparison with `extract_expected.json`. In the last build 97 of the 100 role
+meshes matched exactly; the 3 flame meshes (Tempest Phoenix's crest, Thunderclap Kirin's tail tuft) each came
+back without their zero-area needle tips (120 sliver triangles thinner than SketchUp's 0.001" tolerance, which
+draw nothing in Roblox either).
 
 ## SketchUp model (`assets/models/StormlingPets.dae`)
 

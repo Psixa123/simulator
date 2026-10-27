@@ -498,6 +498,30 @@ local function addEffects(ctx, look, root)
 	elseif ctx.Rainbow then
 		particles(rainbowSparkles(10, 0.45))
 	end
+
+	-- Secret pets: a cosmic aura on top of everything - a rainbow sparkle swirl, slow deep-violet motes and a
+	-- soft glow in the pet's accent colour
+	if ctx.Secret then
+		particles(rainbowSparkles(9, 0.5))
+		particles({
+			Texture = SPARKLE,
+			Color = ColorSequence.new(Color3.fromRGB(150, 90, 255), Color3.fromRGB(40, 20, 90)),
+			Size = NumberSequence.new(0.6, 0),
+			Transparency = NumberSequence.new(0.2, 1),
+			Lifetime = NumberRange.new(1.4, 2),
+			Rate = 4,
+			Speed = NumberRange.new(0.3, 0.8),
+			SpreadAngle = Vector2.new(180, 180),
+			LightEmission = 0.6,
+		})
+		local glow = Instance.new("PointLight")
+		glow.Name = "SecretGlow"
+		glow.Color = accent
+		glow.Brightness = 1.6
+		glow.Range = 9
+		glow.Shadows = false
+		glow.Parent = root
+	end
 end
 
 -------------------------------------------------------------------------------- Mesh pack
@@ -937,6 +961,7 @@ function PetModels.Build(petId: string, tier, options)
 		Scale = (options.Scale or 1) * PetModels.Scale(petId, tierName),
 		Golden = tierName == "Golden",
 		Rainbow = tierName == "Rainbow",
+		Secret = def.Rarity == "Secret",
 		HueIndex = 0,
 		Material = if tierName ~= "Normal" then Enum.Material.SmoothPlastic else (look.Material or Enum.Material.SmoothPlastic),
 		Parts = {},

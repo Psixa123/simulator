@@ -138,6 +138,13 @@ Badges.List = {
 		Id = 0,
 		Rule = { Kind = "Field", Field = "TotalVolts", Min = 1e6 },
 	},
+	{
+		Key = "SecretPet",
+		Name = "Secret Discovered",
+		Description = "Hatched a Secret Stormling, one of the rarest pets in the game!",
+		Id = 0,
+		Rule = { Kind = "Indexed", Rarity = "Secret" },
+	},
 }
 
 Badges.ByKey = {}

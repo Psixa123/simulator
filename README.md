@@ -70,6 +70,9 @@ ambient particles and sounds. Costs, Power requirements and hazard settings live
 
 - Hatch Stormlings from the **egg station in each biome** (single hatch, or Triple/Auto Hatch with
   gamepasses). Rarities go from Common to Legendary, plus **Exclusive** pets that only drop from Mega Storms.
+- Every egg also hides **Secret** pets (one each in the first four eggs, two in the Magma egg, three in the
+  Cosmic egg) at 1 in 250K up to 1 in 5M per hatch: by far the strongest pets for their egg, shown as "???"
+  until discovered, with their own hatch reveal and a server-wide announcement (`Pets.Eggs[*].Secrets`).
 - Equipped Stormlings follow you, **boost your energy multiplier** and **catch weather near you
   automatically**.
 - Combine **5 of the same pet into a Golden** one, and **5 Golden into a Rainbow** one for much bigger

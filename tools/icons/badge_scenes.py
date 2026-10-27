@@ -186,6 +186,7 @@ def add_scenes(props):
     props["Badge_PetLegendary"] = prop(tier_pet("BreezeKing", scale=2.4))
     props["Badge_PetGolden"] = prop(tier_pet("ThunderPup", "Golden", scale=2.4))
     props["Badge_PetRainbow"] = rainbow_pet(icons)
+    props["Badge_PetSecret"] = prop(tier_pet("Hypercane", scale=2.0))
     made = rare_weather(icons)
     if made:
         props["Badge_RareWeather"] = made

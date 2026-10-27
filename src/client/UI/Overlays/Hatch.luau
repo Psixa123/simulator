@@ -15,6 +15,8 @@
 -- times (tick... tick... TICK) cracking a bit more each time and taking the rarity's colour, puffs up
 -- and pops (flash, shell shards, shockwave rings, sparkles), and the pet pops out above its name card.
 -- Epic and better: a stamp, screen shake and confetti. A tap skips to the burst, then closes.
+-- Secret: the lights go out just before the pop, then a rainbow burst over a starry cosmic backdrop,
+-- a "SECRET!" stamp with the pet's odds under it, a big shake and a longer hold.
 -- One RenderStepped loop draws every frame from the animation clock alone, so a skip just moves the
 -- clock; the backdrop, blur, HUD and prompts are restored on every way out (end, skip, error, reset).
 
@@ -1621,6 +1623,109 @@ end
 ---------------------------------------------------------------------------
 -- One play
 ---------------------------------------------------------------------------
+-- Secret reveal layer (under the slots): a black-out, a rainbow burst of rays and twinkling stars
+local SECRET_RAYS = 18
+local function buildSecretFx(parent: Instance, center: Vector2, screenWidth: number, screenHeight: number, rng: Random, petId: string)
+	local void = box({
+		Name = "SecretVoid",
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 0,
+		Parent = parent,
+		UI.Gradient(Color3.fromRGB(34, 12, 70), Color3.fromRGB(2, 0, 10)),
+	})
+	local burst = box({
+		Name = "Burst",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(10, 10),
+		Position = UDim2.fromOffset(center.X, center.Y),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 0,
+		Visible = false,
+		Parent = void,
+	})
+	local length = math.max(screenWidth, screenHeight) * 0.75
+	local rays = {}
+	for index = 1, SECRET_RAYS do
+		-- a holder twice the ray's length, centred on the burst, so rotating it swings the ray around the centre
+		local holder = box({
+			Name = "Ray",
+			BackgroundTransparency = 1,
+			Size = UDim2.fromOffset(length * 2, 1),
+			Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Rotation = (index - 1) * 360 / SECRET_RAYS,
+			ZIndex = 0,
+			Parent = burst,
+		})
+		local ray = box({
+			Name = "Beam",
+			BackgroundColor3 = Pets.SecretRainbow[(index - 1) % #Pets.SecretRainbow + 1],
+			BackgroundTransparency = 0.3,
+			Size = UDim2.new(0.5, 0, 0, if index % 2 == 0 then 54 else 30),
+			Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0, 0.5),
+			ZIndex = 0,
+			Parent = holder,
+			transparencyGradient(0, { { 0, 0.1 }, { 0.55, 0.55 }, { 1, 1 } }),
+		})
+		table.insert(rays, { Holder = holder, Beam = ray, Base = (index - 1) * 360 / SECRET_RAYS })
+	end
+	local stars = {}
+	for index = 1, 22 do
+		local colors = { WHITE, Color3.fromRGB(255, 236, 140), Color3.fromRGB(170, 220, 255), Color3.fromRGB(255, 160, 235) }
+		local star = sparkle(void, rng:NextInteger(10, 26), colors[index % #colors + 1], 0)
+		star.Position = UDim2.fromOffset(rng:NextNumber(0.04, 0.96) * screenWidth, rng:NextNumber(0.06, 0.94) * screenHeight)
+		table.insert(stars, { Frame = star, Scale = star:FindFirstChildOfClass("UIScale"), Phase = rng:NextNumber(0, 6.28), Speed = rng:NextNumber(1.6, 3.4) })
+	end
+	local def = Pets.Pets[petId]
+	local odds = UI.Text({
+		Name = "Odds",
+		Text = "✦ " .. Format.Odds(if def and def.Odds then 1 / def.Odds else 0) .. " ✦",
+		TextSize = 34,
+		Color = Color3.fromRGB(255, 240, 160),
+		Stroke = Color3.fromRGB(30, 10, 60),
+		StrokeThickness = 4,
+		Size = UDim2.fromOffset(520, 44),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 6,
+		Visible = false,
+		Parent = parent,
+	})
+	return { Void = void, Burst = burst, Rays = rays, Stars = stars, Odds = odds, OddsScale = scaler(odds) }
+end
+
+-- Draws the secret reveal: dark from `pop - 1.1`, the burst and stars from the pop, the odds after the stamp
+local function drawSecretFx(fx, clock: number, pop: number, oddsAt: number)
+	local dark = outQuad(progress(clock, pop - 1.1, 0.6))
+	fx.Void.BackgroundTransparency = 1 - 0.94 * dark
+	local burstK = progress(clock, pop, 0.4)
+	setVisible(fx.Burst, burstK > 0)
+	if burstK > 0 then
+		local since = clock - pop
+		local grow = outBack(burstK, 1.4)
+		for index, ray in fx.Rays do
+			ray.Holder.Rotation = ray.Base + since * 16
+			ray.Beam.Size = UDim2.new(0.5 * grow, 0, 0, (if index % 2 == 0 then 54 else 30) * (1 + 0.12 * math.sin(since * 3 + index)))
+			ray.Beam.BackgroundTransparency = 0.25 + 0.2 * (0.5 + 0.5 * math.sin(since * 2.4 + index * 0.9))
+		end
+	end
+	for _, star in fx.Stars do
+		local twinkle = math.sin((clock - pop) * star.Speed + star.Phase)
+		local on = dark > 0.5 and twinkle > -0.2
+		setVisible(star.Frame, on)
+		if on then
+			star.Scale.Scale = math.max(0.35 + 0.65 * twinkle, 0.001) * (if clock < pop then 0.6 else 1)
+		end
+	end
+	local oddsK = progress(clock, oddsAt, 0.35)
+	setVisible(fx.Odds, oddsK > 0)
+	if oddsK > 0 then
+		fx.OddsScale.Scale = math.max(outBack(oddsK, 2.5), 0.001)
+	end
+end
+
 local function runPlay(play, result, options)
 	local results = result.Results or {}
 	if #results == 0 then
@@ -1751,6 +1856,14 @@ local function runPlay(play, result, options)
 	end
 	local stampTime = bestPop + 0.32
 
+	-- Secret: the black-out, rainbow burst and starry backdrop under the slots, and the odds under the stamp
+	local secretFx = nil
+	if bestOrder >= 7 then
+		secretFx = buildSecretFx(frame, poolCenter, screenWidth, screenHeight, rng, best.Entry.Id)
+		secretFx.Odds.Position = UDim2.fromOffset(screenWidth / 2, ribbonY + 70 * ribbonScale)
+		secretFx.OddsScale.Scale = ribbonScale
+	end
+
 	-- "Tap to skip" / "Tap to continue"
 	local verb = if touchScreen() then "Tap" else "Click"
 	local hint = UI.Text({
@@ -1819,6 +1932,14 @@ local function runPlay(play, result, options)
 			sound("Thunder", 1.1, 1.4)
 		end)
 	end
+	if secretFx then
+		at(bestPop - 1.0, false, function()
+			sound("Thunder", 0.6, 1.2) -- the lights go out
+		end)
+		at(bestPop + 0.05, true, function()
+			sound("Success", 1.5, 1)
+		end)
+	end
 	table.sort(events, function(a, b)
 		return a.Time < b.Time
 	end)
@@ -1852,6 +1973,9 @@ local function runPlay(play, result, options)
 	if quick and bestOrder >= 5 then
 		hold = math.max(hold, 2.4) -- even auto hatch stops a moment for a Legendary
 	end
+	if secretFx then
+		hold = math.max(hold, T.Hold + 3.2) -- a secret always gets a long look (auto hatch too)
+	end
 	local closing = false -- whether the backdrop goes with this play (else it lingers for the next one)
 	local outroLevel, outroFade = 1, nil
 	local shakeStarts = {}
@@ -1859,7 +1983,10 @@ local function runPlay(play, result, options)
 		table.insert(shakeStarts, { T.Pop + slot.Delay, 5 })
 	end
 	if stamp then
-		table.insert(shakeStarts, { stampTime + 0.16, 14 })
+		table.insert(shakeStarts, { stampTime + 0.16, if secretFx then 24 else 14 })
+	end
+	if secretFx then
+		table.insert(shakeStarts, { bestPop, 18 })
 	end
 
 	-- The loop: everything below is a function of `clock`
@@ -1896,6 +2023,10 @@ local function runPlay(play, result, options)
 			local level = math.max(startLevel, outQuad(progress(clock, 0, T.Intro)))
 			setLevel(s, level)
 			outroLevel = level
+		end
+
+		if secretFx then
+			drawSecretFx(secretFx, clock, bestPop, stampTime + 0.5)
 		end
 
 		-- Ribbon drops in with a bounce, then the count chip pops on

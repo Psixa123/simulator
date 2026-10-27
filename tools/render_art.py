@@ -50,7 +50,7 @@ ADS = ["catch", "hatch", "mega", "islands", "tiers", "legendary", "scene", "titl
 # (assets/source/badges3d, tools/icons/render_icons.py --set badges) on a sunburst -> assets/badges/<Key>.png
 BADGES = ["Welcome", "FirstCatch", "RareCatch", "StormChaser", "Zone_Thunder", "Zone_Dunes", "Zone_Frost", "Zone_Volcano",
           "Zone_Sky", "FirstHatch", "LegendaryPet", "GoldenPet", "RainbowPet", "ClimateShift", "MegaStorm", "StormChampion",
-          "Millionaire"]
+          "Millionaire", "SecretPet"]
 BADGE_REACH = 230  # px at 512: Roblox crops badge icons to a circle; the medal and its art must stay inside this radius
 
 UI_ICONS = ["Pets", "Eggs", "Shop", "Upgrades", "Rewards", "Teleport", "ClimateShift", "Settings", "Index", "Volts", "Energy",
