@@ -223,7 +223,7 @@ GameConfig.Pets = {
 -- Roblox asset id of the uploaded pet mesh pack (README: "Better pet models"). When the place has no
 -- ReplicatedStorage.PetMeshes, the server inserts this model there at startup; 0 = built-in pet models.
 -- tools/roblox/upload_pets.py fills it in.
-GameConfig.PetMeshAssetId = 85473571110990
+GameConfig.PetMeshAssetId = 71925421663333
 
 -- Roblox asset id of the uploaded world prop pack (assets/models/StormWorldProps.glb, docs/STYLE_GUIDE.md
 -- "Prop kit"). When the place has no ServerStorage/ReplicatedStorage.WorldProps, the server's WorldProps
