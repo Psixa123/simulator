@@ -503,6 +503,7 @@ function TradePanel.Build()
 			Size = UDim2.fromOffset(4 * TILE.X + 3 * 8, 2 * TILE.Y + 8),
 			Position = UDim2.new(0.5, 0, 0, 48),
 			AnchorPoint = Vector2.new(0.5, 0),
+			ZIndex = 3, -- above the empty slots
 			Parent = box,
 			UI.Grid(UDim2.fromOffset(TILE.X, TILE.Y), UDim2.fromOffset(8, 8)),
 		})
@@ -513,9 +514,13 @@ function TradePanel.Build()
 			Size = grid.Size,
 			Position = grid.Position,
 			AnchorPoint = grid.AnchorPoint,
+			ZIndex = 1,
 			Parent = box,
 			UI.Grid(UDim2.fromOffset(TILE.X, TILE.Y), UDim2.fromOffset(8, 8)),
 		})
+		-- fill from the left like the empty slots (UI.Grid centres a part-filled row)
+		grid.UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		slots.UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 		for index = 1, CONFIG.MaxPets do
 			frame({
 				Name = "Slot" .. index,
@@ -850,7 +855,8 @@ function TradePanel.Build()
 			setStatus("Waiting for " .. partner.DisplayName .. " to press Ready...")
 		else
 			UI.SetButtonText(readyButton, "Ready")
-			UI.SetButtonColor(readyButton, "Leaf")
+			-- grey until there is something to trade (the server refuses an empty trade)
+			UI.SetButtonColor(readyButton, if #trade.Mine.Pets + #trade.Theirs.Pets > 0 then "Leaf" else "Off")
 			UI.SetButtonIcon(readyButton, "Check")
 			if trade.Theirs.Ready then
 				setStatus(partner.DisplayName .. " is ready! Check the offer, then press Ready.", SETS.Leaf.Lip)

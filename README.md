@@ -77,6 +77,22 @@ ambient particles and sounds. Costs, Power requirements and hazard settings live
 - 3 pets can be equipped at once (6 with the +3 Pet Slots pass); storage holds 60.
 - A Pet Index tracks every Stormling you've discovered.
 
+### 🔄 Trading
+
+- The **Trade** button in the HUD lists the other players in the server. Send a request; they get a card with
+  **Accept / Decline** that expires after 20 seconds (and a badge on their Trade button). Asking the same player
+  again has a 10-second cooldown. Players can turn requests off in **Settings → Allow Trade Requests**.
+- In the trade window both players put up to **8 pets** each in their offer (offering an equipped pet unequips
+  it) and see the other side's pets live, with name, tier, rarity and bonus. When both press **Ready**, a
+  **5-second countdown** runs; any change to either offer resets Ready on both sides. Then the pets swap,
+  received pets join the Pet Index, and both players are saved straight away.
+- Cancel, leaving the server, hatching an egg or closing the window ends the trade. Exclusive pets (Mega Storm
+  drops, the Aurora Gryphon) can be traded.
+- Everything is checked on the server (`src/server/Services/TradeService.luau`): pets must belong to the offerer,
+  be offered once and stay unequipped; offered pets can't be equipped, deleted or crafted; the receiver needs
+  storage space; and the swap is re-checked and done atomically on both profiles, so a pet can't be duplicated.
+  Each completed trade is logged to the server output (`[Trade] ...`). Tuning lives in `GameConfig.Trading`.
+
 ### 🌪️ Mega Storms
 
 Every **~10 minutes** (the first one 3 minutes after a server starts) a giant storm appears in the hub
