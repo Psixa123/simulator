@@ -2868,14 +2868,14 @@ Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-newmtl EyeOfTheStorm.Neon_60E4FF
-Kd 0.3765 0.8941 1.0000
+newmtl EyeOfTheStorm.Neon_3CB4FF
+Kd 0.2353 0.7059 1.0000
 Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-Ke 0.3765 0.8941 1.0000
+Ke 0.2353 0.7059 1.0000
 newmtl EyeOfTheStorm.Accent@SpinY
 Kd 0.3294 0.7686 1.0000
 Ka 0 0 0
@@ -2985,15 +2985,15 @@ Ns 60
 d 1.00
 illum 2
 Ke 1.0000 0.8824 0.2902
-newmtl ThunderKirin.Accent@Wag
-Kd 1.0000 0.8392 0.2510
+newmtl ThunderKirin.Body@Wag
+Kd 0.1725 0.1569 0.4078
 Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-newmtl ThunderKirin.Body@Wag
-Kd 0.1725 0.1569 0.4078
+newmtl ThunderKirin.Accent@Wag
+Kd 1.0000 0.8392 0.2510
 Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60
@@ -3051,6 +3051,13 @@ Ns 60
 d 1.00
 illum 2
 Ke 1.0000 1.0000 1.0000
+newmtl SandstormSphinx.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
 newmtl SandstormSphinx.Mouth
 Kd 0.2431 0.1176 0.1804
 Ka 0 0 0
@@ -3073,6 +3080,13 @@ Ns 60
 d 1.00
 illum 2
 Ke 0.3137 1.0000 0.8863
+newmtl SandstormSphinx.Body@Wag
+Kd 0.9333 0.7686 0.4078
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
 newmtl SandstormSphinx.Accent@WingL
 Kd 0.1490 0.3373 0.7686
 Ka 0 0 0
@@ -3095,6 +3109,13 @@ Ns 60
 d 1.00
 illum 2
 Ke 1.0000 0.8392 0.3529
+newmtl SandstormSphinx.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
 newmtl SandstormSphinx.Pivot@WingL
 Kd 0.7843 0.7843 0.7843
 Ka 0 0 0
@@ -3160,13 +3181,6 @@ Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-newmtl BlizzardMonarch.Ice_8CCDFF
-Kd 0.5490 0.8039 1.0000
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
 newmtl BlizzardMonarch.Neon_96EBFF
 Kd 0.5882 0.9216 1.0000
 Ka 0 0 0
@@ -3175,6 +3189,20 @@ Ns 60
 d 1.00
 illum 2
 Ke 0.5882 0.9216 1.0000
+newmtl BlizzardMonarch.Ice_8CCDFF
+Kd 0.5490 0.8039 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl BlizzardMonarch.Body@Wag
+Kd 0.9098 0.9569 1.0000
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
 newmtl BlizzardMonarch.Accent@WingL
 Kd 0.4314 0.7451 1.0000
 Ka 0 0 0
@@ -3195,6 +3223,13 @@ Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
+illum 2
+newmtl BlizzardMonarch.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
 illum 2
 newmtl BlizzardMonarch.Pivot@WingL
 Kd 0.7843 0.7843 0.7843
@@ -3224,6 +3259,13 @@ Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
+newmtl TempestPhoenix.Accent
+Kd 1.0000 0.7686 0.2196
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
 newmtl TempestPhoenix.Eye
 Kd 1.0000 0.9647 0.6667
 Ka 0 0 0
@@ -3240,8 +3282,22 @@ Ns 60
 d 1.00
 illum 2
 Ke 1.0000 1.0000 1.0000
-newmtl TempestPhoenix.Color_FFD23C
-Kd 1.0000 0.8235 0.2353
+newmtl TempestPhoenix.Blush
+Kd 1.0000 0.5490 0.6667
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.65
+illum 2
+newmtl TempestPhoenix.Mouth
+Kd 0.2431 0.1176 0.1804
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl TempestPhoenix.Color_FFB43C
+Kd 1.0000 0.7059 0.2353
 Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60
@@ -3284,30 +3340,6 @@ Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-newmtl TempestPhoenix.Neon_FF8C28@SpinY
-Kd 1.0000 0.5490 0.1569
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
-Ke 1.0000 0.5490 0.1569
-newmtl TempestPhoenix.Neon_FFE15A@WingL
-Kd 1.0000 0.8824 0.3529
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
-Ke 1.0000 0.8824 0.3529
-newmtl TempestPhoenix.Neon_FFE15A@WingR
-Kd 1.0000 0.8824 0.3529
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
-Ke 1.0000 0.8824 0.3529
 newmtl TempestPhoenix.Pivot@Wag
 Kd 0.7843 0.7843 0.7843
 Ka 0 0 0
@@ -3381,27 +3413,6 @@ Ns 60
 d 1.00
 illum 2
 Ke 1.0000 0.4392 0.1098
-newmtl PyroclasmDragon.Accent@Wag
-Kd 1.0000 0.4392 0.1098
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
-newmtl PyroclasmDragon.Accent@WingL
-Kd 1.0000 0.4392 0.1098
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
-newmtl PyroclasmDragon.Accent@WingR
-Kd 1.0000 0.4392 0.1098
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
 newmtl PyroclasmDragon.Body@Wag
 Kd 0.1725 0.1333 0.1569
 Ka 0 0 0
@@ -3418,6 +3429,27 @@ d 1.00
 illum 2
 newmtl PyroclasmDragon.Body@WingR
 Kd 0.1725 0.1333 0.1569
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PyroclasmDragon.Accent@Wag
+Kd 1.0000 0.4392 0.1098
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PyroclasmDragon.Accent@WingL
+Kd 1.0000 0.4392 0.1098
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl PyroclasmDragon.Accent@WingR
+Kd 1.0000 0.4392 0.1098
 Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60
@@ -3511,6 +3543,13 @@ Ns 60
 d 1.00
 illum 2
 Ke 1.0000 1.0000 1.0000
+newmtl VoidLeviathan.Body@Wag
+Kd 0.1020 0.0706 0.2431
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
 newmtl VoidLeviathan.Accent@WingL
 Kd 0.2510 0.9255 1.0000
 Ka 0 0 0
@@ -3533,6 +3572,13 @@ Ns 60
 d 1.00
 illum 2
 Ke 0.2510 0.9255 1.0000
+newmtl VoidLeviathan.Pivot@Wag
+Kd 0.7843 0.7843 0.7843
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 0.00
+illum 2
 newmtl VoidLeviathan.Pivot@WingL
 Kd 0.7843 0.7843 0.7843
 Ka 0 0 0
@@ -3556,6 +3602,13 @@ d 0.00
 illum 2
 newmtl NovaSeraph.Body
 Kd 1.0000 0.9804 0.9255
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
+newmtl NovaSeraph.Accent
+Kd 1.0000 0.7686 0.2824
 Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60
@@ -3700,14 +3753,21 @@ Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-newmtl Hypercane.Neon_FFFFFF
-Kd 1.0000 1.0000 1.0000
+newmtl Hypercane.Neon_50E6FF
+Kd 0.3137 0.9020 1.0000
 Ka 0 0 0
 Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-Ke 1.0000 1.0000 1.0000
+Ke 0.3137 0.9020 1.0000
+newmtl Hypercane.Accent@SpinY
+Kd 1.0000 0.3294 0.8627
+Ka 0 0 0
+Ks 0.25 0.25 0.25
+Ns 60
+d 1.00
+illum 2
 newmtl Hypercane.Accent@WingL
 Kd 1.0000 0.3294 0.8627
 Ka 0 0 0
@@ -3722,14 +3782,6 @@ Ks 0.25 0.25 0.25
 Ns 60
 d 1.00
 illum 2
-newmtl Hypercane.Neon_50E6FF@SpinY
-Kd 0.3137 0.9020 1.0000
-Ka 0 0 0
-Ks 0.25 0.25 0.25
-Ns 60
-d 1.00
-illum 2
-Ke 0.3137 0.9020 1.0000
 newmtl Hypercane.Neon_FF54DC@SpinY
 Kd 1.0000 0.3294 0.8627
 Ka 0 0 0

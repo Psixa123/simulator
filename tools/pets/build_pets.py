@@ -54,7 +54,10 @@ OUT = ROOT / "build" / "pets"
 FONT = ROOT / "assets" / "source" / "fonts" / "FredokaOne-Regular.ttf"
 
 MAX_TRIS = 4000
+MAX_TRIS_SECRET = 10000  # Secret pets are modelled in Blender (tools/pets/blender/) with a bigger budget
 MAX_VISIBLE_MESHES = 12
+BLENDER_PETS = ROOT / "assets" / "source" / "pets" / "blender"  # <PetId>.glb exported by build_secret_pets.py
+ROLE_ORDER = ("Root", "Body", "Accent", "Eye", "Shine", "Blush", "Mouth", "Color", "Neon", "Ice", "Pivot")
 ANIMS = ("WingL", "WingR", "Wag", "SpinY", "SpinZ")
 HINGED = ("WingL", "WingR", "Wag")
 ROLE_RE = re.compile(r"^(Body|Accent|Eye|Shine|Blush|Mouth|Color_[0-9A-F]{6}|Neon_[0-9A-F]{6}|Ice_[0-9A-F]{6})(@(WingL|WingR|Wag|SpinY|SpinZ))?$")
@@ -123,6 +126,109 @@ def run_restricted():
     return namespace["build_all"]()
 
 
+def read_glb(path):
+    """Minimal GLB reader -> (gltf json, binary chunk)."""
+    data = path.read_bytes()
+    magic, version, length = struct.unpack_from("<4sII", data, 0)
+    if magic != b"glTF" or version != 2:
+        raise ValueError(f"{path} is not a glTF 2.0 binary")
+    offset, gltf, blob = 12, None, b""
+    while offset < length:
+        size, kind = struct.unpack_from("<I4s", data, offset)
+        chunk = data[offset + 8:offset + 8 + size]
+        if kind == b"JSON":
+            gltf = json.loads(chunk)
+        elif kind == b"BIN\x00":
+            blob = chunk
+        offset += 8 + size
+    return gltf, blob
+
+
+def glb_accessor(gltf, blob, index):
+    acc = gltf["accessors"][index]
+    view = gltf["bufferViews"][acc["bufferView"]]
+    dtype = {5121: np.uint8, 5123: np.uint16, 5125: np.uint32, 5126: np.float32}[acc["componentType"]]
+    width = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[acc["type"]]
+    start = view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+    stride = view.get("byteStride", 0) or np.dtype(dtype).itemsize * width
+    raw = np.frombuffer(blob, dtype=np.uint8, count=stride * (acc["count"] - 1) + np.dtype(dtype).itemsize * width,
+                        offset=start)
+    rows = np.lib.stride_tricks.as_strided(raw, shape=(acc["count"], np.dtype(dtype).itemsize * width),
+                                           strides=(stride, 1))
+    return np.ascontiguousarray(rows).view(dtype).reshape(acc["count"], width)
+
+
+def node_matrix(node):
+    if "matrix" in node:
+        return np.asarray(node["matrix"], dtype=np.float64).reshape(4, 4).T
+    m = np.eye(4)
+    if "scale" in node:
+        m = np.diag(list(node["scale"]) + [1.0]) @ m
+    if "rotation" in node:
+        x, y, z, w = node["rotation"]
+        r = np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                      [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
+        rot = np.eye(4)
+        rot[:3, :3] = r
+        m = rot @ m
+    if "translation" in node:
+        t = np.eye(4)
+        t[:3, 3] = node["translation"]
+        m = t @ m
+    return m
+
+
+def role_sort_key(name):
+    base = name.split("@")[0]
+    head = base.split("_")[0]
+    category = ROLE_ORDER.index(head) if head in ROLE_ORDER else len(ROLE_ORDER)
+    animated = "@" in name and head != "Pivot"
+    return (head == "Pivot", animated, category, name)
+
+
+def load_blender_pet(pet_id):
+    """The meshes of assets/source/pets/blender/<PetId>.glb (exported from Blender by
+    tools/pets/blender/build_secret_pets.py): every mesh node named "<PetId>.<Role>" (at any depth), with
+    its node transforms applied, as [{"name": role, "verts", "tris"}] in pack order."""
+    gltf, blob = read_glb(BLENDER_PETS / f"{pet_id}.glb")
+    nodes = gltf["nodes"]
+    meshes = []
+
+    def visit(index, parent):
+        node = nodes[index]
+        world = parent @ node_matrix(node)
+        name = node.get("name", "")
+        if "mesh" in node:
+            if not name.startswith(pet_id + "."):
+                raise ValueError(f"{pet_id}.glb: unexpected mesh node {name!r}")
+            verts, tris = [], []
+            base = 0
+            for prim in gltf["meshes"][node["mesh"]]["primitives"]:
+                if prim.get("mode", 4) != 4:
+                    raise ValueError(f"{name}: only triangle primitives are supported")
+                pos = glb_accessor(gltf, blob, prim["attributes"]["POSITION"]).astype(np.float64)
+                pos = (np.c_[pos, np.ones(len(pos))] @ world.T)[:, :3]
+                idx = glb_accessor(gltf, blob, prim["indices"]).reshape(-1, 3).astype(np.int64)
+                verts.append(pos)
+                tris.append(idx + base)
+                base += len(pos)
+            meshes.append({"name": name[len(pet_id) + 1:], "verts": np.concatenate(verts),
+                           "tris": np.concatenate(tris)})
+        for child in node.get("children", []):
+            visit(child, world)
+
+    for root in gltf["scenes"][gltf.get("scene", 0)]["nodes"]:
+        visit(root, np.eye(4))
+    meshes.sort(key=lambda m: role_sort_key(m["name"]))
+    return meshes
+
+
+def blender_pets(geo):
+    """Secret pets that have a Blender export (they replace the pet_geometry.py models in the pack)."""
+    return [p for p in geo["PET_IDS"] if geo["PETS"][p]["Rarity"] == "Secret" and (BLENDER_PETS / f"{p}.glb").exists()]
+
+
 def parse_pets_luau():
     """Pets.Pets[*].Look from the Luau config -> {id: look}."""
     text = PETS_LUAU.read_text(encoding="utf-8")
@@ -177,6 +283,7 @@ def check_pet_table(geo):
 
 def validate_pet(geo, pet_id, meshes):
     problems = []
+    max_tris = MAX_TRIS_SECRET if geo["PETS"][pet_id]["Rarity"] == "Secret" else MAX_TRIS
     names = [m["name"] for m in meshes]
     if len(names) != len(set(names)):
         problems.append("duplicate mesh names")
@@ -227,8 +334,8 @@ def validate_pet(geo, pet_id, meshes):
     for anim in pivots:
         if anim not in anims:
             problems.append(f"Pivot@{anim} without animated meshes")
-    if tris > MAX_TRIS:
-        problems.append(f"{tris} triangles > {MAX_TRIS}")
+    if tris > max_tris:
+        problems.append(f"{tris} triangles > {max_tris}")
     if visible > MAX_VISIBLE_MESHES:
         problems.append(f"{visible} visible meshes > {MAX_VISIBLE_MESHES}")
     # spinning pieces rotate about the pet origin, so they must be centred on that axis
@@ -502,6 +609,8 @@ def main():
     parser.add_argument("--pets", default="", help="comma separated pet ids to render")
     parser.add_argument("--size", type=int, default=512, help="render size in pixels")
     parser.add_argument("--no-outline", action="store_true", help="render without the ink outline")
+    parser.add_argument("--sketchup-secrets", action="store_true",
+                        help="use the pet_geometry.py (SketchUp) models of the Secret pets, not the Blender ones")
     args = parser.parse_args()
 
     print("Checking pet_geometry.py sandbox safety...")
@@ -509,10 +618,16 @@ def main():
     geo = load_geometry()
     problems += check_pet_table(geo)
     print("Building meshes...")
-    pack = geo["build_all"]()
+    built = geo["build_all"]()
+    pack = dict(built)
+    from_blender = [] if args.sketchup_secrets else blender_pets(geo)
+    for pet_id in from_blender:
+        pack[pet_id] = load_blender_pet(pet_id)
+    if from_blender:
+        print(f"  Blender models (assets/source/pets/blender): {', '.join(from_blender)}")
     try:
         restricted = run_restricted()
-        for pet_id, meshes in pack.items():
+        for pet_id, meshes in built.items():
             other = restricted.get(pet_id, [])
             if [(m["name"], len(m["tris"])) for m in meshes] != [(m["name"], len(m["tris"])) for m in other]:
                 problems.append(f"{pet_id}: different result with sandbox-only builtins")
@@ -525,7 +640,8 @@ def main():
         report.append((pet_id, tris, visible, len(pack[pet_id])))
     total = sum(r[1] for r in report)
     for pet_id, tris, visible, count in report:
-        print(f"  {pet_id:16s} {tris:5d} tris  {visible:2d} visible meshes  ({count} incl. markers)")
+        source = "  (Blender)" if pet_id in from_blender else ""
+        print(f"  {pet_id:16s} {tris:5d} tris  {visible:2d} visible meshes  ({count} incl. markers){source}")
     print(f"  total {total} triangles, max {max(r[1] for r in report)} per pet")
     if problems:
         print("PROBLEMS:")

@@ -1,0 +1,152 @@
+{
+ "EyeOfTheStorm": {
+  "tris": 9904,
+  "meshes": {
+   "Body": 2448,
+   "Eye": 504,
+   "Mouth": 1032,
+   "Shine": 344,
+   "Blush": 200,
+   "Neon_3CB4FF": 290,
+   "Color_FFD23C": 828,
+   "Neon_54C4FF@SpinY": 226,
+   "Accent@WingL": 1632,
+   "Accent@WingR": 1632,
+   "Accent@SpinY": 768
+  }
+ },
+ "ThunderKirin": {
+  "tris": 9892,
+  "meshes": {
+   "Body": 3592,
+   "Eye": 504,
+   "Mouth": 1032,
+   "Shine": 344,
+   "Blush": 200,
+   "Accent": 1880,
+   "Neon_FFE14A": 672,
+   "Color_F4F6FF": 736,
+   "Body@Wag": 152,
+   "Accent@Wag": 202,
+   "Neon_FFE14A@SpinY": 578
+  }
+ },
+ "SandstormSphinx": {
+  "tris": 9876,
+  "meshes": {
+   "Body": 1962,
+   "Eye": 504,
+   "Mouth": 1192,
+   "Shine": 344,
+   "Blush": 360,
+   "Accent": 822,
+   "Color_FFD23C": 1728,
+   "Neon_50FFE2": 408,
+   "Accent@WingL": 1026,
+   "Accent@WingR": 1026,
+   "Body@Wag": 180,
+   "Neon_FFD65A@SpinY": 324
+  }
+ },
+ "BlizzardMonarch": {
+  "tris": 9900,
+  "meshes": {
+   "Body": 3756,
+   "Eye": 504,
+   "Mouth": 1032,
+   "Shine": 344,
+   "Blush": 200,
+   "Accent": 244,
+   "Ice_8CCDFF": 250,
+   "Neon_96EBFF": 744,
+   "Accent@WingL": 1050,
+   "Accent@WingR": 1050,
+   "Body@Wag": 390,
+   "Ice_CDF0FF@SpinY": 336
+  }
+ },
+ "TempestPhoenix": {
+  "tris": 9796,
+  "meshes": {
+   "Body": 1956,
+   "Eye": 504,
+   "Mouth": 800,
+   "Shine": 344,
+   "Blush": 200,
+   "Accent": 360,
+   "Color_FFB43C": 300,
+   "Neon_FF8C28": 554,
+   "Neon_FFE15A": 332,
+   "Accent@WingL": 1814,
+   "Accent@WingR": 1814,
+   "Accent@Wag": 818
+  }
+ },
+ "PyroclasmDragon": {
+  "tris": 9859,
+  "meshes": {
+   "Body": 2080,
+   "Eye": 504,
+   "Mouth": 1112,
+   "Shine": 408,
+   "Neon_FF701C": 1713,
+   "Accent": 1770,
+   "Body@WingL": 622,
+   "Accent@WingL": 322,
+   "Body@WingR": 622,
+   "Accent@WingR": 322,
+   "Body@Wag": 250,
+   "Accent@Wag": 134
+  }
+ },
+ "VoidLeviathan": {
+  "tris": 9772,
+  "meshes": {
+   "Body": 2798,
+   "Eye": 504,
+   "Mouth": 952,
+   "Shine": 344,
+   "Blush": 200,
+   "Body@Wag": 772,
+   "Accent@WingL": 522,
+   "Accent@WingR": 522,
+   "Accent": 1298,
+   "Neon_40ECFF": 804,
+   "Neon_FFFFFF": 480,
+   "Neon_40ECFF@SpinY": 576
+  }
+ },
+ "NovaSeraph": {
+  "tris": 9872,
+  "meshes": {
+   "Body": 1950,
+   "Eye": 504,
+   "Mouth": 910,
+   "Shine": 344,
+   "Blush": 200,
+   "Accent": 500,
+   "Color_FFD23C": 194,
+   "Neon_FFAAF0": 24,
+   "Accent@WingL": 2356,
+   "Accent@WingR": 2356,
+   "Neon_FFD65A@SpinY": 534
+  }
+ },
+ "Hypercane": {
+  "tris": 9864,
+  "meshes": {
+   "Body": 2808,
+   "Eye": 504,
+   "Mouth": 1112,
+   "Shine": 408,
+   "Blush": 200,
+   "Accent": 378,
+   "Color_FFD23C": 832,
+   "Neon_50E6FF": 506,
+   "Accent@WingL": 892,
+   "Accent@WingR": 892,
+   "Accent@SpinY": 1080,
+   "Neon_FF54DC@SpinY": 252
+  }
+ }
+}

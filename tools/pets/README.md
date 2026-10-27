@@ -92,15 +92,63 @@ as the GLB/OBJ, with its preview colour, e.g. one group per `entry["name"]`. Roo
 ## Budgets
 
 * At most **4,000 triangles per pet** (`TRI_BUDGET`): `build_pet` lowers the tessellation level
-  until the pet fits. Currently every pet is 2.7k-4.0k triangles, about 169k for all 47.
+  until the pet fits. Currently every pet is 2.7k-4.0k triangles.
+* **Secret pets: at most 10,000 triangles** (`MAX_TRIS_SECRET` in `build_pets.py`, `SECRET_BUDGET` in
+  `blender/build_secret_pets.py`). They are the premium, one-in-millions pets, so they get a 2.5x budget for their
+  Blender models. Every role mesh stays far below Roblox's 20,000-triangle MeshPart limit (the biggest is ~2.6k),
+  `PetModels` accepts up to 150 pieces per pet, and Roblox's automatic MeshPart LOD keeps far-away pets cheap.
+  The pack is about 223k triangles for all 47 pets.
 * At most **12 visible meshes per pet** (Root/Pivot markers not counted): static pieces with the same
   role are merged (both eyes are one `Eye` mesh, all shines one `Shine` mesh, ...).
 
 ## Secret pets
 
 The nine Secret pets (rarity `Secret`, `Pets.Eggs[*].Secrets`: Eye of the Storm, Thunderclap Kirin, Sandstorm
-Sphinx, Blizzard Monarch, Tempest Phoenix, Pyroclasm Dragon, Void Leviathan, Nova Seraph, Hypercane) are built
-from the same parts plus a premium kit that only their `DESIGN` entries switch on (so every older pet stays
+Sphinx, Blizzard Monarch, Tempest Phoenix, Pyroclasm Dragon, Void Leviathan, Nova Seraph, Hypercane) are
+**modelled in Blender** (next section); the pack uses those models. Their older `pet_geometry.py` versions
+(below) are still built and checked, are what the SketchUp model and `export_dae.py` show, and are used with
+`build_pets.py --sketchup-secrets`.
+
+### Blender models (`tools/pets/blender/`)
+
+| File | What it is |
+| --- | --- |
+| `blender/kit.py` | Headless Blender helpers: quad spheres, sweeps, lathes, metaball/voxel-remesh unions (`blob_union`), Skin-modifier trees, bevelled curves, Shrinkwrap "decals", modifier baking, the `Pet` assembler (roles, budget fitting, Root/Pivot markers, materials) and the glTF export. |
+| `blender/features.py` | Reusable chibi parts: the face (domed neon eyes, ink pupils/lids/lashes, highlights, blush, mouths), feathered / membrane / fin / butterfly wings, halos, crowns, gems, bolts, stars, plated bellies. |
+| `blender/secret_pets.py` | One readable build function per Secret pet (`BUILDERS`). |
+| `blender/build_secret_pets.py` | Builds, exports and renders them (run with Blender's Python module). |
+| `blender/render.py` | Cycles (CPU) renders: transparent background, key/fill/rim/bounce area lights, inverted-hull ink outline. |
+| `blender/sheets.py` | Contact sheets: `build/pets/blender_secret_sheet.png`, `build/pets/secret_old_vs_blender.png`. |
+| `../../assets/source/pets/blender/<PetId>.glb` | The exported Secret pets (a `<PetId>` node with `<PetId>.<Role>` meshes), merged into the pack by `build_pets.py`. |
+
+```sh
+python3 -m venv /tmp/blender-venv && /tmp/blender-venv/bin/pip install bpy     # once: bpy 5.x needs Python 3.13
+/tmp/blender-venv/bin/python tools/pets/blender/build_secret_pets.py          # all 9: export + Cycles renders
+/tmp/blender-venv/bin/python tools/pets/blender/build_secret_pets.py --pets Hypercane --views hero --no-export
+/tmp/blender-venv/bin/python tools/pets/blender/build_secret_pets.py --blend   # also save <PetId>.blend sources
+python tools/pets/build_pets.py                                                # merge into StormlingPets.glb + checks
+python tools/pets/blender/sheets.py --compare                                  # contact sheets
+```
+
+How a pet is made: organic shapes start as clean quad topology (a subdivided cube pushed onto a sphere and
+reshaped into the chibi "Round"/"Bean" bodies) or as unions of puffs (voxel remesh + smoothing for clouds,
+collars, the kirin's cloud); limbs, tails, feathers, flames and fins are swept elliptical sections smoothed with a
+Subdivision Surface; antlers, horns, mane lines and stripes are bevelled curves; eyes, pupils, blush, belly
+patches and spots are discs Shrinkwrap-projected onto the body (domed, rim sunk into the surface); wings are
+fans of plump feathers, Solidified membranes between finger bones, webbed fins or bevelled butterfly lobes.
+`Pet.add(role, ...)` files every part under its pack role; `Pet.finish` collapse-decimates the parts to the
+budget (a water-filling share by surface area; face and sticker parts are never decimated, parts on the centre
+line are decimated symmetrically), merges each role into one triangulated mesh, adds the `Root` cube and the
+`Pivot@<Anim>` hinges, and `export_pet` writes the GLB (turned 180 degrees about Z: Blender's -Y front becomes the
+pack's -Z front; the pet's left (+X in Blender) is the pack's -X, where `WingL` lives). Modelling space is
+studs, Z up, origin = pet centre. `build_pets.py` reads these GLBs (its own small glTF reader), applies the same
+contract checks as for every pet (role names, Root/Pivot cubes, winding, degenerate triangles, spin pieces centred
+on their axis, 10k triangles / 12 visible meshes), and writes them into the pack after the 38 older pets, so
+those stay byte-identical.
+
+### The older `pet_geometry.py` versions
+
+They are built from the same parts as the other pets plus a premium kit that only their `DESIGN` entries switch on (so every older pet stays
 byte-identical): `orbit` (tilted rings with stars, bolts, shards, pyramids, fireballs or moons that spin with
 `SpinY`), `cyclone` (hurricane spiral arms), `spiral_mark` / `snowflake_mark` (glowing forehead emblems), `mane`
 (a crest of lightning bolts), `nemes` + `uraeus` (sphinx headdress over a `wide_patch` hood, cobra and beard),
