@@ -35,7 +35,7 @@ local ORDER = {
 	"RadarController",
 }
 
-local PANELS = { "Shop", "Pets", "Upgrades", "Rebirth", "Rewards", "Settings", "Teleport", "Egg" }
+local PANELS = { "Shop", "Pets", "Upgrades", "Rebirth", "Rewards", "Settings", "Teleport", "Egg", "Trade" }
 
 for _, name in ORDER do
 	Registry[name] = require(Controllers:WaitForChild(name))

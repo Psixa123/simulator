@@ -16,6 +16,20 @@ Pets.Rarities = {
 	Epic = { Order = 4, Name = "Epic", Color = rgb(182, 96, 255), Scale = 1.1 },
 	Legendary = { Order = 5, Name = "Legendary", Color = rgb(255, 192, 42), Scale = 1.22 },
 	Exclusive = { Order = 6, Name = "Exclusive", Color = rgb(255, 84, 156), Scale = 1.35 },
+	-- Secret pets: one or more per egg, rolled before the egg's other pets at "1 in Odds" each (Eggs[*].Secrets,
+	-- Formulas.HatchChances). Deep cosmic colour; the UI adds a rainbow shimmer (Pets.SecretRainbow).
+	Secret = { Order = 7, Name = "Secret", Color = rgb(44, 22, 88), Scale = 1.5 },
+}
+
+-- Rainbow colour keys the UI uses on Secret tiles, labels and the secret hatch reveal
+Pets.SecretRainbow = {
+	rgb(255, 84, 120),
+	rgb(255, 176, 54),
+	rgb(255, 240, 90),
+	rgb(90, 240, 150),
+	rgb(70, 200, 255),
+	rgb(170, 110, 255),
+	rgb(255, 100, 220),
 }
 
 -- Bonus = RarityBase * ZoneFactor for egg pets
@@ -84,6 +98,22 @@ Pets.Pets = {
 	-- Cosmic Epics (7) and crafted Golden pets pass it in the late game, so it speeds players up without
 	-- replacing progression.
 	AuroraGryphon = { Name = "Aurora Gryphon", Rarity = "Exclusive", Bonus = 6, Source = "Lobby shop", Look = { Body = "Round", Color = rgb(74, 98, 214), Accent = rgb(96, 246, 200), Features = { "Ears", "Wings", "Beak", "Tail" }, Effect = "Glow" } },
+
+	-------------------------------------------------------------------- Secret pets (Eggs[*].Secrets)
+	-- "OP and very very rare": each one beats everything you can get by the time you reach its egg. The first
+	-- egg's secret (20) already beats every Mega Storm exclusive (best: Rainbow Roc, 18) and every egg Legendary
+	-- up to the Magma egg; from the Frost egg on they are 5-12x the egg's own Legendary, and the three Cosmic
+	-- secrets (110 / 140 / 180) are the best pets in the game, above even a crafted Rainbow Galaxy Guardian (90)
+	-- or Rainbow Roc (108). Odds per secret: 1 in 250K (Plains) rising to 1 in 5M (the Cosmic Hypercane).
+	EyeOfTheStorm = { Name = "Eye of the Storm", Rarity = "Secret", Zone = 1, Bonus = 20, Look = { Body = "Cloud", Color = rgb(236, 244, 255), Accent = rgb(84, 196, 255), Features = { "Crown", "Halo", "Wings" }, Effect = "Sparkle", EyeColor = rgb(96, 228, 255) } },
+	ThunderKirin = { Name = "Thunderclap Kirin", Rarity = "Secret", Zone = 2, Bonus = 25, Look = { Body = "Bean", Color = rgb(44, 40, 104), Accent = rgb(255, 214, 64), Features = { "Horns", "Tail", "Bolt" }, Effect = "Zap", EyeColor = rgb(255, 238, 110) } },
+	SandstormSphinx = { Name = "Sandstorm Sphinx", Rarity = "Secret", Zone = 3, Bonus = 32, Look = { Body = "Round", Color = rgb(238, 196, 104), Accent = rgb(38, 86, 196), Features = { "Wings", "Tail", "Halo" }, Effect = "Glow", EyeColor = rgb(80, 255, 226) } },
+	BlizzardMonarch = { Name = "Blizzard Monarch", Rarity = "Secret", Zone = 4, Bonus = 45, Look = { Body = "Round", Color = rgb(232, 244, 255), Accent = rgb(110, 190, 255), Features = { "Ears", "Crown", "Wings", "Tail" }, Effect = "Snow", EyeColor = rgb(130, 230, 255) } },
+	TempestPhoenix = { Name = "Tempest Phoenix", Rarity = "Secret", Zone = 5, Bonus = 70, Look = { Body = "Round", Color = rgb(255, 86, 44), Accent = rgb(255, 196, 56), Features = { "Beak", "Flame", "Wings", "Tail" }, Effect = "Fire", EyeColor = rgb(255, 246, 170) } },
+	PyroclasmDragon = { Name = "Pyroclasm Dragon", Rarity = "Secret", Zone = 5, Bonus = 95, Look = { Body = "Bean", Color = rgb(44, 34, 40), Accent = rgb(255, 112, 28), Features = { "Cracks", "Horns", "Crown", "Wings", "Tail" }, Effect = "Fire", EyeColor = rgb(255, 206, 64) } },
+	VoidLeviathan = { Name = "Void Leviathan", Rarity = "Secret", Zone = 6, Bonus = 110, Look = { Body = "Drop", Color = rgb(26, 18, 62), Accent = rgb(64, 236, 255), Features = { "Halo", "Wings" }, Effect = "Sparkle", EyeColor = rgb(150, 255, 250) } },
+	NovaSeraph = { Name = "Nova Seraph", Rarity = "Secret", Zone = 6, Bonus = 140, Look = { Body = "Round", Color = rgb(255, 250, 236), Accent = rgb(255, 196, 72), Features = { "Crown", "Halo", "Wings" }, Effect = "Glow", EyeColor = rgb(255, 170, 240) } },
+	Hypercane = { Name = "Hypercane", Rarity = "Secret", Zone = 6, Bonus = 180, Look = { Body = "Cloud", Color = rgb(30, 18, 52), Accent = rgb(255, 84, 220), Features = { "Horns", "Crown", "Halo", "Wings" }, Effect = "Sparkle", EyeColor = rgb(255, 255, 255) } },
 }
 
 Pets.Eggs = {
@@ -100,6 +130,10 @@ Pets.Eggs = {
 			{ Id = "Prism", Chance = 2.7 },
 			{ Id = "BreezeKing", Chance = 0.3 },
 		},
+		-- 1 in Odds per hatch each (Formulas.HatchChances; luck helps them only a little)
+		Secrets = {
+			{ Id = "EyeOfTheStorm", Odds = 250000 },
+		},
 	},
 	ThunderEgg = {
 		Name = "Thunder Cloud Egg",
@@ -113,6 +147,10 @@ Pets.Eggs = {
 			{ Id = "VoltBat", Chance = 12 },
 			{ Id = "ThunderPup", Chance = 2.7 },
 			{ Id = "StormLord", Chance = 0.3 },
+		},
+		-- 1 in Odds per hatch each (Formulas.HatchChances; luck helps them only a little)
+		Secrets = {
+			{ Id = "ThunderKirin", Odds = 400000 },
 		},
 	},
 	DuneEgg = {
@@ -128,6 +166,10 @@ Pets.Eggs = {
 			{ Id = "Scarab", Chance = 2.7 },
 			{ Id = "MirageDjinn", Chance = 0.3 },
 		},
+		-- 1 in Odds per hatch each (Formulas.HatchChances; luck helps them only a little)
+		Secrets = {
+			{ Id = "SandstormSphinx", Odds = 500000 },
+		},
 	},
 	FrostEgg = {
 		Name = "Frost Cloud Egg",
@@ -141,6 +183,10 @@ Pets.Eggs = {
 			{ Id = "Frostbite", Chance = 12 },
 			{ Id = "AuroraFox", Chance = 2.7 },
 			{ Id = "YetiKing", Chance = 0.3 },
+		},
+		-- 1 in Odds per hatch each (Formulas.HatchChances; luck helps them only a little)
+		Secrets = {
+			{ Id = "BlizzardMonarch", Odds = 800000 },
 		},
 	},
 	MagmaEgg = {
@@ -156,6 +202,11 @@ Pets.Eggs = {
 			{ Id = "PhoenixChick", Chance = 2.7 },
 			{ Id = "InfernoDrake", Chance = 0.3 },
 		},
+		-- 1 in Odds per hatch each (Formulas.HatchChances; luck helps them only a little)
+		Secrets = {
+			{ Id = "TempestPhoenix", Odds = 1000000 },
+			{ Id = "PyroclasmDragon", Odds = 2000000 },
+		},
 	},
 	CosmicEgg = {
 		Name = "Cosmic Cloud Egg",
@@ -169,6 +220,12 @@ Pets.Eggs = {
 			{ Id = "Nebula", Chance = 12 },
 			{ Id = "Moonbeam", Chance = 2.7 },
 			{ Id = "GalaxyGuardian", Chance = 0.3 },
+		},
+		-- 1 in Odds per hatch each (Formulas.HatchChances; luck helps them only a little)
+		Secrets = {
+			{ Id = "VoidLeviathan", Odds = 2000000 },
+			{ Id = "NovaSeraph", Odds = 4000000 },
+			{ Id = "Hypercane", Odds = 5000000 },
 		},
 	},
 }
@@ -189,12 +246,20 @@ for id, egg in Pets.Eggs do
 	for _, entry in egg.Pets do
 		Pets.Pets[entry.Id].Egg = id
 	end
+	egg.Secrets = egg.Secrets or {}
+	for _, entry in egg.Secrets do
+		Pets.Pets[entry.Id].Egg = id
+		Pets.Pets[entry.Id].Odds = entry.Odds
+	end
 end
 
 -- Stable order for the pet index (by egg, then rarity, then exclusives)
 Pets.IndexOrder = {}
 for _, eggId in Pets.EggOrder do
 	for _, entry in Pets.Eggs[eggId].Pets do
+		table.insert(Pets.IndexOrder, entry.Id)
+	end
+	for _, entry in Pets.Eggs[eggId].Secrets do
 		table.insert(Pets.IndexOrder, entry.Id)
 	end
 end
@@ -205,6 +270,12 @@ end
 function Pets.RarityOf(petId: string)
 	local pet = Pets.Pets[petId]
 	return pet and Pets.Rarities[pet.Rarity]
+end
+
+-- Secret pets (very rare egg pets shown as "???" until discovered)
+function Pets.IsSecret(petId: string): boolean
+	local pet = Pets.Pets[petId]
+	return pet ~= nil and pet.Rarity == "Secret"
 end
 
 -- Pet tiers: 5 of the same pet craft a Golden one, 5 Golden craft a Rainbow one

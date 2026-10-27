@@ -112,6 +112,14 @@ function Format.Chance(fraction: number): string
 	return trimZeros(string.format("%.3f", percent)) .. "%"
 end
 
+-- 0.000004 -> "1 in 250K", 1 / 1.2e6 -> "1 in 1.2M" (secret pet odds)
+function Format.Odds(fraction: number): string
+	if fraction <= 0 then
+		return "never"
+	end
+	return "1 in " .. Format.Number(math.floor(1 / fraction + 0.5))
+end
+
 -- Pet bonus (0.35) -> "+35%"
 function Format.Bonus(bonus: number): string
 	return "+" .. Format.Number(math.floor(bonus * 100 + 0.5)) .. "%"

@@ -204,6 +204,13 @@ GameConfig.Pets = {
 	RainbowMultiplier = 6,
 	HatchDistance = 26,
 	AutoHatchDelay = 0.4,
+	-- Secret pets (Pets.Eggs[*].Secrets, "1 in Odds" each): rolled as a whole number out of SecretRollScale
+	-- (exact for odds that divide it, no float rounding at 1-in-millions), before the egg's other pets.
+	-- Luck (Lucky Hatcher, 2x Luck) only helps them a little: x(1 + (luck - 1) * SecretLuckShare), at most
+	-- SecretLuckMax (Lucky Hatcher alone x1.25, 2x Luck alone x1.5, both x2) so they never get common.
+	SecretRollScale = 1e9,
+	SecretLuckShare = 0.5,
+	SecretLuckMax = 2,
 	-- Equipped pets catch weather near you on their own
 	AutoCatch = {
 		PowerPerPet = 0.08, -- fraction of your vacuum Power each equipped pet catches with

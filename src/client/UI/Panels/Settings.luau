@@ -1,5 +1,5 @@
 --!nonstrict
--- Settings panel: music, sound effects, other players' pets, performance mode, auto catch.
+-- Settings panel: music, sound effects, other players' pets, performance mode, auto catch, trade requests.
 -- Sky Lab look: one white row per setting with its icon in a tinted well and a toggle.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,6 +23,7 @@ local STYLE = {
 	OtherPets = { Set = "Pink", Icon = "Pets" },
 	LowGraphics = { Set = "Rain", Icon = "Settings" },
 	AutoCatch = { Set = "Leaf", Icon = "Power" },
+	AllowTrades = { Set = "Sky", Icon = "Trade" },
 }
 
 function Settings.Build()
@@ -30,7 +31,7 @@ function Settings.Build()
 		Name = "Settings",
 		Title = "Settings",
 		Icon = "⚙️",
-		Size = UDim2.fromOffset(580, 504),
+		Size = UDim2.fromOffset(580, 582),
 		Padding = { 20, 16, 18 },
 	})
 

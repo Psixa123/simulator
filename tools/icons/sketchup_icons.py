@@ -15,7 +15,7 @@
 # Sandbox rules (checked by `python3 tools/icons/import_icons.py check`): no imports (math is
 # pre-loaded), no eval/exec/open/type/setattr, no dunders, no classes, no any()/all().
 
-# ===== chunk 1/11: icon helpers (session_state["IC"]) - palette, discs, rings, tubes, cushions =====
+# ===== chunk 1/12: icon helpers (session_state["IC"]) - palette, discs, rings, tubes, cushions =====
 L = session_state["L"]
 IC = session_state.setdefault("IC", {})
 v_add, v_sub, v_mul, v_dot, v_cross, v_norm, v_len = [L[k] for k in (
@@ -161,7 +161,7 @@ IC.update({"P": P, "new_icon": new_icon, "front": front, "disc": disc, "torus": 
            "pillow": pillow, "ellipse_poly": ellipse_poly, "align": align, "decal": decal})
 result = {"chunk": 1, "helpers": len(IC)}
 
-# ===== chunk 2/11: icon helpers - bevelled slabs, smooth profiles, 2D outline tools =====
+# ===== chunk 2/12: icon helpers - bevelled slabs, smooth profiles, 2D outline tools =====
 L = session_state["L"]
 IC = session_state["IC"]
 
@@ -229,7 +229,7 @@ IC.update({"bolt_shape": bolt_shape, "slab": slab, "smooth_profile": smooth_prof
            "move2": move2})
 result = {"chunk": 2, "helpers": len(IC)}
 
-# ===== chunk 3/11: Volts (bolt coin), Energy (raindrop), Star, Check, Close =====
+# ===== chunk 3/12: Volts (bolt coin), Energy (raindrop), Star, Check, Close =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -298,7 +298,7 @@ def close():
 
 result = {"built": [L["report"](f()) for f in (volts, energy, star, check, close)]}
 
-# ===== chunk 4/11: Pets (paw), Eggs (spotted egg), Luck (four-leaf clover) =====
+# ===== chunk 4/12: Pets (paw), Eggs (spotted egg), Luck (four-leaf clover) =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -369,7 +369,7 @@ def luck():
 
 result = {"built": [L["report"](f()) for f in (pets, eggs, luck)]}
 
-# ===== chunk 5/11: Shop (shopping bag), Sell (coin bag), Codes (ticket) =====
+# ===== chunk 5/12: Shop (shopping bag), Sell (coin bag), Codes (ticket) =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -452,7 +452,7 @@ def codes():
 
 result = {"built": [L["report"](f()) for f in (shop, sell, codes)]}
 
-# ===== chunk 6/11: Upgrades (fat up arrow), Boost (x2 lightning badge), Power (vacuum nozzle) =====
+# ===== chunk 6/12: Upgrades (fat up arrow), Boost (x2 lightning badge), Power (vacuum nozzle) =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -507,7 +507,7 @@ def power():
 
 result = {"built": [L["report"](f()) for f in (upgrades, boost, power)]}
 
-# ===== chunk 7/11: Rewards (gift box with a bow), Gift (small present) =====
+# ===== chunk 7/12: Rewards (gift box with a bow), Gift (small present) =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -559,7 +559,7 @@ def gift():
 
 result = {"built": [L["report"](f()) for f in (rewards, gift)]}
 
-# ===== chunk 8/11: Teleport (map pin on a mini globe), ClimateShift (purple swirl), Settings (gear) =====
+# ===== chunk 8/12: Teleport (map pin on a mini globe), ClimateShift (purple swirl), Settings (gear) =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -635,7 +635,7 @@ def settings():
 
 result = {"built": [L["report"](f()) for f in (teleport, climate_shift, settings)]}
 
-# ===== chunk 9/11: Index (book), Daily (calendar), Lock (padlock) =====
+# ===== chunk 9/12: Index (book), Daily (calendar), Lock (padlock) =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -682,7 +682,7 @@ def lock():
 
 result = {"built": [L["report"](f()) for f in (index, daily, lock)]}
 
-# ===== chunk 10/11: Radar (radar dish), Range (target), Speed (winged boot) =====
+# ===== chunk 10/12: Radar (radar dish), Range (target), Speed (winged boot) =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -759,7 +759,7 @@ def speed():
 
 result = {"built": [L["report"](f()) for f in (radar, range_target, speed)]}
 
-# ===== chunk 11/11: Rainbow, MegaStorm (thundercloud with a bolt), Tank (storm jar) =====
+# ===== chunk 11/12: Rainbow, MegaStorm (thundercloud with a bolt), Tank (storm jar) =====
 L = session_state["L"]
 IC = session_state["IC"]
 P = IC["P"]
@@ -807,3 +807,51 @@ def tank():
 
 
 result = {"built": [L["report"](f()) for f in (rainbow, mega_storm, tank)]}
+
+# ===== chunk 12/12: Trade (two curved swap arrows) =====
+L = session_state["L"]
+IC = session_state["IC"]
+P = IC["P"]
+
+
+def swap_arrow(start, end, cz, rm=1.55, width=0.95, flare=0.55, head=1.2, lead=0.18):
+    """Flat outline of a fat arrow curving clockwise round (0, cz) from angle `start` to `end` (degrees,
+    start > end), with a pointed head at `end`; counter-clockwise as slab() wants it."""
+    ro, ri = rm + width / 2.0, rm - width / 2.0
+    steps = 10
+    outer, inner = [], []
+    for k in range(steps + 1):
+        a = math.radians(start + (end - start) * k / steps)
+        outer.append((ro * math.cos(a), cz + ro * math.sin(a)))
+        inner.append((ri * math.cos(a), cz + ri * math.sin(a)))
+    a = math.radians(end)
+    radial, tangent = (math.cos(a), math.sin(a)), (math.sin(a), -math.cos(a))
+    tip = (rm * radial[0] + head * tangent[0], cz + rm * radial[1] + head * tangent[1])
+    # the barbs lean a little towards the tip so they stay thick enough for the bevel
+    wing_out = ((ro + flare) * radial[0] + lead * tangent[0], cz + (ro + flare) * radial[1] + lead * tangent[1])
+    wing_in = ((ri - flare) * radial[0] + lead * tangent[0], cz + (ri - flare) * radial[1] + lead * tangent[1])
+    poly = outer + [wing_out, tip, wing_in] + list(reversed(inner))
+    return [list(q) for q in reversed(poly)]
+
+
+def shine_arc(start, end, cz, r, y):
+    """A thin white gloss streak along an arrow's front face."""
+    path = []
+    for k in range(9):
+        a = math.radians(start + (end - start) * k / 8.0)
+        path.append((r * math.cos(a), y, cz + r * math.sin(a)))
+    return IC["sweep"](path, 0.085, n=8, closed=False, flat=0.5)
+
+
+def trade():
+    p = IC["new_icon"]("Trade", 28)
+    cz, depth = 2.3, 0.78
+    L["piece"](p, P["sky"], IC["slab"](swap_arrow(164.0, 24.0, cz), depth, 0.22, seg=3, corner=0.18), crease=50)
+    L["piece"](p, P["leaf"], IC["slab"](swap_arrow(344.0, 204.0, cz), depth, 0.22, y=0.04, seg=3, corner=0.18),
+               crease=50)
+    L["piece"](p, P["shine"], shine_arc(140.0, 70.0, cz, 1.86, -depth / 2.0 - 0.01), crease=60)
+    L["piece"](p, P["shine"], shine_arc(320.0, 262.0, cz, 1.86, -depth / 2.0 + 0.03), crease=60)
+    return p
+
+
+result = {"built": [L["report"](f()) for f in (trade,)]}

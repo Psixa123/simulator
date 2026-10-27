@@ -92,7 +92,7 @@ Monetization.Gamepasses = {
 		Icon = "🍀",
 		Price = 249,
 		Color = Color3.fromRGB(90, 230, 120),
-		Description = "+50% luck for Rare, Epic and Legendary pets from every egg.",
+		Description = "+50% luck for Rare, Epic and Legendary pets from every egg (+25% for Secret pets).",
 	},
 	TripleHatch = {
 		Id = 2054142623,

@@ -32,7 +32,7 @@ The in-game Shop shows the same pictures as its card art. They are uploaded sepa
 | `RemoteSell` | Remote Sell | 199 | Sell from anywhere and automatically sell whenever your tank is full. | `assets/gamepasses/RemoteSell.png` |
 | `MegaTank` | Mega Tank | 149 | Double your Storm Tank capacity forever. | `assets/gamepasses/MegaTank.png` |
 | `InfiniteTank` | Infinite Tank | 499 | Your Storm Tank never fills up: catch weather nonstop and sell whenever you like. | `assets/gamepasses/InfiniteTank.png` |
-| `LuckyHatcher` | Lucky Hatcher | 249 | +50% luck for Rare, Epic and Legendary pets from every egg. | `assets/gamepasses/LuckyHatcher.png` |
+| `LuckyHatcher` | Lucky Hatcher | 249 | +50% luck for Rare, Epic and Legendary pets from every egg (+25% for Secret pets). | `assets/gamepasses/LuckyHatcher.png` |
 | `TripleHatch` | Triple Hatch | 149 | Hatch 3 eggs at once. | `assets/gamepasses/TripleHatch.png` |
 | `AutoHatch` | Auto Hatch | 99 | Keep hatching eggs automatically while you stand next to them. | `assets/gamepasses/AutoHatch.png` |
 | `PetSlots` | +3 Pet Slots | 249 | Equip 3 more pets at the same time. | `assets/gamepasses/PetSlots.png` |

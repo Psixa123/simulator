@@ -24,12 +24,13 @@ hero angle, and they are designed to read at 48 px.
 | Radar | radar dish | Close | red round X |
 | Lock | padlock | Star | star |
 | Check | check mark | Rainbow | rainbow on clouds |
+| Trade | two curved swap arrows (sky + leaf) | | |
 
 ## Files
 
 | Path | What |
 | --- | --- |
-| `tools/icons/sketchup_icons.py` | the SketchUp models: 11 `# ===== chunk` blocks (2 of helpers, 9 of icons), one group `Prop_<Key>` per icon, pieces grouped by paint (`Color_RRGGBB`, `Glass_RRGGBB`, `Neon_FFFFFF` for shine streaks) |
+| `tools/icons/sketchup_icons.py` | the SketchUp models: 12 `# ===== chunk` blocks (2 of helpers, 10 of icons), one group `Prop_<Key>` per icon, pieces grouped by paint (`Color_RRGGBB`, `Glass_RRGGBB`, `Neon_FFFFFF` for shine streaks) |
 | `tools/icons/import_icons.py` | offline dry run, import of a SketchUp extraction, checks |
 | `tools/icons/render_icons.py` | source → GLB → headless Chromium → finished PNGs, contact sheet, 48 px check |
 | `tools/icons/viewer.html` | three.js renderer: the shaded view next to a paint-id/depth pass |
@@ -87,8 +88,8 @@ Look tweaks that need no remodelling:
    `read_skill`). Then, with `build_model`:
    * send `tools/world/sketchup/lib.py` one `# ===== chunk` at a time (4 calls; the first with
      `clean: true`),
-   * then send `tools/icons/sketchup_icons.py` one chunk at a time, in order (11 calls; chunk 1 stores the
-     helpers in `session_state["IC"]`),
+   * then send `tools/icons/sketchup_icons.py` one chunk at a time, in order (12 chunks; chunk 1 stores the
+     helpers in `session_state["IC"]`; consecutive icon chunks may share a call),
    * then send `tools/world/sketchup/extract.py` with `ONLY = [...]` set to a batch of icon keys. The
      whole set is about 1.8 MB of polygons, so it was pulled in three batches and each full tool result
      was saved to a file:

@@ -278,6 +278,27 @@ end
 -- Eggs
 ---------------------------------------------------------------------------
 -- Returns { { Id, Chance (0..1) } } with luck applied to Rare+ pets
+-- Luck for secret pets: only a share of the egg luck, capped (GameConfig.Pets.SecretLuckShare / SecretLuckMax)
+function Formulas.SecretLuck(luck: number): number
+	local settings = GameConfig.Pets
+	return math.clamp(1 + (luck - 1) * settings.SecretLuckShare, 1, settings.SecretLuckMax)
+end
+
+-- An egg's secret pets as whole-number "slots" out of GameConfig.Pets.SecretRollScale: { { Id, Slots } }.
+-- 1 in 250,000 = 4,000 slots out of 1e9 exactly (no float rounding); boosted odds round to the nearest slot.
+function Formulas.SecretSlots(eggId: string, luck: number)
+	local egg = Pets.Eggs[eggId]
+	local scale = GameConfig.Pets.SecretRollScale
+	local factor = Formulas.SecretLuck(luck)
+	local slots = {}
+	for _, entry in (egg and egg.Secrets) or {} do
+		table.insert(slots, { Id = entry.Id, Slots = math.max(1, math.floor(scale / entry.Odds * factor + 0.5)) })
+	end
+	return slots
+end
+
+-- Every pet an egg can hatch with its chance (0..1, summing to 1): the regular pets first (luck boosts
+-- Rare and better), then the secrets (Secret = true, Slots). The regular pets share what the secrets leave.
 function Formulas.HatchChances(eggId: string, luck: number)
 	local egg = Pets.Eggs[eggId]
 	local entries = {}
@@ -291,10 +312,53 @@ function Formulas.HatchChances(eggId: string, luck: number)
 		total += weight
 		table.insert(entries, { Id = entry.Id, Weight = weight })
 	end
+	local scale = GameConfig.Pets.SecretRollScale
+	local secrets = Formulas.SecretSlots(eggId, luck)
+	local secretSlots = 0
+	for _, secret in secrets do
+		secretSlots += secret.Slots
+	end
+	local rest = (scale - secretSlots) / scale
 	for _, entry in entries do
-		entry.Chance = entry.Weight / total
+		entry.Chance = entry.Weight / total * rest
+	end
+	for _, secret in secrets do
+		table.insert(entries, { Id = secret.Id, Weight = 0, Chance = secret.Slots / scale, Slots = secret.Slots, Secret = true })
 	end
 	return entries
+end
+
+-- Rolls one hatch (random: a Random). A whole number in 1..SecretRollScale picks a secret when it lands in
+-- one's slots; otherwise a second draw picks a regular pet by its weight (same odds as before secrets).
+function Formulas.RollHatch(eggId: string, luck: number, random: Random): string
+	local ticket = random:NextInteger(1, GameConfig.Pets.SecretRollScale)
+	local upTo = 0
+	for _, secret in Formulas.SecretSlots(eggId, luck) do
+		upTo += secret.Slots
+		if ticket <= upTo then
+			return secret.Id
+		end
+	end
+	local egg = Pets.Eggs[eggId]
+	local weights = {}
+	local total = 0
+	for index, entry in egg.Pets do
+		local weight = entry.Chance
+		if Pets.RarityOf(entry.Id).Order >= 3 then
+			weight *= luck
+		end
+		weights[index] = weight
+		total += weight
+	end
+	local pick = random:NextNumber() * total
+	local cumulative = 0
+	for index, entry in egg.Pets do
+		cumulative += weights[index]
+		if pick < cumulative then
+			return entry.Id
+		end
+	end
+	return egg.Pets[#egg.Pets].Id
 end
 
 ---------------------------------------------------------------------------

@@ -109,6 +109,7 @@ ICONS = {
     "Gift": {"yaw": -32, "pitch": 20},
     "Boost": {"yaw": -18, "pitch": 6},
     "Close": {"yaw": -20, "pitch": 6},
+    "Trade": {"yaw": -18, "pitch": 8},
 }
 
 # The zone emblems (tools/icons/sketchup_zone_emblems.py): one gold medallion per region of

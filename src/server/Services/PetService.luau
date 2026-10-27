@@ -52,17 +52,9 @@ local function inTrade(player: Player, uid: string): boolean
 end
 local IN_TRADE = "That pet is in your trade offer! Take it out of the trade first."
 
+-- Secrets first (a whole-number roll, exact at 1-in-millions), then the egg's regular pets (Formulas.RollHatch)
 local function roll(eggId: string, luck: number): string
-	local chances = Formulas.HatchChances(eggId, luck)
-	local pick = rng:NextNumber()
-	local cumulative = 0
-	for _, entry in chances do
-		cumulative += entry.Chance
-		if pick <= cumulative then
-			return entry.Id
-		end
-	end
-	return chances[#chances].Id
+	return Formulas.RollHatch(eggId, luck, rng)
 end
 
 local function equipBest(player: Player, data)
@@ -180,9 +172,15 @@ function PetService.Hatch(player: Player, eggId: string, count: number?, free: b
 		local entry, isNew = PetService.AddPet(player, petId, false)
 		table.insert(results, { Id = petId, Uid = entry and entry.Uid, New = isNew })
 
-		-- Only Legendary and Exclusive hatches are announced to the whole server
+		-- Only Legendary, Exclusive and Secret hatches are announced to the whole server
 		local rarity = Pets.RarityOf(petId)
-		if rarity.Name == "Legendary" or rarity.Name == "Exclusive" then
+		if rarity.Name == "Secret" then
+			local def = Pets.Pets[petId]
+			Net.NotifyAll(
+				string.format("🌌 SECRET! %s hatched %s (%s)!", player.DisplayName, def.Name, Format.Odds(1 / def.Odds)),
+				"Reward"
+			)
+		elseif rarity.Name == "Legendary" or rarity.Name == "Exclusive" then
 			Net.NotifyAll(
 				string.format("🌟 %s hatched a %s %s!", player.DisplayName, rarity.Name, Pets.Pets[petId].Name),
 				"Reward"
@@ -293,8 +291,8 @@ local function petAction(player: Player, action: string, argument)
 		end
 		table.remove(data.Pets, index)
 	elseif action == "DeleteMany" then
-		-- Multi-delete from the Pets panel: a list of pet Uids. Equipped pets and exclusives
-		-- (pets no egg can hatch) are never bulk-deleted; those go one at a time.
+		-- Multi-delete from the Pets panel: a list of pet Uids. Equipped pets, exclusives (pets no egg
+		-- can hatch) and secret pets are never bulk-deleted; those go one at a time.
 		if type(argument) ~= "table" then
 			return Net.Fail("Invalid pets.")
 		end
@@ -312,7 +310,7 @@ local function petAction(player: Player, action: string, argument)
 		local kept, removed = {}, 0
 		for _, pet in data.Pets do
 			local def = Pets.Pets[pet.Id]
-			if wanted[pet.Uid] and not pet.Equipped and def and def.Egg and not inTrade(player, pet.Uid) then
+			if wanted[pet.Uid] and not pet.Equipped and def and def.Egg and def.Rarity ~= "Secret" and not inTrade(player, pet.Uid) then
 				removed += 1
 			else
 				table.insert(kept, pet)

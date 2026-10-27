@@ -41,6 +41,7 @@ local Icons = {
 	Gift = { Id = 126027840891767, Emoji = "🎁" }, -- small gift
 	Boost = { Id = 75840590772147, Emoji = "🚀" }, -- rocket
 	Close = { Id = 87698644308982, Emoji = "✖️" }, -- cross
+	Trade = { Id = 91677105986788, Emoji = "🔄" }, -- two curved swap arrows, assets/ui/icons3d/Trade.png
 	-- Zone emblems (Zone_<Zones key>, assets/ui/icons3d/Zone_*.png): the medallions on the zone title card
 	Zone_Hub = { Id = 133610062922415, Emoji = "🏠" }, -- domed lab on a cloud, assets/ui/icons3d/Zone_Hub.png
 	Zone_Meadows = { Id = 116632794687034, Emoji = "🌤️" }, -- sun over clover hills, assets/ui/icons3d/Zone_Meadows.png
