@@ -1131,9 +1131,20 @@ PETS = {
     "RainbowRoc": _pet("Rainbow Roc", "Exclusive", "Round", (255, 248, 252), (255, 120, 200), ["Wings", "Beak", "Crown", "Tail"], "Rainbow", (120, 220, 255)),
     "Sunbeam": _pet("Sunbeam", "Epic", "Round", (255, 235, 120), (255, 255, 255), ["Rays", "Halo"], "Glow", None),
     "AuroraGryphon": _pet("Aurora Gryphon", "Exclusive", "Round", (74, 98, 214), (96, 246, 200), ["Ears", "Wings", "Beak", "Tail"], "Glow", None),
+    # Secret pets (Pets.Eggs[*].Secrets)
+    "EyeOfTheStorm": _pet("Eye of the Storm", "Secret", "Cloud", (236, 244, 255), (84, 196, 255), ["Crown", "Halo", "Wings"], "Sparkle", (96, 228, 255)),
+    "ThunderKirin": _pet("Thunderclap Kirin", "Secret", "Bean", (44, 40, 104), (255, 214, 64), ["Horns", "Tail", "Bolt"], "Zap", (255, 238, 110)),
+    "SandstormSphinx": _pet("Sandstorm Sphinx", "Secret", "Round", (238, 196, 104), (38, 86, 196), ["Wings", "Tail", "Halo"], "Glow", (80, 255, 226)),
+    "BlizzardMonarch": _pet("Blizzard Monarch", "Secret", "Round", (232, 244, 255), (110, 190, 255), ["Ears", "Crown", "Wings"], "Snow", (130, 230, 255)),
+    "TempestPhoenix": _pet("Tempest Phoenix", "Secret", "Round", (255, 86, 44), (255, 196, 56), ["Beak", "Flame", "Wings", "Tail"], "Fire", (255, 246, 170)),
+    "PyroclasmDragon": _pet("Pyroclasm Dragon", "Secret", "Bean", (44, 34, 40), (255, 112, 28), ["Cracks", "Horns", "Crown", "Wings", "Tail"], "Fire", (255, 206, 64)),
+    "VoidLeviathan": _pet("Void Leviathan", "Secret", "Drop", (26, 18, 62), (64, 236, 255), ["Halo", "Wings"], "Sparkle", (150, 255, 250)),
+    "NovaSeraph": _pet("Nova Seraph", "Secret", "Round", (255, 250, 236), (255, 196, 72), ["Crown", "Halo", "Wings"], "Glow", (255, 170, 240)),
+    "Hypercane": _pet("Hypercane", "Secret", "Cloud", (30, 18, 52), (255, 84, 220), ["Horns", "Crown", "Halo", "Wings"], "Sparkle", (255, 255, 255)),
 }
 
-# Pet index order (same as Pets.IndexOrder)
+# Pack order: the pet index order (Pets.IndexOrder), with the secret pets appended at the end so every
+# older pet keeps its place on the pack grid (in Pets.IndexOrder each secret follows its egg's pets)
 PET_IDS = [
     "Puffling", "Droplet", "Sunny", "Prism", "BreezeKing",
     "Static", "Zappy", "VoltBat", "ThunderPup", "StormLord",
@@ -1143,6 +1154,8 @@ PET_IDS = [
     "Stardust", "Comet", "Nebula", "Moonbeam", "GalaxyGuardian",
     "Sunbeam", "TempestTitan", "VoltWyrm", "FrostColossus", "CycloneDrake", "MaelstromSpirit", "RainbowRoc",
     "AuroraGryphon",
+    "EyeOfTheStorm", "ThunderKirin", "SandstormSphinx", "BlizzardMonarch", "TempestPhoenix", "PyroclasmDragon",
+    "VoidLeviathan", "NovaSeraph", "Hypercane",
 ]
 
 # Per-pet design choices on top of the Look (styles of features + small signature details)
@@ -1189,6 +1202,69 @@ DESIGN = {
     "AuroraGryphon": {"mouth": None, "ears": "tuft", "ear_inner": "Color_F8FAFF", "beak": "eagle", "wings": "aurora",
                       "wing_size": 1.08, "wing_glow": (178, 124, 255), "tail": "lion", "feet": "talon", "ruff": True,
                       "brow_star": True},
+
+    # ---- Secret pets: every one has a spinning orbit (rings, stars, shards, bolts, planets...) and glowing eyes
+    # Plains: a storm cloud riding its own hurricane - spiral arms swirling under it, a glowing hurricane-eye
+    # swirl on the forehead, a cyan-gem crown, a halo and an orbit of stars
+    "EyeOfTheStorm": {"body_q": 0.8, "mouth": "smile", "cloud": "storm", "wings": "feather", "wing_size": 1.12, "crown_gem": (96, 228, 255),
+                      "spiral_mark": {"role": neon_role((96, 228, 255)), "pitch": 30.0, "size": 1.0},
+                      "cyclone": {"role": "Accent", "arms": 3, "r0": 1.85, "r1": 0.95, "y0": -1.0, "y1": -0.72, "turns": 0.6},
+                      "orbit": [{"r": 1.7, "y": 0.05, "tilt_x": 16.0, "tilt_z": -10.0, "minor": 0.02, "beads": 4, "bead": "star",
+                                 "size": 0.14}]},
+    # Thunder: a storm-cloud kirin - golden antlers, a crest of lightning down its back, hooves on a cloud,
+    # a lightning-tuft tail and three bolts circling it
+    "ThunderKirin": {"body_q": 0.8, "mouth": "smile", "horns": "antler", "tail": "kirin", "bolt": "forehead", "feet": "hoof",
+                     "underpuffs": fixed_role((244, 246, 255)), "bolt_cheeks": True,
+                     "mane": {"count": 7, "size": 0.46, "start": 60.0, "end": 8.0},
+                     "orbit": [{"r": 1.6, "y": 0.1, "tilt_x": -12.0, "tilt_z": 10.0, "minor": 0.0, "beads": 3, "bead": "bolt",
+                                "size": 0.17, "role": neon_role(BOLT_YELLOW), "upright": True}]},
+    # Dune: a winged sphinx - lapis-and-gold striped headdress, a golden cobra with a glowing gem, a golden sun
+    # halo and golden pyramids orbiting it
+    "SandstormSphinx": {"body_q": 0.8, "mouth": "cat", "no_blush": True, "nemes": True, "uraeus": True, "uraeus_gem": neon_role((80, 255, 226)),
+                        "wings": "feather", "wing_size": 1.05, "tail": "lion", "halo_role": neon_role((255, 214, 90)), "halo_scale": 1.15,
+                        "orbit": [{"r": 1.55, "y": -0.5, "tilt_x": 8.0, "tilt_z": -6.0, "minor": 0.02, "beads": 4, "bead": "pyramid",
+                                   "size": 0.18, "role": neon_role((255, 214, 90)), "upright": True}]},
+    # Frost: an ice fox monarch - a crown of tall crystals with a glowing gem, a glowing snowflake on the brow,
+    # fluffy cheeks and ice shards circling it
+    "BlizzardMonarch": {"body_q": 0.8, "mouth": "cat", "ears": "fox", "crown_style": "ice", "crown_gem": (150, 235, 255), "wings": "feather",
+                        "wing_size": 1.05, "cheek_tufts": True,
+                        "snowflake_mark": {"role": neon_role((150, 235, 255)), "pitch": 33.0, "size": 0.15},
+                        "orbit": [{"r": 1.6, "y": 0.0, "tilt_x": 18.0, "tilt_z": -12.0, "minor": 0.0, "beads": 6, "bead": "shard",
+                                   "size": 0.16, "alt": 0.7, "role": ice_role((205, 240, 255)), "upright": True}]},
+    # Magma: a phoenix of the fire storm - glowing flame-tipped aurora wings, a fire crest, golden eagle beak and
+    # talons, long curling tail plumes and a ring of fire around it
+    "TempestPhoenix": {"body_q": 0.8, "mouth": None, "beak": "eagle", "wings": "aurora", "wing_size": 1.15, "wing_glow": FLAME_IN,
+                       "tail": "phoenix", "feet": "talon", "flame_ring": {"r": 1.42, "y": -0.62, "tilt_x": 10.0}},
+    # Magma: an obsidian dragon cracked with lava - big horns, a crown of glowing magma spikes, lava belly plates,
+    # bat wings and a spiked back
+    "PyroclasmDragon": {"body_q": 0.8, "mouth": "smile", "no_blush": True, "horns": "dragon", "horn_scale": 1.25, "wings": "bat",
+                        "wing_size": 1.15, "tail": "dragon", "crown_style": "magma", "belly_accent": True, "crack_step": 2, "crack_sides": 4,
+                        "belly_pitch": -36.0, "belly_size": 0.9,
+                        "dorsal": {"role": "Accent", "spots": ((62.0, 0.26), (38.0, 0.32), (14.0, 0.28), (-10.0, 0.22))}},
+    # Cosmic: a void sea serpent - a comet-curl head, glowing fins, a starry body, a coiled tail with glowing
+    # spots and ringed planets orbiting it
+    "VoidLeviathan": {"body_q": 0.8, "mouth": "smile", "drop": "comet", "wings": "fin", "wing_size": 1.0, "bone_role": "Accent",
+                      "wing_yaw": 92.0, "wing_pitch": -6.0, "star_freckles": neon_role(WHITE),
+                      "coil": {"r0": 0.95, "r1": 0.6, "y0": -0.4, "y1": -1.05, "turns": 1.05, "thick": 0.24},
+                      "orbit": [{"r": 1.75, "y": -0.15, "tilt_x": 20.0, "tilt_z": -14.0, "minor": 0.02, "beads": 3, "bead": "planet",
+                                 "size": 0.12}]},
+    # Cosmic: a seraph of the stars - two pairs of wings, a golden crown with pink gems, a golden halo and two
+    # crossed gyroscope rings of stars
+    "NovaSeraph": {"body_q": 0.8, "mouth": "smile", "wings": "seraph", "wing_size": 1.0, "crown_gem": (255, 170, 240), "brow_star": True,
+                   "halo_role": neon_role((255, 214, 90)),
+                   "orbit": [{"r": 1.55, "y": 0.0, "tilt_x": 62.0, "tilt_z": 0.0, "minor": 0.026, "beads": 4, "bead": "star",
+                              "size": 0.12, "role": neon_role((255, 214, 90))},
+                             {"r": 1.55, "y": 0.0, "tilt_x": -62.0, "tilt_z": 0.0, "minor": 0.026, "beads": 4, "bead": "star",
+                              "size": 0.12, "phase": 45.0, "role": neon_role((255, 214, 90))}]},
+    # Cosmic: the ultimate storm - a black storm cloud with white-hot eyes, horns, a diamond crown, starry body,
+    # magenta wings, a swirling magenta hurricane under it and a cyan accretion disk with orbiting bolts
+    "Hypercane": {"body_q": 0.8, "mouth": "smile", "cloud": "storm", "horns": "devil", "horn_scale": 1.2, "crown_gem": WHITE, "wings": "feather",
+                  "wing_size": 1.12, "star_freckles": neon_role(WHITE),
+                  "cyclone": {"arms": 4, "r0": 1.9, "r1": 0.95, "y0": -1.05, "y1": -0.75, "turns": 0.65},
+                  "orbit": [{"r": 1.85, "y": -0.15, "tilt_x": 14.0, "tilt_z": -10.0, "minor": 0.05, "beads": 0,
+                             "role": neon_role((80, 230, 255))},
+                            {"r": 2.08, "y": -0.15, "tilt_x": 14.0, "tilt_z": -10.0, "minor": 0.022, "beads": 3, "bead": "bolt",
+                             "size": 0.16, "role": neon_role((80, 230, 255)), "upright": True}]},
 }
 
 
@@ -1795,6 +1871,13 @@ def feat_horns(ctx):
                                                               (0.0, 0.0, 1.0))))
         ctx["head_top"] = max(ctx.get("head_top", 0.0), body_top(ctx) + 0.4)
         return
+    if style == "antler":
+        for side in (-1, 1):
+            p, n = surface_at(body, side * 30.0, 56.0)
+            y_dir = vnorm(vadd(vmul(n, 0.5), (0.0, 0.8, 0.0)))
+            add(ctx, "Accent", transform_mesh(antler_mesh(ctx, scale, side), xf_frame(vmad(p, n, -0.05), y_dir, (0.0, 0.0, 1.0))))
+        ctx["head_top"] = max(ctx.get("head_top", 0.0), body_top(ctx) + 0.6 * scale)
+        return
     st = HORN_STYLES[style]
     yaw = st["yaw"]
     pitch = st["pitch"]
@@ -1848,6 +1931,9 @@ def crown_mesh(ctx, R, H, spike, points, thick):
 def feat_crown(ctx):
     look = ctx["look"]
     design = ctx["design"]
+    if design.get("crown_style"):
+        secret_crown(ctx)
+        return
     kind = look["Body"]
     R = design.get("crown_r", 0.39)
     if kind == "Drop":
@@ -1873,7 +1959,7 @@ def feat_crown(ctx):
         seat = centre[1] - 0.04
         xf = xf_chain([xf_rot_z(rad(-8.0)), xf_frame(vmad(centre, axis, -0.04), axis, (0.0, 0.0, 1.0))])
     add(ctx, fixed_role(GOLD), transform_mesh(band, xf))
-    add(ctx, neon_role(GEM_RED), transform_mesh(gems, xf))
+    add(ctx, neon_role(design.get("crown_gem", GEM_RED)), transform_mesh(gems, xf))
     ctx["crown_top"] = seat + H + spike + 0.08
     ctx["head_top"] = max(ctx.get("head_top", 0.0), ctx["crown_top"])
 
@@ -1899,9 +1985,9 @@ def feat_halo(ctx):
     y = top + 0.24
     if look["Body"] == "Drop":
         y = max(body_top(ctx), ctx.get("crown_top", 0.0)) + 0.1
-    m = torus(0.5, 0.058, lod(ctx, 28, 14), lod(ctx, 7, 5))
+    m = torus(0.5 * ctx["design"].get("halo_scale", 1.0), 0.058, lod(ctx, 28, 14), lod(ctx, 7, 5))
     m = translate_mesh(m, 0.0, y, 0.04)
-    add(ctx, neon_role(look["Accent"]) + "@SpinY", m)
+    add(ctx, ctx["design"].get("halo_role", neon_role(look["Accent"])) + "@SpinY", m)
 
 
 def feather_wing(ctx, size):
@@ -2016,6 +2102,8 @@ def feat_wings(ctx):
         size *= 1.05
     if kind == "Bean":
         pitch = 18.0
+    yaw = ctx["design"].get("wing_yaw", yaw)
+    pitch = ctx["design"].get("wing_pitch", pitch)
     for side in (-1, 1):
         anim = "WingL" if side < 0 else "WingR"
         p, n = surface_at(body, side * yaw, pitch)
@@ -2034,6 +2122,15 @@ def feat_wings(ctx):
             bones = None
             raise_a = rad(18.0)
             sweep_a = rad(-14.0)
+        elif style == "seraph":
+            membrane = seraph_wing(ctx, size)
+            bones = None
+            raise_a = rad(26.0)
+            sweep_a = rad(-16.0)
+        elif style == "fin":
+            membrane, bones = fin_wing(ctx, size)
+            raise_a = rad(12.0)
+            sweep_a = rad(-30.0)
         else:
             membrane = feather_wing(ctx, size)
             bones = None
@@ -2044,9 +2141,9 @@ def feat_wings(ctx):
             chain.append(xf_scale(-1.0, 1.0, 1.0))
         chain.append(xf_translate(hinge[0], hinge[1], hinge[2]))
         xf = xf_chain(chain)
-        add(ctx, "Accent@" + anim, transform_mesh(membrane, xf))
+        add(ctx, ctx["design"].get("wing_role", "Accent") + "@" + anim, transform_mesh(membrane, xf))
         if bones is not None:
-            add(ctx, "Body@" + anim, transform_mesh(bones, xf))
+            add(ctx, ctx["design"].get("bone_role", "Body") + "@" + anim, transform_mesh(bones, xf))
         if style == "aurora":
             add(ctx, neon_role(ctx["design"].get("wing_glow", ctx["look"]["Accent"])) + "@" + anim, transform_mesh(glow, xf))
         add_pivot(ctx, anim, hinge)
@@ -2109,6 +2206,17 @@ def feat_tail(ctx):
                  ((0.0, 0.29, -0.03), 0.05)]
         tuft = radial_mesh(cloud_surface(puffs, 26.0), lod(ctx, 6, 4))
         accent_parts.append(transform_mesh(tuft, xf_frame(vmad(tip, tdir, 0.02), tdir, (0.0, 0.0, -1.0))))
+    elif style == "phoenix":
+        accent_parts.append(phoenix_tail(ctx))
+    elif style == "kirin":
+        # slim tail ending in a flame-like tuft
+        pts = [(0.0, 0.0, 0.0), (0.0, -0.08, 0.34), (0.0, 0.04, 0.62), (0.0, 0.3, 0.76)]
+
+        def rf(t):
+            return 0.08 * (1.0 - 0.4 * t)
+        body_parts.append(sweep(pts, lod(ctx, 10, 6), rf, lod(ctx, 8, 6), (1.0, 0.0, 0.0), "round", "round", 0.0))
+        fl = flame_mesh(ctx, 0.15, 0.46, 0.1)
+        accent_parts.append(transform_mesh(fl, xf_frame(vadd(pts[-1], (0.0, -0.06, 0.0)), (0.0, 0.85, 0.5), (0.0, 0.0, 1.0))))
     elif style == "bird":
         for (ang, L) in ((-24.0, 0.75), (0.0, 0.88), (24.0, 0.75)):
             f = leaf(L, 0.17, 0.05, lod(ctx, 6, 4), lod(ctx, 7, 5), 0.6, 0.5, 0.25)
@@ -2317,21 +2425,22 @@ def feat_cracks(ctx):
     look = ctx["look"]
     body = ctx["body"]
     parts = []
+    step = ctx["design"].get("crack_step", 3)
     for crack in CRACKS:
         pts = []
         dense = []
         for i in range(len(crack) - 1):
             a = crack[i]
             b = crack[i + 1]
-            for j in range(3):
-                t = j / 3.0
+            for j in range(step):
+                t = j / float(step)
                 dense.append((lerp(a[0], b[0], t), lerp(a[1], b[1], t)))
         dense.append(crack[-1])
         for (yaw, pitch) in dense:
             p, n = surface_at(body, yaw, pitch)
             pts.append(vmad(p, n, 0.0))
         radii = [0.06 * (1.0 - 0.6 * abs(i / float(len(pts) - 1) - 0.35)) for i in range(len(pts))]
-        parts.append(tube(pts, radii, 5, "round", "round", None, 1))
+        parts.append(tube(pts, radii, ctx["design"].get("crack_sides", 5), "round", "round", None, 1))
     add(ctx, neon_role(look["Accent"]), merge_meshes(parts))
 
 
@@ -2343,7 +2452,13 @@ def detail_feet(ctx):
     look = ctx["look"]
     for side in (-1, 1):
         p, n = surface_at(body, side * 26.0, -62.0)
-        if style == "talon":
+        if style == "hoof":
+            # kirin hooves: a round leg with a golden cuff
+            leg = ellipsoid(0.17, 0.2, 0.2, lod(ctx, 5, 3))
+            add(ctx, "Body", translate_mesh(leg, p[0] * 0.92, p[1] + 0.02, p[2] - 0.04))
+            cuff = torus(0.15, 0.04, lod(ctx, 14, 8), 5)
+            add(ctx, "Accent", translate_mesh(cuff, p[0] * 0.92, p[1] - 0.08, p[2] - 0.04))
+        elif style == "talon":
             # gryphon paws with golden talons
             paw = ellipsoid(0.2, 0.15, 0.24, lod(ctx, 5, 3))
             add(ctx, "Body", translate_mesh(paw, p[0] * 0.92, p[1] + 0.02, p[2] - 0.06))
@@ -2376,7 +2491,8 @@ def detail_underpuffs(ctx):
     # soft accent-coloured cloud base peeking out under the body (front and sides only)
     puffs = [((0.0, 0.0, 0.0), 0.6), ((0.62, 0.02, 0.06), 0.46), ((-0.62, 0.02, 0.06), 0.46), ((0.0, 0.0, 0.3), 0.5)]
     m = radial_mesh(cloud_surface(puffs, 12.0), lod(ctx, 8, 5))
-    add(ctx, "Accent", translate_mesh(scale_mesh(m, 1.0, 0.75, 0.9), 0.0, -0.72, 0.02))
+    role = ctx["design"].get("underpuffs")
+    add(ctx, role if isinstance(role, str) else "Accent", translate_mesh(scale_mesh(m, 1.0, 0.75, 0.9), 0.0, -0.72, 0.02))
 
 
 def detail_drop_shine(ctx):
@@ -2559,6 +2675,423 @@ def detail_ruff(ctx):
     add(ctx, fixed_role((248, 250, 255)), merge_meshes(parts))
 
 
+# ----------------------------------------------------------------------------- secret pets (premium details)
+# The Secret pets (rarity "Secret", very rare egg pets) get more and finer detail than the regular pets
+# within the same budgets: orbit rings with beads that spin around them (SpinY), hurricane spiral arms,
+# a lightning mane, antlers, a sphinx headdress, crystal and magma crowns, gyroscope rings, a serpent
+# coil, ... Everything here is switched on by DESIGN keys that only the secret pets use.
+
+SECRET_LADDER = (1.0, 0.94, 0.88, 0.83, 0.78, 0.73, 0.68, 0.64, 0.6, 0.56, 0.52)
+
+
+def facing_frame(pos, out_dir):
+    # local -Z (an extruded shape's front) facing out_dir, local +Y as close to world up as possible
+    back = vmul(vnorm(out_dir), -1.0)
+    y = vsub(UP, vmul(back, vdot(UP, back)))
+    y = perpendicular(back) if vlen(y) < 1e-6 else vnorm(y)
+    return xf_basis(vcross(y, back), y, back, pos)
+
+
+def bead_mesh(ctx, kind, s):
+    # a small orbit bead centred on the origin, its front facing -Z
+    if kind == "star":
+        return extrude(star_poly(4, s, s * 0.36), s * 0.42, s * 0.14, 1)
+    if kind == "star5":
+        return extrude(star_poly(5, s, s * 0.46), s * 0.4, s * 0.14, 1)
+    if kind == "bolt":
+        return extrude(bolt_poly(s * 2.2), s * 0.42, s * 0.14, 1)
+    if kind == "gem":
+        return crystal(s * 0.62, -s * 0.9, -s * 0.15, s * 0.25, s * 0.9, 6, 0.85)
+    if kind == "shard":
+        return crystal(s * 0.42, -s * 0.7, -s * 0.2, s * 0.7, s * 1.6, 6, 0.8)
+    if kind == "pyramid":
+        return crystal(s * 0.85, -s * 0.5, -s * 0.45, -s * 0.4, s * 0.75, 4, 0.97)
+    if kind == "planet":
+        ball = uv_sphere(s, s, s, lod(ctx, 10, 6), lod(ctx, 6, 4))
+        ring = torus(s * 1.55, s * 0.12, lod(ctx, 14, 8), 4)
+        return merge_meshes([ball, transform_mesh(ring, xf_rot_x(rad(24.0)))])
+    if kind == "orb":
+        return uv_sphere(s, s, s, lod(ctx, 10, 6), lod(ctx, 6, 4))
+    return ellipsoid(s, s, s, 3)
+
+
+def orbit_mesh(ctx, spec):
+    # a tilted ring around the pet's Y axis with beads spaced evenly on it (centred on the axis, so it
+    # can spin with SpinY: the tilted ring then wobbles like a gyroscope)
+    R = spec.get("r", 1.5)
+    parts = []
+    minor = spec.get("minor", 0.03)
+    if minor > 0.0:
+        parts.append(torus(R, minor, lod(ctx, spec.get("seg", 40), 20), lod(ctx, 5, 4)))
+    n = spec.get("beads", 0)
+    for k in range(n):
+        a = TAU * k / float(n) + rad(spec.get("phase", 0.0))
+        e = (math.cos(a), 0.0, -math.sin(a))
+        size = spec.get("size", 0.1)
+        if spec.get("alt") and k % 2 == 1:
+            size *= spec["alt"]
+        bead = bead_mesh(ctx, spec.get("bead", "star"), size)
+        if spec.get("upright"):
+            # face along the ring (a bolt or a pyramid standing on it)
+            frame = xf_basis(vcross(UP, e), UP, e, vmul(e, R))
+        else:
+            frame = facing_frame(vmul(e, R), e)
+        parts.append(transform_mesh(bead, frame))
+    tilt = [xf_rot_x(rad(spec.get("tilt_x", 14.0))), xf_rot_z(rad(spec.get("tilt_z", -8.0))),
+            xf_translate(0.0, spec.get("y", 0.0), 0.0)]
+    return xform(merge_meshes(parts), tilt)
+
+
+def detail_orbit(ctx):
+    for spec in ctx["design"]["orbit"]:
+        role = spec.get("role") or neon_role(ctx["look"]["Accent"])
+        add(ctx, role + ("" if spec.get("static") else "@SpinY"), orbit_mesh(ctx, spec))
+
+
+def detail_cyclone(ctx):
+    # hurricane spiral arms swirling around the pet (flat bands that wind in towards it), spinning
+    spec = ctx["design"]["cyclone"]
+    arms = spec.get("arms", 3)
+    r0 = spec.get("r0", 1.75)
+    r1 = spec.get("r1", 0.9)
+    y0 = spec.get("y0", -0.95)
+    y1 = spec.get("y1", -0.75)
+    turns = spec.get("turns", 0.55)
+    width = spec.get("width", 0.12)
+    parts = []
+    steps = lod(ctx, 22, 12)
+    for k in range(arms):
+        path = []
+        radii = []
+        for i in range(steps + 1):
+            t = i / float(steps)
+            r = lerp(r0, r1, t)
+            a = TAU * k / float(arms) + turns * TAU * t
+            path.append((r * math.cos(a), lerp(y0, y1, t), -r * math.sin(a)))
+            env = math.sin(PI * min(1.0, 0.08 + t * 0.95)) ** 0.55
+            radii.append((0.035 * env + 0.006, width * env + 0.01))
+        radii[0] = 0.0
+        parts.append(tube(path, radii, lod(ctx, 6, 4), "round", "round", UP))
+    role = spec.get("role") or neon_role(ctx["look"]["Accent"])
+    add(ctx, role + "@SpinY", merge_meshes(parts))
+
+
+def spiral_uvs(turns, r0, r1, n):
+    out = []
+    for i in range(n + 1):
+        t = i / float(n)
+        a = PI / 2.0 + turns * TAU * t
+        r = lerp(r0, r1, t)
+        out.append((r * math.cos(a), r * math.sin(a)))
+    return out
+
+
+def detail_spiral_mark(ctx):
+    # glowing hurricane-eye swirl on the forehead: two spiral arms around a bright dot
+    spec = ctx["design"]["spiral_mark"]
+    patch = body_patch(ctx["body"], 0.0, spec.get("pitch", 36.0))
+    size = spec.get("size", 1.0)
+    parts = []
+    n = lod(ctx, 18, 10)
+    for k in range(2):
+        uvs = [(u * size, v * size) for (u, v) in spiral_uvs(0.75, 0.035, 0.15, n)]
+        if k == 1:
+            uvs = [(-u, -v) for (u, v) in uvs]
+        radii = [0.026 * size * (1.0 - 0.6 * i / float(n)) for i in range(n + 1)]
+        parts.append(tube(surface_path(patch, uvs, 0.012), radii, 6, "round", "round", None, 2))
+    parts.append(decal(patch, 0.0, 0.0, 0.04 * size, 0.04 * size, 0.02, 0.01, 2, 10, skirt=0.02))
+    add(ctx, spec.get("role", neon_role(WHITE)), merge_meshes(parts))
+
+
+def detail_snowflake_mark(ctx):
+    # six-armed glowing snowflake on the forehead
+    spec = ctx["design"]["snowflake_mark"]
+    patch = body_patch(ctx["body"], 0.0, spec.get("pitch", 38.0))
+    s = spec.get("size", 0.17)
+    parts = []
+    for k in range(6):
+        a = PI / 2.0 + TAU * k / 6.0
+        d = (math.cos(a), math.sin(a))
+        path = surface_path(patch, [(d[0] * s * t, d[1] * s * t) for t in (0.0, 0.5, 1.0)], 0.014)
+        parts.append(tube(path, [0.02, 0.018, 0.012], 5, "round", "round", None, 1))
+        for side in (-1.0, 1.0):
+            b = (d[0] * s * 0.62, d[1] * s * 0.62)
+            ba = a + side * 0.75
+            tip = (b[0] + math.cos(ba) * s * 0.3, b[1] + math.sin(ba) * s * 0.3)
+            parts.append(tube(surface_path(patch, [b, tip], 0.014), [0.014, 0.009], 5, "round", "round", None, 1))
+    add(ctx, spec.get("role", neon_role(WHITE)), merge_meshes(parts))
+
+
+def detail_mane(ctx):
+    # a crest of lightning bolts from the forehead over the head and down the back
+    spec = ctx["design"]["mane"]
+    S = ctx["body"]["S"]
+    a0 = rad(spec.get("start", 62.0))
+    a1 = rad(180.0 - spec.get("end", 10.0))
+    parts = []
+    count = spec.get("count", 7)
+    for i in range(count):
+        t = i / float(count - 1)
+        th = lerp(a0, a1, t)
+        d = (0.0, math.sin(th), -math.cos(th))
+        p = S(d)
+        n = surf_normal(S, d)
+        tangent = (0.0, math.cos(th), math.sin(th))
+        tangent = vnorm(vsub(tangent, vmul(n, vdot(tangent, n))))
+        size = spec.get("size", 0.5) * (1.0 - 0.5 * abs(t - 0.3) / 0.7)
+        bolt = extrude(bolt_poly(size), 0.07, 0.024, 1)
+        # bolt_poly points up (+Y) and leans along +X (= backwards here): stand it on the surface
+        frame = xf_basis(tangent, n, vcross(tangent, n), vmad(p, n, size * 0.3))
+        parts.append(transform_mesh(xform(bolt, [xf_rot_z(rad(-10.0 if i % 2 else -22.0))]), frame))
+    add(ctx, spec.get("role", neon_role(BOLT_YELLOW)), merge_meshes(parts))
+    ctx["head_top"] = max(ctx.get("head_top", 0.0), body_top(ctx) + spec.get("size", 0.5) * 0.6)
+
+
+def antler_mesh(ctx, scale, side):
+    # branched antler (x out, y up, z back): a curved beam with two forward tines and a top fork
+    def beam_rf(t):
+        return 0.075 * scale * (1.0 - 0.62 * t) + 0.012
+    beam = [(0.0, -0.12, 0.0), (0.06, 0.22, 0.06), (0.16, 0.48, 0.16), (0.14, 0.78, 0.3)]
+    beam = [vmul(p, scale) for p in beam]
+    parts = [sweep(beam, lod(ctx, 12, 7), beam_rf, lod(ctx, 8, 6), (1.0, 0.0, 0.0), "round", "round", 0.1)]
+    pts = bezier_points(beam, 32)
+    for (t, d, L) in ((0.42, (0.05, 0.55, -0.6), 0.3), (0.7, (0.35, 0.65, -0.25), 0.26), (0.92, (-0.1, 0.8, 0.4), 0.2)):
+        base = pts[int(t * 32)]
+        d = vnorm(d)
+        tip = vmad(base, d, L * scale)
+        mid = vmad(vmad(base, d, L * scale * 0.55), (0.0, 1.0, 0.0), 0.05 * scale)
+        r = beam_rf(t) * 0.75
+        parts.append(tube(catmull_rom([base, mid, tip], 3), [r] + [r * (1.0 - 0.8 * j / 6.0) for j in range(1, 7)], lod(ctx, 7, 5),
+                          "round", "round", (1.0, 0.0, 0.0), 2))
+    m = merge_meshes(parts)
+    if side < 0:
+        m = mirror_x(m)
+    return m
+
+
+def nemes_shape(a):
+    # sphinx headdress outline seen from above: straight across the brow, round at the back
+    s = math.sin(a)
+    if s < 0.0:
+        return 1.0 - 0.22 * (-s) ** 2
+    return 1.0
+
+
+def detail_nemes(ctx):
+    # sphinx headdress: a striped cloth over the head with a golden brow band and two striped lappets
+    # hanging beside the face
+    body = ctx["body"]
+    accent = "Accent"
+    gold = fixed_role(GOLD)
+    patch = body_patch(body, 180.0, 72.0)
+    add(ctx, accent, decal(patch, 0.0, -0.08, 0.98, 0.98, 0.07, 0.006, 4, lod(ctx, 32, 16), skirt=0.04, dome=0.25,
+                           shape=nemes_shape))
+    cloth = dome_patch(patch, 0.0, -0.08, 0.98, 0.98, 0.07, 0.006, 0.25)
+    stripes = []
+    for v in (-0.62, -0.36, -0.1, 0.16, 0.42):
+        half = 0.9 * math.sqrt(max(0.0, 1.0 - ((v + 0.08) / 0.98) ** 2))
+        n = lod(ctx, 16, 8)
+        uvs = [(lerp(-half, half, i / float(n)), v) for i in range(n + 1)]
+        stripes.append(tube(surface_path(cloth, uvs, -0.004), [0.026] * (n + 1), 5, "round", "round", None, 1))
+    # golden brow band across the forehead
+    n = lod(ctx, 20, 10)
+    band = []
+    for i in range(n + 1):
+        yaw = lerp(-78.0, 78.0, i / float(n))
+        p, nn = surface_at(body, yaw, 38.0 + 6.0 * abs(yaw) / 78.0)
+        band.append(vmad(p, nn, 0.05))
+    stripes.append(tube(band, [(0.05, 0.05)] * (n + 1), 6, "round", "round", None, 2))
+    lappets = []
+    for side in (-1, 1):
+        pts = []
+        radii = []
+        m = lod(ctx, 10, 6)
+        for i in range(m + 1):
+            t = i / float(m)
+            p, nn = surface_at(body, side * lerp(66.0, 74.0, t), lerp(40.0, -42.0, t))
+            pts.append(vmad(p, nn, 0.06 + 0.05 * t))
+            radii.append((0.04, 0.16 + 0.07 * t))
+        lappets.append(tube(pts, radii, lod(ctx, 8, 6), "round", "round", (side * 1.0, 0.0, 0.0), 2))
+        for t in (0.3, 0.55, 0.8):
+            p, nn = surface_at(body, side * lerp(66.0, 74.0, t), lerp(40.0, -42.0, t))
+            c = vmad(p, nn, 0.06 + 0.05 * t + 0.035)
+            tang = vnorm(vcross(nn, UP))
+            w = 0.16 + 0.07 * t
+            stripes.append(tube([vmad(c, tang, -w * 0.92), c, vmad(c, tang, w * 0.92)], [0.022, 0.024, 0.022], 5, "round",
+                                "round", None, 1))
+    add(ctx, accent, merge_meshes(lappets))
+    add(ctx, gold, merge_meshes(stripes))
+    ctx["head_top"] = max(ctx.get("head_top", 0.0), body_top(ctx) + 0.08)
+
+
+def detail_uraeus(ctx):
+    # golden cobra rearing up from the brow band, a glowing gem below it
+    body = ctx["body"]
+    p, n = surface_at(body, 0.0, 44.0)
+    base = vmad(p, n, 0.06)
+    path = [base, vadd(base, (0.0, 0.08, -0.05)), vadd(base, (0.0, 0.2, -0.04)), vadd(base, (0.0, 0.3, -0.08))]
+    neck = tube(catmull_rom(path, 4), [0.035 + 0.01 * math.sin(PI * i / 12.0) for i in range(13)], 6, "round", "round",
+                (1.0, 0.0, 0.0), 2)
+    hood = transform_mesh(ellipsoid(0.1, 0.12, 0.035, lod(ctx, 4, 3)), xf_frame(vadd(base, (0.0, 0.27, -0.05)), (0.0, 1.0, -0.25),
+                                                                                 (0.0, 0.0, 1.0)))
+    add(ctx, fixed_role(GOLD), merge_meshes([neck, hood]))
+    gp, gn = surface_at(body, 0.0, 37.0)
+    gemm = crystal(0.06, -0.06, -0.01, 0.01, 0.06, 6, 0.9)
+    add(ctx, ctx["design"].get("uraeus_gem", neon_role(GEM_RED)),
+        transform_mesh(xform(gemm, [xf_rot_x(PI / 2.0)]), xf_frame(vmad(gp, gn, 0.08), (0.0, 1.0, 0.0), vmul(gn, -1.0))))
+
+
+def detail_coil(ctx):
+    # serpent tail: from the back of the body it coils once around underneath and ends in a small fin
+    spec = ctx["design"]["coil"]
+    n = lod(ctx, 44, 22)
+    path = []
+    radii = []
+    R0 = spec.get("r0", 0.95)
+    R1 = spec.get("r1", 0.55)
+    for i in range(n + 1):
+        t = i / float(n)
+        a = -PI / 2.0 - spec.get("turns", 1.1) * TAU * t
+        r = lerp(R0, R1, t ** 0.8)
+        y = lerp(spec.get("y0", -0.35), spec.get("y1", -1.05), t)
+        path.append((r * math.cos(a), y, -r * math.sin(a)))
+        radii.append(spec.get("thick", 0.24) * (1.0 - 0.82 * t) + 0.012)
+    add(ctx, "Body", tube(path, radii, lod(ctx, 10, 6), "round", "round", UP))
+    # little tail fin at the end, and glowing spots along the coil
+    end = path[-1]
+    tdir = vnorm(vsub(path[-1], path[-3]))
+    fin = extrude(blob_poly([(0.0, 0.0), (0.12, 0.14), (0.04, 0.3), (-0.06, 0.14)], 4), 0.035, 0.012, 1)
+    add(ctx, "Accent", transform_mesh(fin, xf_basis(vnorm(vcross(UP, tdir)), tdir, vcross(vnorm(vcross(UP, tdir)), tdir), end)))
+    spots = []
+    for i in range(2, n - 2, max(2, n // 9)):
+        p = path[i]
+        out = vnorm((p[0], 0.0, p[2]))
+        r = radii[i]
+        q = vadd(vmad(p, out, r * 0.75), (0.0, r * 0.55, 0.0))
+        spots.append(transform_mesh(ellipsoid(r * 0.26, r * 0.18, r * 0.26, 2), xf_frame(q, vnorm(vadd(out, (0.0, 0.8, 0.0))),
+                                                                                       (0.0, 0.0, 1.0))))
+    add(ctx, spec.get("spots", neon_role(ctx["look"]["Accent"])), merge_meshes(spots))
+
+
+def detail_dorsal(ctx):
+    # row of curved fin spikes along the top/back of the body
+    spec = ctx["design"]["dorsal"]
+    body = ctx["body"]
+    parts = []
+    for (pitch, h) in spec.get("spots", ((70.0, 0.28), (48.0, 0.34), (24.0, 0.3), (0.0, 0.24), (-22.0, 0.18))):
+        p, n = surface_at(body, 180.0, pitch)
+        spike = sweep([(0.0, -0.05, 0.0), (0.0, h * 0.45, 0.02), (0.0, h * 0.8, 0.1), (0.0, h, 0.2)], lod(ctx, 7, 5),
+                      horn_fn(0.07, 1.4, 0.8), lod(ctx, 6, 5), (1.0, 0.0, 0.0), "round", "round", 0.1)
+        parts.append(transform_mesh(scale_mesh(spike, 0.45, 1.0, 1.0), xf_frame(vmad(p, n, -0.03), n, (0.0, -1.0, 0.0))))
+    add(ctx, spec.get("role", "Accent"), merge_meshes(parts))
+
+
+def detail_glow_spots(ctx):
+    # bioluminescent spots / constellations on the body
+    spec = ctx["design"]["glow_spots"]
+    body = ctx["body"]
+    parts = []
+    for (yaw, pitch, s) in spec.get("spots", ()):
+        patch = body_patch(body, yaw, pitch)
+        parts.append(decal(patch, 0.0, 0.0, 0.05 * s, 0.05 * s, 0.012, 0.006, 2, 10, skirt=0.02))
+    add(ctx, spec.get("role", neon_role(ctx["look"]["Accent"])), merge_meshes(parts))
+
+
+def detail_flame_ring(ctx):
+    # a ring of fire around the pet: little flames standing on a glowing ring, leaning outwards
+    spec = ctx["design"]["flame_ring"]
+    R = spec.get("r", 1.35)
+    parts = [torus(R, 0.035, lod(ctx, 40, 20), 5)]
+    count = spec.get("count", 9)
+
+    def tongue(r, h):
+        pts = [(0.0, 0.0, 0.0), (0.0, h * 0.35, 0.0), (0.03, h * 0.7, 0.0), (0.07, h, 0.02)]
+
+        def rf(t):
+            return 0.0 if t >= 1.0 else r * (math.sin(PI * min(1.0, 0.25 + t * 0.9)) ** 0.9) * (1.0 - t) ** 0.55
+        return sweep(pts, lod(ctx, 6, 4), rf, lod(ctx, 6, 5), (1.0, 0.0, 0.0), "round", "round", 0.2, 0.0, 1.0, 1)
+    for k in range(count):
+        a = TAU * k / float(count)
+        e = (math.cos(a), 0.0, -math.sin(a))
+        fl = tongue(0.1, 0.34 if k % 2 == 0 else 0.26)
+        parts.append(transform_mesh(fl, xf_frame(vmul(e, R), vnorm(vadd(UP, vmul(e, 0.35))), vmul(e, -1.0))))
+    m = xform(merge_meshes(parts), [xf_rot_x(rad(spec.get("tilt_x", 10.0))), xf_translate(0.0, spec.get("y", -0.55), 0.0)])
+    add(ctx, spec.get("role", neon_role(FLAME_OUT)), m)
+
+
+def secret_crown(ctx):
+    # crowns of the secret pets: "ice" (a ring of tall crystals), "magma" (an obsidian band with glowing spikes)
+    design = ctx["design"]
+    style = design["crown_style"]
+    R = design.get("crown_r", 0.42)
+    cx = design.get("crown_x", 0.0)
+    cz = 0.1 if ctx["look"]["Body"] == "Cloud" else 0.06
+    seat = 0.0
+    for k in range(12):
+        a = TAU * k / 12.0
+        seat += height_at(ctx, cx + R * 0.85 * math.cos(a), cz + R * 0.85 * math.sin(a), 0.1)
+    seat = seat / 12.0 - 0.06
+    xf = xf_chain([xf_rot_z(rad(design.get("crown_tilt", -6.0))), xf_rot_x(rad(-6.0)), xf_translate(cx, seat, cz)])
+    band = torus(R, 0.055, lod(ctx, 32, 16), lod(ctx, 6, 4))
+    band = transform_mesh(band, xf_scale(1.0, 1.6, 1.0))
+    spikes = []
+    count = design.get("crown_points", 7)
+    top = 0.0
+    for k in range(count):
+        a = PI / 2.0 + TAU * k / float(count)
+        e = (math.cos(a), 0.0, -math.sin(a))
+        front = max(0.0, math.sin(a))
+        h = (0.34 + 0.22 * front ** 3) if k % 2 == 0 else 0.24 + 0.08 * front
+        if style == "ice":
+            sp = crystal(0.075, 0.0, 0.05, h * 0.6, h, 6, 0.8)
+        else:
+            sp = crystal(0.075, 0.0, 0.04, h * 0.45, h * 1.1, 5, 0.75)
+        frame = xf_frame(vadd(vmul(e, R), (0.0, 0.03, 0.0)), vnorm(vadd(UP, vmul(e, 0.22))), e)
+        spikes.append(transform_mesh(sp, frame))
+        top = max(top, h)
+    gem_m = transform_mesh(crystal(0.075, -0.09, -0.02, 0.02, 0.09, 6, 0.9),
+                           xf_chain([xf_rot_x(PI / 2.0), xf_translate(0.0, 0.03, -R - 0.05)]))
+    if style == "ice":
+        add(ctx, design.get("crown_role", ice_role((205, 240, 255))), transform_mesh(merge_meshes([band] + spikes), xf))
+        add(ctx, neon_role(design.get("crown_gem", GEM_RED)), transform_mesh(gem_m, xf))
+    else:
+        add(ctx, "Body", transform_mesh(band, xf))
+        add(ctx, neon_role(design.get("crown_gem", ctx["look"]["Accent"])), transform_mesh(merge_meshes(spikes + [gem_m]), xf))
+    ctx["crown_top"] = seat + top + 0.08
+    ctx["head_top"] = max(ctx.get("head_top", 0.0), ctx["crown_top"])
+
+
+def seraph_wing(ctx, size):
+    # two layered feather wings: a big upper wing and a smaller lower one, swept apart
+    upper = feather_wing(ctx, size)
+    lower = feather_wing(ctx, size * 0.72)
+    lower = xform(lower, [xf_rot_z(rad(-48.0)), xf_translate(0.0, -0.08, 0.06)])
+    return merge_meshes([upper, lower])
+
+
+def fin_wing(ctx, size):
+    # leviathan fin: four rounded lobes with a thin membrane, plus the rays (returns membrane, rays)
+    lobes = [(-12.0, 0.62, 0.075), (12.0, 0.8, 0.08), (36.0, 0.9, 0.085), (60.0, 0.8, 0.085)]
+    outline = finger_wing_outline(ctx, lobes, 0.62, (0.03, -0.1), (0.0, 0.15))
+    membrane = extrude([(x * size, y * size) for (x, y) in outline], 0.045 * size, 0.018 * size, 1)
+    rays = []
+    for (a, L, w) in lobes:
+        d = (math.cos(rad(a)), math.sin(rad(a)), 0.0)
+        rays.append(tube([(0.0, 0.0, 0.0), vmul(d, L * size * 0.55), vmul(d, (L - w) * size)], [0.03 * size, 0.024 * size, 0.012 * size],
+                         lod(ctx, 5, 4), "round", "round", (0.0, 0.0, 1.0), 1))
+    return (membrane, merge_meshes(rays))
+
+
+def phoenix_tail(ctx):
+    # long sweeping plumes, each curling up at the tip (tail space: +Z away from the body)
+    parts = []
+    for (ang, L, lift) in ((-30.0, 0.9, 0.1), (-12.0, 1.1, 0.0), (12.0, 1.1, 0.0), (30.0, 0.9, 0.1), (0.0, 1.3, 0.22)):
+        f = leaf(L, 0.16, 0.05, lod(ctx, 6, 4), lod(ctx, 9, 6), 0.6, 0.45, 0.35)
+        f = xform(f, [xf_rot_y(-PI / 2.0), xf_rot_x(rad(-18.0 - lift * 60.0)), xf_rot_y(rad(ang)), xf_translate(0.0, lift * 0.3, 0.0)])
+        parts.append(f)
+    return merge_meshes(parts)
+
+
 FEATURES = {
     "Ears": feat_ears, "BunnyEars": feat_bunny_ears, "Horns": feat_horns, "Antenna": feat_antenna,
     "Flower": feat_flower, "Flame": feat_flame, "Crown": feat_crown, "Bolt": feat_bolt, "Halo": feat_halo,
@@ -2576,7 +3109,15 @@ DETAILS = [
     ("star_mark", detail_star_mark), ("moon_mark", detail_moon_mark), ("freckles", detail_freckles),
     ("star_freckles", detail_star_freckles), ("belly_accent", detail_belly_accent), ("back_stripe", detail_back_stripe),
     ("arms", detail_arms), ("shards", detail_shards), ("bolt_cheeks", detail_bolt_cheeks), ("ripples", detail_ripples),
-    ("ruff", detail_ruff), ("brow_star", detail_brow_star),
+    ("ruff", detail_ruff), ("brow_star", detail_brow_star), ("nemes", detail_nemes), ("uraeus", detail_uraeus),
+    ("coil", detail_coil),
+]
+
+# details that sit on top of the features (secret pets): run after them
+LATE_DETAILS = [
+    ("orbit", detail_orbit), ("cyclone", detail_cyclone), ("spiral_mark", detail_spiral_mark),
+    ("snowflake_mark", detail_snowflake_mark), ("mane", detail_mane), ("dorsal", detail_dorsal),
+    ("glow_spots", detail_glow_spots), ("flame_ring", detail_flame_ring),
 ]
 
 
@@ -2605,16 +3146,22 @@ def role_sort_key(name):
 def build_pet_at(pet_id, q):
     look = PETS[pet_id]
     ctx = {"id": pet_id, "look": look, "design": DESIGN.get(pet_id, {}), "q": q, "parts": {}, "order": [], "pivots": {}}
+    # secret pets keep a finer body and face (body_q) and spend the rest of the budget on their details
+    ctx["q"] = max(q, ctx["design"].get("body_q", 0.0))
     body = make_body(ctx)
     ctx["body"] = body
     add(ctx, "Body", body["mesh"])
     build_face(ctx)
+    ctx["q"] = q
     for (key, fn) in DETAILS:
         if ctx["design"].get(key):
             fn(ctx)
     for feature in FEATURE_ORDER:
         if feature in look["Features"]:
             FEATURES[feature](ctx)
+    for (key, fn) in LATE_DETAILS:
+        if ctx["design"].get(key):
+            fn(ctx)
     out = [named("Root", box(0.1, 0.1, 0.1))]
     roles = sorted(ctx["order"], key=role_sort_key)
     for role in roles:
@@ -2631,7 +3178,10 @@ TRI_BUDGET = 4000
 def build_pet(pet_id, budget=TRI_BUDGET):
     # Highest detail that fits the triangle budget
     meshes = None
-    for q in (1.0, 0.88, 0.78, 0.68, 0.6, 0.52):
+    ladder = (1.0, 0.88, 0.78, 0.68, 0.6, 0.52)
+    if PETS[pet_id]["Rarity"] == "Secret":
+        ladder = SECRET_LADDER  # finer steps: secret pets use as much of the budget as they can
+    for q in ladder:
         meshes = build_pet_at(pet_id, q)
         if tri_count(meshes) <= budget:
             return meshes

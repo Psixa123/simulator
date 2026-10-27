@@ -68,7 +68,7 @@ FORBIDDEN_CALLS = {"eval", "exec", "open", "type", "setattr", "getattr", "__impo
 
 RARITY_COLORS = {
     "Common": (196, 204, 218), "Uncommon": (96, 222, 112), "Rare": (72, 164, 255), "Epic": (182, 96, 255),
-    "Legendary": (255, 192, 42), "Exclusive": (255, 84, 156),
+    "Legendary": (255, 192, 42), "Exclusive": (255, 84, 156), "Secret": (44, 22, 88),
 }
 
 
